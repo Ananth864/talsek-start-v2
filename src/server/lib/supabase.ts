@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { getCookies, setCookie } from '@tanstack/react-start/server'
+import {
+  getCookies,
+  setCookie,
+  getRequestUrl,
+} from '@tanstack/react-start/server'
 import { serverEnv } from './env'
 import type { Database } from '#/integrations/supabase/types'
 
@@ -60,12 +64,49 @@ export function getAdminClient() {
   )
 }
 
-/** Returns the cookie-backed client plus the active session, or throws. */
+/**
+ * Verified identity for the current request, via JWT signature check
+ * (`getClaims()`). Use for authorization decisions in route guards and the
+ * session middleware — never `getSession()`, whose cookie-backed payload is not
+ * trusted (ADR-0008). Returns a minimal `{ id, email }` or `null`.
+ */
+export async function getVerifiedUser() {
+  const { client, flushCookies } = getSupabaseServerClient()
+  const { data, error } = await client.auth.getClaims()
+  flushCookies()
+  if (error || !data) return null
+  const claims = data.claims
+  const id = typeof claims.sub === 'string' ? claims.sub : null
+  const email = typeof claims.email === 'string' ? claims.email : null
+  if (!id) return null
+  return { id, email }
+}
+
+/**
+ * Builds the user-scoped Supabase client for protected server functions.
+ * Verifies identity via `getClaims()` (throws `UNAUTHORIZED` if invalid), then
+ * exposes the cookie-backed client and session tokens. RLS re-validates the
+ * token at the Postgres layer on every query, so the session is only a carrier.
+ */
 export async function requireUserClient() {
-  const { client } = getSupabaseServerClient()
+  const { client, flushCookies } = getSupabaseServerClient()
+  const user = await getVerifiedUser()
+  if (!user) throw new Error('UNAUTHORIZED')
   const {
     data: { session },
   } = await client.auth.getSession()
+  flushCookies()
   if (!session) throw new Error('UNAUTHORIZED')
-  return { client, session }
+  return { client, session, user }
+}
+
+/**
+ * Absolute origin of the incoming request (e.g. `http://localhost:3000`,
+ * `https://app.example.com`). Used to build Supabase email/OAuth redirect URLs
+ * under SSR, where `window.location` is unavailable. Honors Vercel's forwarded
+ * host/proto headers (ADR-0008).
+ */
+export function getRequestOrigin() {
+  const url = getRequestUrl({ xForwardedHost: true, xForwardedProto: true })
+  return `${url.protocol}//${url.host}`
 }

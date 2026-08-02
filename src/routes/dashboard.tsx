@@ -1,12 +1,16 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchJobs } from '#/server/fn/jobs'
-import { getSession, signOut } from '#/server/fn/auth'
+import { getAuthState, signOut } from '#/server/fn/auth'
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: async () => {
-    const { session } = await getSession()
-    if (!session) throw redirect({ to: '/signin' })
+    const { user } = await getAuthState()
+    if (!user)
+      throw redirect({
+        to: '/signin',
+        search: { redirect: '/dashboard' },
+      })
   },
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData({
