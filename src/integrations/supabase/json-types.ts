@@ -1,20 +1,24 @@
 // Shared JSON shapes -------------------------------------------------
 // Audit log metadata (currently unstructured but JSON object if present)
 //
-// NOTE: FormQuestion is ported with its owning domain (forms). Kept loose here
-// so the generated Database type compiles standalone without dragging in the
-// (replaced) edge-function schema tree. `ParsedJobData` and
-// `ScreeningInterviewInformation` are narrowed to concrete shapes now that the
-// Jobs write path (#5) owns them — this also makes both JSON columns
-// serializable across the server-function boundary (ADR-0009 §1), so they are
-// re-added to the canonical Jobs select.
+// FormQuestion is narrowed for the Applicant apply-by-token path (#11): get-form
+// returns questions across the server-function boundary, so the shape must be
+// concrete (ADR-0009 §1). Mirrors the source `formQuestionSchema`.
 //
-// `ResumeExtraction` (parsed_candidate_data) is narrowed here for the candidate
-// board read path (#6): the board displays parsed candidate data, which the
-// default server-function serializer can only carry once the column is a
-// concrete (unknown-free) shape (ADR-0009 §1 / ADR-0011). It mirrors the
-// source's `resumeExtractionSchema` verbatim.
-type FormQuestion = Record<string, unknown>
+// `ParsedJobData` / `ScreeningInterviewInformation` were narrowed with the Jobs
+// write path (#5). `ResumeExtraction` (parsed_candidate_data) was narrowed for
+// the candidate board (#6) — concrete shapes only across the server-fn boundary.
+export type FormQuestion = {
+  id: string
+  baseId: string
+  type: 'text' | 'email' | 'file' | 'select' | 'number' | 'url'
+  label: string
+  placeholder?: string
+  required: boolean
+  options?: string[]
+  isMandatory: boolean
+  isCustom: boolean
+}
 
 // Core AI job-match analysis persisted inside job_applications.ai_analysis.
 // Narrowed for the candidate profile detail (#7): the dialog reads scores,

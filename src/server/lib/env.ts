@@ -25,6 +25,11 @@ export const serverEnv = createEnv({
     // (skips provider calls + credit consume). Playwright sets this so E2E
     // exercises the sync chain without multi-minute hedged AI calls (ADR-0014).
     AI_PIPELINE_STUB: z.enum(['1', 'true']).optional(),
+    // Upstash Redis for Applicant IP rate limits (ADR-0015). Optional: when
+    // absent, `checkIpRateLimit` falls back to an in-process sliding window
+    // so local/E2E still reject overruns.
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},
