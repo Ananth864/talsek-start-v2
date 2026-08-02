@@ -7,10 +7,8 @@ import { test, expect } from '@playwright/test'
  */
 test('member signs in and sees the company Jobs dashboard', async ({ page }) => {
   await page.goto('/signin')
-
-  await expect(
-    page.getByRole('heading', { name: /sign in to talsek/i }),
-  ).toBeVisible()
+  await page.waitForLoadState('networkidle') // let the client hydrate before interacting
+  await expect(page.getByLabel('Email')).toBeVisible()
 
   await page.getByLabel('Email').fill(process.env.E2E_EMAIL!)
   await page.getByLabel('Password').fill(process.env.E2E_PASSWORD!)

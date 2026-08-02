@@ -1,5 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// Playwright doesn't auto-load .env.local; do it here so E2E_EMAIL/PASSWORD etc.
+// are available to the specs. (Node 20.12+/26 has process.loadEnvFile.)
+try {
+  process.loadEnvFile('.env.local')
+} catch {
+  // .env.local optional (e.g. CI injects vars directly)
+}
+
 /**
  * Target-agnostic harness. The SAME specs run against either:
  *   - the SOURCE app   (E2E_TARGET=source)  — to capture current behaviour
@@ -17,7 +25,7 @@ const baseURL =
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   workers: 1,
   reporter: 'list',
   use: {

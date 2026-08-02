@@ -10,27 +10,31 @@ export const signIn = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { client, flushCookies } = getSupabaseServerClient()
+    const { error } = await client.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     })
+    // Flush auth cookies in the handler's synchronous frame so they reach the
+    // browser on the server-function response.
+    flushCookies()
     if (error) return { ok: false, error: error.message } as const
     return { ok: true } as const
   })
 
 export const signOut = createServerFn({ method: 'POST' }).handler(async () => {
-  const supabase = getSupabaseServerClient()
-  await supabase.auth.signOut()
+  const { client, flushCookies } = getSupabaseServerClient()
+  await client.auth.signOut()
+  flushCookies()
   return { ok: true } as const
 })
 
 /** Lightweight session probe used by route guards. */
 export const getSession = createServerFn({ method: 'GET' }).handler(async () => {
-  const supabase = getSupabaseServerClient()
+  const { client } = getSupabaseServerClient()
   const {
     data: { session },
-  } = await supabase.auth.getSession()
+  } = await client.auth.getSession()
   return {
     session: session
       ? { user: { id: session.user.id, email: session.user.email ?? '' } }

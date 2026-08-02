@@ -4,14 +4,21 @@ import { getCookies, setCookie } from '@tanstack/react-start/server'
 import { serverEnv } from './env'
 import type { Database } from '#/integrations/supabase/types'
 
+type PendingCookie = { name: string; value: string; options?: object }
+
 /**
- * Per-request Supabase client backed by the user's auth cookies (read/written
- * via TanStack Start's cookie API). Because the access token rides every
- * request, Row-Level Security scopes all reads to the Member's company — no
- * manual `company_id` filtering (ADR-4).
+ * Per-request Supabase client backed by the user's auth cookies.
+ *
+ * Supabase-ssr's `setAll` fires *inside* its awaited auth calls, which is not
+ * the handler's synchronous frame — so writes are stashed and flushed by the
+ * caller via `flushCookies()` immediately after the await (the documented
+ * pattern for setting response headers from a server function). Reads use
+ * `getCookies()` directly.
  */
 export function getSupabaseServerClient() {
-  return createServerClient<Database>(
+  const pending: PendingCookie[] = []
+
+  const client = createServerClient<Database>(
     serverEnv.SUPABASE_URL,
     serverEnv.SUPABASE_ANON_KEY,
     {
@@ -24,12 +31,19 @@ export function getSupabaseServerClient() {
         },
         setAll(cookiesToSet) {
           for (const c of cookiesToSet) {
-            setCookie(c.name, c.value, c.options)
+            pending.push({ name: c.name, value: c.value, options: c.options })
           }
         },
       },
     },
   )
+
+  /** Apply any cookies Supabase queued. Call right after the auth `await`. */
+  function flushCookies() {
+    for (const c of pending) setCookie(c.name, c.value, c.options)
+  }
+
+  return { client, flushCookies }
 }
 
 /** Service-role client — bypasses RLS. Session-less operations only (ADR-4). */
@@ -48,7 +62,7 @@ export function getAdminClient() {
 
 /** Returns the cookie-backed client plus the active session, or throws. */
 export async function requireUserClient() {
-  const client = getSupabaseServerClient()
+  const { client } = getSupabaseServerClient()
   const {
     data: { session },
   } = await client.auth.getSession()
