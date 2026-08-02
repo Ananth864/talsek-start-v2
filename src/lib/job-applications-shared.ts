@@ -70,6 +70,21 @@ export function normalizedMatchScore(application: JobApplicationRow): number {
 }
 
 /**
+ * Badge variant for a match score — the profile detail's header badge and
+ * Final Score presentation (source parity: 70/40 thresholds). Lives here so
+ * the mapping has one owner alongside `scoreBand` (which owns the finer
+ * 80/60/40 ring/border palette — a distinct presentational scale, also from
+ * the source).
+ */
+export function matchBadgeVariant(
+  score: number,
+): 'default' | 'secondary' | 'destructive' {
+  if (score >= 70) return 'default'
+  if (score >= 40) return 'secondary'
+  return 'destructive'
+}
+
+/**
  * Score-band presentation for a candidate. One place owns the band→colour
  * mapping so the ring and the card's left border stay in lock-step. Returns
  * literal Tailwind classes (no templating) so the JIT keeps them.

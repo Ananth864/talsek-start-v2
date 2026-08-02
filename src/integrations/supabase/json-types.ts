@@ -1,23 +1,40 @@
 // Shared JSON shapes -------------------------------------------------
 // Audit log metadata (currently unstructured but JSON object if present)
 //
-// NOTE: FormQuestion / JobMatchCoreAnalysis are ported with their owning
-// domains (AI pipeline + forms). Kept loose here so the generated Database type
-// compiles standalone without dragging in the (replaced) edge-function schema
-// tree. `ParsedJobData` and `ScreeningInterviewInformation` are narrowed to
-// concrete shapes now that the Jobs write path (#5) owns them — this also makes
-// both JSON columns serializable across the server-function boundary
-// (ADR-0009 §1), so they are re-added to the canonical Jobs select.
+// NOTE: FormQuestion is ported with its owning domain (forms). Kept loose here
+// so the generated Database type compiles standalone without dragging in the
+// (replaced) edge-function schema tree. `ParsedJobData` and
+// `ScreeningInterviewInformation` are narrowed to concrete shapes now that the
+// Jobs write path (#5) owns them — this also makes both JSON columns
+// serializable across the server-function boundary (ADR-0009 §1), so they are
+// re-added to the canonical Jobs select.
 //
 // `ResumeExtraction` (parsed_candidate_data) is narrowed here for the candidate
 // board read path (#6): the board displays parsed candidate data, which the
 // default server-function serializer can only carry once the column is a
 // concrete (unknown-free) shape (ADR-0009 §1 / ADR-0011). It mirrors the
-// source's `resumeExtractionSchema` verbatim. `JobMatchCoreAnalysis`
-// (ai_analysis) stays loose until the candidate match/write domain ports it;
-// the board does not select that column.
+// source's `resumeExtractionSchema` verbatim.
 type FormQuestion = Record<string, unknown>
-type JobMatchCoreAnalysis = Record<string, unknown>
+
+// Core AI job-match analysis persisted inside job_applications.ai_analysis.
+// Narrowed for the candidate profile detail (#7): the dialog reads scores,
+// recommendation, rationale, strengths, and concerns, which the default
+// server-function serializer can only carry once the column is a concrete
+// (unknown-free) shape (ADR-0009 §1 — same precedent as `ResumeExtraction`).
+// Mirrors the source's `jobMatchCoreAnalysisSchema` (supabase/functions/
+// _shared/schemas/ai-response-schemas.ts) verbatim.
+type JobMatchCoreAnalysis = {
+  individual_scores: {
+    role_responsibility_readiness_score: number
+    concerns_mitigation_score: number
+    prestige_score: number
+  }
+  recommendation: 'STRONG_FIT' | 'GOOD_FIT' | 'MODERATE_FIT' | 'POOR_FIT'
+  rationale: string
+  candidate_readiness: string
+  strengths_for_role: string[]
+  potential_concerns: string[]
+}
 
 // Resume extraction output persisted on job_applications.parsed_candidate_data.
 // Mirrors the source `resumeExtractionSchema` (supabase/functions/_shared/

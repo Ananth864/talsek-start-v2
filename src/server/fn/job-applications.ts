@@ -33,16 +33,22 @@ import type { Database } from '#/integrations/supabase/types'
  * the selected Job context already comes from the Jobs list. Defined as a
  * function of the user-scoped client so the same call serves the handler and
  * the `JobApplicationRow` type derivation.
+ *
+ * `ai_analysis`, `email_content`, and the raw `match_score` are selected for
+ * the candidate profile detail (#7): the dialog reads the same cached board row
+ * (same query key), so its data is consistent with the board by construction.
+ * Both JSON columns are typed concrete (unknown-free) so the default
+ * server-function serializer carries them (ADR-0009 §1).
  */
 export function jobApplicationsQuery(client: SupabaseClient<Database>) {
   return client
     .from('job_applications')
     .select(
       `id, candidate_id, candidate_name, job_id, current_stage_id, status,
-       final_score, meets_all_non_negotiables,
+       final_score, match_score, meets_all_non_negotiables,
        preferred_requirements_matched, processing_source, resume_url, starred,
        created_at, updated_at,
-       parsed_candidate_data,
+       parsed_candidate_data, ai_analysis, email_content,
        candidate:candidates(id, email),
        current_stage:job_stages(id, stage_id, stage_order, hiring_stage:hiring_stages(id, name))`,
     )

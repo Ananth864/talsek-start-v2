@@ -1,5 +1,7 @@
-import { ExternalLink, Star } from 'lucide-react'
+import { useState } from 'react'
+import { ExternalLink, Sparkles, Star } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { cn } from '#/lib/utils'
 import { countIncludedRequirements } from '#/lib/requirements'
@@ -10,6 +12,7 @@ import {
   scoreBand,
 } from '#/lib/job-applications-shared'
 import { ScoreRing } from './score-ring'
+import { CandidateProfileDialog } from './candidate-profile-dialog'
 import type { JobApplicationRow } from '#/server/fn/job-applications'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
 
@@ -28,11 +31,13 @@ function formatDate(iso: string | null | undefined) {
  * A candidate row in the board (read path). Ports the visible surface of the
  * source's `CandidateCard`: match-score ring, name/email/applied date, resume
  * link, parsed-data summary (current role, experience, top skills), requirement
- * badges, and the Processing Status. The action controls (AI Analysis dialog,
- * Shortlist, Reject, star toggle) are write-path surfaces and port with the
- * candidate write-path tickets — the star renders read-only here.
+ * badges, and the Processing Status. The "AI Analysis" action opens the
+ * candidate profile detail (`CandidateProfileDialog`, ticket #7). The write
+ * actions (Shortlist, Reject, star toggle) port with the candidate write-path
+ * tickets — the star renders read-only here.
  */
 export function CandidateCard({ application, job }: CandidateCardProps) {
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const score = normalizedMatchScore(application)
   const parsed = parsedSummary(application.parsed_candidate_data)
   const email = application.candidate.email
@@ -138,21 +143,40 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
                   </span>
                 ) : null}
               </div>
-              {application.resume_url ? (
-                <a
-                  href={application.resume_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+              <div className="flex items-center gap-2">
+                {application.resume_url ? (
+                  <a
+                    href={application.resume_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Resume
+                    <ExternalLink className="size-3" />
+                  </a>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 px-2 text-[11px]"
+                  onClick={() => setIsProfileOpen(true)}
+                  data-testid="candidate-view-profile"
                 >
-                  Resume
-                  <ExternalLink className="size-3" />
-                </a>
-              ) : null}
+                  <Sparkles className="size-3" />
+                  AI Analysis
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </CardContent>
+
+      <CandidateProfileDialog
+        application={application}
+        job={job}
+        open={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
     </Card>
   )
 }

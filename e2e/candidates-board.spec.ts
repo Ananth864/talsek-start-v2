@@ -73,6 +73,54 @@ test('selecting a Job shows its candidate board grouped by Hiring Stage', async 
   }
 })
 
+test('opening a candidate from the board shows the full profile dialog (#7)', async ({
+  page,
+}) => {
+  await signIn(page)
+  await page.getByTestId('job-card').first().click()
+  await expect(page).toHaveURL(/jobId=/)
+  await expect(page.getByTestId('candidates-list')).toBeVisible()
+
+  // Conditional on seeded applications, like the board spec above: the E2E
+  // account's Jobs carry a pipeline but applications arrive via later tickets
+  // (#9/#11). When a card exists, the AI Analysis action must open the
+  // profile dialog with its tabbed detail and a match score consistent with
+  // the board; PDF download is exercised end-to-end.
+  const cards = page.getByTestId('candidate-card')
+  const cardCount = await cards.count()
+  if (cardCount === 0) {
+    await expect(page.getByText(/no candidates in this stage/i)).toBeVisible()
+    return
+  }
+
+  const firstCard = cards.first()
+  const ringLabel = await firstCard
+    .getByRole('img', { name: /Match score/ })
+    .getAttribute('aria-label')
+  await firstCard.getByTestId('candidate-view-profile').click()
+
+  const dialog = page.getByTestId('candidate-profile-dialog')
+  await expect(dialog).toBeVisible()
+
+  // Header: match badge consistent with the card's score ring (both render
+  // the persisted final_score).
+  const badgeText = await dialog.getByTestId('profile-match-score').innerText()
+  const badgeScore = badgeText.match(/(\d+)/)?.[1]
+  expect(ringLabel).toContain(`${badgeScore}`)
+
+  // The tabbed detail renders: Overview is default; the other tabs switch.
+  await expect(dialog.getByRole('tab', { name: 'Overview' })).toBeVisible()
+  await dialog.getByRole('tab', { name: 'Requirement Analysis' }).click()
+  await dialog.getByRole('tab', { name: 'Resume Data' }).click()
+  await dialog.getByRole('tab', { name: 'Email' }).click()
+
+  // PDF rendering: the download event fires with a .pdf file.
+  const downloadPromise = page.waitForEvent('download')
+  await dialog.getByTestId('profile-download-pdf').click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/\.pdf$/)
+})
+
 test('candidate board is server-rendered on first paint (no client fetch)', async ({
   page,
 }) => {
