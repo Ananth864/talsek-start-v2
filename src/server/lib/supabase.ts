@@ -34,6 +34,11 @@ export function getSupabaseServerClient() {
 
 /** Service-role client — bypasses RLS. Session-less operations only (ADR-4). */
 export function getAdminClient() {
+  if (!serverEnv.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is not set — required for admin/webhook/cron flows.',
+    )
+  }
   return createClient<Database>(
     serverEnv.SUPABASE_URL,
     serverEnv.SUPABASE_SERVICE_ROLE_KEY,

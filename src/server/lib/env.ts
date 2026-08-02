@@ -11,7 +11,8 @@ export const serverEnv = createEnv({
   server: {
     SUPABASE_URL: z.string().url(),
     SUPABASE_ANON_KEY: z.string().min(1),
-    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    // Only required for admin/webhook/cron flows; user-scoped flows work without it.
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},
