@@ -1,17 +1,46 @@
 // Shared JSON shapes -------------------------------------------------
 // Audit log metadata (currently unstructured but JSON object if present)
 //
-// NOTE: the precise shapes for FormQuestion / JobMatchCoreAnalysis /
-// ResumeExtraction are ported with their owning domains (AI pipeline + forms).
-// Kept loose here so the generated Database type compiles standalone without
-// dragging in the (replaced) edge-function schema tree.
-// `ParsedJobData` and `ScreeningInterviewInformation` are narrowed to concrete
-// shapes now that the Jobs write path (#5) owns them — this also makes both
-// JSON columns serializable across the server-function boundary (ADR-0009 §1),
-// so they are re-added to the canonical Jobs select.
+// NOTE: FormQuestion / JobMatchCoreAnalysis are ported with their owning
+// domains (AI pipeline + forms). Kept loose here so the generated Database type
+// compiles standalone without dragging in the (replaced) edge-function schema
+// tree. `ParsedJobData` and `ScreeningInterviewInformation` are narrowed to
+// concrete shapes now that the Jobs write path (#5) owns them — this also makes
+// both JSON columns serializable across the server-function boundary
+// (ADR-0009 §1), so they are re-added to the canonical Jobs select.
+//
+// `ResumeExtraction` (parsed_candidate_data) is narrowed here for the candidate
+// board read path (#6): the board displays parsed candidate data, which the
+// default server-function serializer can only carry once the column is a
+// concrete (unknown-free) shape (ADR-0009 §1 / ADR-0011). It mirrors the
+// source's `resumeExtractionSchema` verbatim. `JobMatchCoreAnalysis`
+// (ai_analysis) stays loose until the candidate match/write domain ports it;
+// the board does not select that column.
 type FormQuestion = Record<string, unknown>
 type JobMatchCoreAnalysis = Record<string, unknown>
-type ResumeExtraction = Record<string, unknown>
+
+// Resume extraction output persisted on job_applications.parsed_candidate_data.
+// Mirrors the source `resumeExtractionSchema` (supabase/functions/_shared/
+// schemas/ai-response-schemas.ts). Every field has a schema default, so a
+// well-formed stored value carries them all; accessors still guard for null/
+// legacy rows defensively.
+type ResumeExtraction = {
+  name: string
+  email: string
+  phone: string
+  location: string
+  current_role: string
+  total_experience_years: number
+  work_experience: WorkExperienceJson[]
+  education: EducationJson[]
+  technical_skills: SkillWithEvidenceJson[]
+  soft_skills: SkillWithEvidenceJson[]
+  certifications: string[]
+  summary: string
+  potential_concerns: PotentialConcernJson[]
+  potential_concerns_questions: string[]
+  career_level: 'student' | 'junior' | 'mid' | 'senior' | 'lead' | 'executive'
+}
 
 // AI-extracted job-description analysis (parse-job-description output). Mirrors
 // the source's `jobParsingSchema` so the create-job payload and the stored

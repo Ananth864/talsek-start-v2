@@ -90,7 +90,7 @@ export function JobDetail({ job }: JobDetailProps) {
   )
 
   return (
-    <div data-testid="job-detail" className="flex-1 overflow-y-auto p-4 md:p-6">
+    <div data-testid="job-detail" className="shrink-0 border-b p-4 md:p-5">
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-2">

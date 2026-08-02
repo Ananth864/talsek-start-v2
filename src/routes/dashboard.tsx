@@ -9,19 +9,25 @@ import { Plus } from 'lucide-react'
 import { fetchJobs, fetchMemberProfile } from '#/server/fn/jobs'
 import { getAuthState, signOut } from '#/server/fn/auth'
 import { jobsQueryKey } from '#/lib/jobs-shared'
+import { jobApplicationsQueryOptions } from '#/hooks/use-job-applications'
+import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
+import { useJobApplicationsSubscription } from '#/hooks/use-job-applications-subscription'
 import { Button } from '#/components/ui/button'
 import { JobsList } from '#/components/jobs/jobs-list'
 import { JobDetail } from '#/components/jobs/job-detail'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
+import { CandidatesList } from '#/components/candidates/candidates-list'
 
 export const Route = createFileRoute('/dashboard')({
   validateSearch: (search: Record<string, unknown>): {
     jobId?: string
     jobSearch?: string
+    stageId?: string
   } => ({
     jobId: typeof search.jobId === 'string' ? search.jobId : undefined,
     jobSearch:
       typeof search.jobSearch === 'string' ? search.jobSearch : undefined,
+    stageId: typeof search.stageId === 'string' ? search.stageId : undefined,
   }),
   beforeLoad: async () => {
     const { user } = await getAuthState()
@@ -44,13 +50,30 @@ export const Route = createFileRoute('/dashboard')({
       companyName: profile?.companies?.name ?? '',
     }
   },
-  loader: async ({ context }) => {
+  // Read the selected Job id from the search params into the loader so the
+  // candidate board can be prefetched + dehydrated for SSR first paint when a
+  // Job is held in the URL (ADR-0007). Selections made client-side (clicking a
+  // Job) fire the query after the navigation instead.
+  loaderDeps: ({ search }) => ({ jobId: search.jobId }),
+  loader: async ({ context, deps }) => {
     // Prefetch + dehydrate the Jobs list for SSR first paint (ADR-0007). The
     // query key matches the source so realtime/mutation invalidation ports
     // unchanged.
     await context.queryClient.ensureQueryData(
       jobsQueryOptions(context.companyId),
     )
+    // Prefetch the selected Job's candidate board + pipeline stages so the
+    // board is present in the first-paint HTML when a Job is in the URL.
+    if (deps.jobId) {
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          jobApplicationsQueryOptions(deps.jobId, context.companyId),
+        ),
+        context.queryClient.ensureQueryData(
+          jobStagesQueryOptions(deps.jobId, context.companyId),
+        ),
+      ])
+    }
   },
   component: DashboardPage,
 })
@@ -72,7 +95,14 @@ function DashboardPage() {
   )
 
   const selectedJobId = search.jobId
+  const selectedStageId = search.stageId
   const searchTerm = search.jobSearch ?? ''
+
+  // Realtime: keep the selected Job's candidate board fresh (ADR-0007). Mounted
+  // here (not inside CandidatesList) so the channel lives across board re-renders
+  // and matches the source, which mounts `useJobApplicationsSubscription` at the
+  // Dashboard level.
+  useJobApplicationsSubscription(selectedJobId, companyId)
 
   const filteredJobs = useMemo(() => {
     if (!searchTerm.trim()) return jobs
@@ -116,9 +146,27 @@ function DashboardPage() {
   }, [filteredJobs, jobs, selectedJobId, searchTerm, navigate])
 
   const handleJobSelect = (jobId: string) => {
+    // Selecting a different Job resets the stage (the new Job's board defaults
+    // its own first stage via CandidatesList).
     void navigate({
       to: '/dashboard',
-      search: { jobId, jobSearch: searchTerm || undefined },
+      search: {
+        jobId,
+        jobSearch: searchTerm || undefined,
+        stageId: jobId === selectedJobId ? selectedStageId : undefined,
+      },
+      replace: true,
+    })
+  }
+
+  const handleStageSelect = (stageId: string) => {
+    void navigate({
+      to: '/dashboard',
+      search: {
+        jobId: selectedJobId,
+        jobSearch: searchTerm || undefined,
+        stageId,
+      },
       replace: true,
     })
   }
@@ -126,7 +174,11 @@ function DashboardPage() {
   const handleSearchChange = (value: string) => {
     void navigate({
       to: '/dashboard',
-      search: { jobId: selectedJobId, jobSearch: value || undefined },
+      search: {
+        jobId: selectedJobId,
+        jobSearch: value || undefined,
+        stageId: selectedStageId,
+      },
       replace: true,
     })
   }
@@ -170,7 +222,19 @@ function DashboardPage() {
           loading={isLoading}
           error={error}
         />
-        <JobDetail job={selectedJob} />
+        {selectedJob ? (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <JobDetail job={selectedJob} />
+            <CandidatesList
+              job={selectedJob}
+              companyId={companyId}
+              activeStageId={selectedStageId}
+              onStageChange={handleStageSelect}
+            />
+          </div>
+        ) : (
+          <JobDetail job={undefined} />
+        )}
       </main>
 
       {canCreateJob ? (
