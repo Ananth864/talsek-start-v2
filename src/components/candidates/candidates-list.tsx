@@ -24,9 +24,9 @@ type CandidatesListProps = {
  *
  * The board uses the source's job-wide candidate query grouped client-side by
  * the current stage, rather than the source's per-stage infinite query — this
- * keeps a single SSR-prefetchable, realtime-invalidatable key. The fit-category
- * filter dropdown, bulk actions, and card action controls (Shortlist / Reject /
- * AI Analysis) port with the candidate write-path tickets.
+ * keeps a single SSR-prefetchable, realtime-invalidatable key. Card actions
+ * (star / Shortlist stage-advance / Reject) land with #8; the fit-category
+ * filter and bulk actions port with later write-path tickets.
  */
 export function CandidatesList({
   job,
@@ -141,7 +141,7 @@ export function CandidatesList({
           <ul data-testid="candidate-cards" className="flex flex-col gap-2">
             {visible.map((app) => (
               <li key={app.id}>
-                <CandidateCard application={app} job={job} />
+                <CandidateCard application={app} job={job} stages={stages} />
               </li>
             ))}
           </ul>

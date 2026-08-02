@@ -20,6 +20,13 @@ export const jobApplicationsQueryKey = (
 ) => ['job-applications', jobId ?? null, companyId ?? null] as const
 
 /**
+ * Prefix used by mutation hooks to invalidate every Job Applications cache
+ * (source parity with `['job-applications']` predicate matches). Exact keys
+ * remain `jobApplicationsQueryKey(jobId, companyId)`.
+ */
+export const JOB_APPLICATIONS_QUERY_KEY_PREFIX = ['job-applications'] as const
+
+/**
  * The Job's pipeline-stages query key. Matches the source's
  * `['job-stages', jobId, currentCompany?.id]` verbatim.
  */

@@ -59,6 +59,9 @@ test('selecting a Job shows its candidate board grouped by Hiring Stage', async 
     await expect(cards.first()).toBeVisible()
     await expect(cards.first().getByRole('img', { name: /Match score/ })).toBeVisible()
     await expect(cards.first().getByTestId('candidate-status')).toBeVisible()
+    // Pipeline actions (#8) render on the card surface.
+    await expect(cards.first().getByTestId('candidate-star-toggle')).toBeVisible()
+    await expect(cards.first().getByTestId('candidate-shortlist')).toBeVisible()
 
     // Switching stage tab updates the URL and re-filters the list.
     if (tabCount > 1) {
@@ -119,6 +122,50 @@ test('opening a candidate from the board shows the full profile dialog (#7)', as
   await dialog.getByTestId('profile-download-pdf').click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/\.pdf$/)
+})
+
+test('pipeline actions are available on candidate cards (#8)', async ({
+  page,
+}) => {
+  await signIn(page)
+  await page.getByTestId('job-card').first().click()
+  await expect(page).toHaveURL(/jobId=/)
+  await expect(page.getByTestId('candidates-list')).toBeVisible()
+
+  // Conditional: applications arrive via #9/#11. When present, star / Shortlist
+  // / Reject controls must mount; confirmation dialogs open without error.
+  const cards = page.getByTestId('candidate-card')
+  const cardCount = await cards.count()
+  if (cardCount === 0) {
+    await expect(page.getByText(/no candidates in this stage/i)).toBeVisible()
+    return
+  }
+
+  const firstCard = cards.first()
+  await expect(firstCard.getByTestId('candidate-star-toggle')).toBeVisible()
+  await expect(firstCard.getByTestId('candidate-shortlist')).toBeVisible()
+
+  const status = await firstCard.getByTestId('candidate-status').innerText()
+  if (/rejected/i.test(status)) {
+    // Rejected cards hide Reject and disable Shortlist.
+    await expect(firstCard.getByTestId('candidate-reject')).toHaveCount(0)
+    return
+  }
+
+  await expect(firstCard.getByTestId('candidate-reject')).toBeVisible()
+  await firstCard.getByTestId('candidate-reject').click()
+  await expect(page.getByTestId('candidate-reject-dialog')).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByTestId('candidate-reject-dialog')).toHaveCount(0)
+
+  const shortlist = firstCard.getByTestId('candidate-shortlist')
+  if (await shortlist.isEnabled()) {
+    await shortlist.click()
+    await expect(page.getByTestId('candidate-shortlist-dialog')).toBeVisible()
+    await expect(page.getByText(/will be moved to the next hiring stage/i)).toBeVisible()
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.getByTestId('candidate-shortlist-dialog')).toHaveCount(0)
+  }
 })
 
 test('candidate board is server-rendered on first paint (no client fetch)', async ({

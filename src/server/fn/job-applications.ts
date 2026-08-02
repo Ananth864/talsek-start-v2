@@ -5,23 +5,24 @@ import { authMiddleware } from '../middleware/auth'
 import type { Database } from '#/integrations/supabase/types'
 
 /**
- * Job Applications read path — the candidate pipeline board (ticket #6). Ports
- * the source's `useCandidates` / `useJobStages` read surface behind user-scoped
- * server functions so Row-Level Security owns company scoping (ADR-0004):
- * there is no manual `.eq('job.company_id', …)` filter anywhere here (the
- * source carried one; it is deleted in the port). The select shape, the
- * `active`/`rejected` status window, the `final_score` ordering, and the
+ * Job Applications read + write path — the candidate pipeline board (tickets
+ * #6 read, #8 mutations). Ports the source's `useCandidates` / `useJobStages`
+ * read surface and the star / reject / stage-move write surface behind
+ * user-scoped server functions so Row-Level Security owns company scoping
+ * (ADR-0004): there is no manual `.eq('job.company_id', …)` filter anywhere
+ * here (the source carried one; it is deleted in the port). The select shape,
+ * the `active`/`rejected` status window, the `final_score` ordering, and the
  * `['job-applications', jobId, companyId]` / `['job-stages', jobId, companyId]`
  * query keys (see `src/lib/job-applications-shared.ts`) match the source
- * verbatim so later mutation/realtime invalidation ports unchanged.
+ * verbatim so mutation/realtime invalidation ports unchanged.
  *
  * The source serves the board from a per-stage *infinite* query
  * (`candidates-by-stage-infinite`). The read path here uses the source's
  * job-wide `useCandidates` shape as the single board query and groups by stage
  * client-side — this gives a clean SSR first paint (one prefetch in the loader)
  * while keeping the realtime-invalidatable `['job-applications', jobId]` key.
- * Paginated per-stage fetching ports with the candidate write-path tickets.
- * See ADR-0011.
+ * Paginated per-stage fetching ports with later write-path tickets.
+ * See ADR-0011 / ADR-0013.
  */
 
 /**
@@ -120,4 +121,99 @@ export const fetchJobStages = createServerFn({ method: 'GET' })
     )
     if (error) throw new Error(`Failed to load job stages: ${error.message}`)
     return rows
+  })
+
+// ─── Job Applications write path (#8) ────────────────────────────────────
+//
+// Ports the source's client-side star / reject updates and the stage-advance
+// half of shortlist as user-scoped server functions (ADR-0002/ADR-0004). The
+// Reachout send (source `bulk-shortlist-candidates` edge fn) is deferred
+// to the bulk-shortlist / reachout tickets (#10 / #16); Shortlist on the card
+// advances `current_stage_id` only. UPDATEs run on `context.supabase`, so the
+// admin-only `job_applications` UPDATE RLS policy applies (ADR-0013).
+
+const applicationIdSchema = z.object({
+  applicationId: z.string().min(1),
+})
+
+const toggleStarredSchema = applicationIdSchema.extend({
+  starred: z.boolean(),
+})
+
+const moveStageSchema = applicationIdSchema.extend({
+  jobId: z.string().min(1),
+  targetStageId: z.string().min(1),
+})
+
+export type ToggleJobApplicationStarredInput = z.infer<typeof toggleStarredSchema>
+export type RejectJobApplicationInput = z.infer<typeof applicationIdSchema>
+export type MoveJobApplicationStageInput = z.infer<typeof moveStageSchema>
+
+/**
+ * Toggle the starred flag on a Job Application (source: `useToggleStarred`).
+ */
+export const toggleJobApplicationStarred = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(toggleStarredSchema)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from('job_applications')
+      .update({ starred: data.starred })
+      .eq('id', data.applicationId)
+    if (error) {
+      throw new Error(`Failed to update favorite: ${error.message}`)
+    }
+    return { ok: true as const }
+  })
+
+/**
+ * Reject a Job Application by setting `status` to `rejected` (source:
+ * `useRejectCandidate`). The row stays in the board status window
+ * (`active`/`rejected`); the card shows the Rejected badge.
+ */
+export const rejectJobApplication = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(applicationIdSchema)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from('job_applications')
+      .update({ status: 'rejected' })
+      .eq('id', data.applicationId)
+    if (error) {
+      throw new Error(`Failed to reject candidate: ${error.message}`)
+    }
+    return { ok: true as const }
+  })
+
+/**
+ * Move a Job Application to another Job Stage on the same Job (the stage
+ * advance half of source shortlist). Verifies the target stage belongs to the
+ * declared Job before writing — the client supplies `jobId` for the check; RLS
+ * still owns company scoping on both tables.
+ */
+export const moveJobApplicationStage = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(moveStageSchema)
+  .handler(async ({ data, context }) => {
+    const { data: stage, error: stageError } = await context.supabase
+      .from('job_stages')
+      .select('id, job_id')
+      .eq('id', data.targetStageId)
+      .maybeSingle()
+    if (stageError) {
+      throw new Error(`Failed to resolve target stage: ${stageError.message}`)
+    }
+    if (!stage || stage.job_id !== data.jobId) {
+      throw new Error('Target stage does not belong to this job')
+    }
+
+    const { error } = await context.supabase
+      .from('job_applications')
+      .update({ current_stage_id: data.targetStageId })
+      .eq('id', data.applicationId)
+      .eq('job_id', data.jobId)
+    if (error) {
+      throw new Error(`Failed to move candidate: ${error.message}`)
+    }
+    return { ok: true as const }
   })

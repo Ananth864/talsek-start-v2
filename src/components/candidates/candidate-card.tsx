@@ -1,8 +1,24 @@
 import { useState } from 'react'
-import { ExternalLink, Sparkles, Star } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  ExternalLink,
+  Loader,
+  Sparkles,
+  Star,
+  Trash2,
+} from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import { cn } from '#/lib/utils'
 import { countIncludedRequirements } from '#/lib/requirements'
 import { parsedSummary } from '#/lib/parsed-candidate'
@@ -11,14 +27,25 @@ import {
   normalizedMatchScore,
   scoreBand,
 } from '#/lib/job-applications-shared'
+import {
+  currentStageName,
+  nextStageForApplication,
+} from '#/lib/candidate-stage-navigation'
+import { useToggleStarred } from '#/hooks/use-toggle-starred'
+import { useRejectCandidate } from '#/hooks/use-reject-candidate'
+import { useMoveJobApplicationStage } from '#/hooks/use-move-job-application-stage'
 import { ScoreRing } from './score-ring'
 import { CandidateProfileDialog } from './candidate-profile-dialog'
-import type { JobApplicationRow } from '#/server/fn/job-applications'
+import type {
+  JobApplicationRow,
+  JobStageRow,
+} from '#/server/fn/job-applications'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
 
 type CandidateCardProps = {
   application: JobApplicationRow
   job: JobWithCompanyRow
+  stages: JobStageRow[]
 }
 
 function formatDate(iso: string | null | undefined) {
@@ -28,22 +55,29 @@ function formatDate(iso: string | null | undefined) {
 }
 
 /**
- * A candidate row in the board (read path). Ports the visible surface of the
- * source's `CandidateCard`: match-score ring, name/email/applied date, resume
- * link, parsed-data summary (current role, experience, top skills), requirement
- * badges, and the Processing Status. The "AI Analysis" action opens the
- * candidate profile detail (`CandidateProfileDialog`, ticket #7). The write
- * actions (Shortlist, Reject, star toggle) port with the candidate write-path
- * tickets — the star renders read-only here.
+ * A candidate row in the board. Ports the source's `CandidateCard` read surface
+ * plus the #8 write actions: star toggle, Shortlist (stage advance; Reachout
+ * send deferred to #10/#16), and Reject with confirmation.
  */
-export function CandidateCard({ application, job }: CandidateCardProps) {
+export function CandidateCard({ application, job, stages }: CandidateCardProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isRejectOpen, setIsRejectOpen] = useState(false)
+  const [isShortlistOpen, setIsShortlistOpen] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const toggleStarred = useToggleStarred()
+  const rejectCandidate = useRejectCandidate()
+  const moveStage = useMoveJobApplicationStage()
+
   const score = normalizedMatchScore(application)
   const parsed = parsedSummary(application.parsed_candidate_data)
   const email = application.candidate.email
   const name = application.candidate_name || parsed.name || email || 'Candidate'
   const applied = formatDate(application.created_at)
   const status = applicationStatusMeta(application.status)
+  const isRejected = application.status === 'rejected'
+  const nextStage = nextStageForApplication(application, stages)
+  const canShortlist = Boolean(nextStage) && !isRejected
 
   const preferredTotal = countIncludedRequirements(
     job.preferred_requirements,
@@ -55,6 +89,68 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
     'non_negotiable',
   )
   const allNonNegMet = application.meets_all_non_negotiables
+
+  const starringId = toggleStarred.isPending
+    ? toggleStarred.variables.applicationId
+    : null
+  const rejectingId = rejectCandidate.isPending
+    ? rejectCandidate.variables.applicationId
+    : null
+  const shortlistingId = moveStage.isPending
+    ? moveStage.variables.applicationId
+    : null
+  const isStarring = starringId === application.id
+  const isRejecting = rejectingId === application.id
+  const isShortlisting = shortlistingId === application.id
+
+  const handleStarToggle = () => {
+    setActionError(null)
+    toggleStarred.mutate(
+      { applicationId: application.id, starred: !application.starred },
+      {
+        onError: (err) => {
+          setActionError(
+            err instanceof Error ? err.message : 'Could not update favorite',
+          )
+        },
+      },
+    )
+  }
+
+  const handleRejectConfirm = () => {
+    setActionError(null)
+    rejectCandidate.mutate(
+      { applicationId: application.id },
+      {
+        onSuccess: () => setIsRejectOpen(false),
+        onError: (err) => {
+          setActionError(
+            err instanceof Error ? err.message : 'Failed to reject candidate',
+          )
+        },
+      },
+    )
+  }
+
+  const handleShortlistConfirm = () => {
+    if (!nextStage) return
+    setActionError(null)
+    moveStage.mutate(
+      {
+        applicationId: application.id,
+        jobId: job.id,
+        targetStageId: nextStage.id,
+      },
+      {
+        onSuccess: () => setIsShortlistOpen(false),
+        onError: (err) => {
+          setActionError(
+            err instanceof Error ? err.message : 'Failed to move candidate',
+          )
+        },
+      },
+    )
+  }
 
   return (
     <Card
@@ -73,9 +169,27 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
                 <h4 className="truncate text-sm font-semibold" title={name}>
                   {name}
                 </h4>
-                {application.starred ? (
-                  <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                ) : null}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0"
+                  onClick={handleStarToggle}
+                  disabled={isStarring}
+                  aria-label={
+                    application.starred ? 'Unstar candidate' : 'Star candidate'
+                  }
+                  data-testid="candidate-star-toggle"
+                >
+                  <Star
+                    className={cn(
+                      'size-3.5',
+                      application.starred
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'text-muted-foreground',
+                    )}
+                  />
+                </Button>
               </div>
               {email && email !== name ? (
                 <p className="truncate text-xs text-muted-foreground" title={email}>
@@ -132,7 +246,7 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
               ) : null}
             </div>
 
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Badge variant={status.variant} data-testid="candidate-status">
                   {status.label}
@@ -143,7 +257,7 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
                   </span>
                 ) : null}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {application.resume_url ? (
                   <a
                     href={application.resume_url}
@@ -165,8 +279,67 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
                   <Sparkles className="size-3" />
                   AI Analysis
                 </Button>
+                {!isRejected ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 px-2 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setActionError(null)
+                      setIsRejectOpen(true)
+                    }}
+                    disabled={isRejecting}
+                    data-testid="candidate-reject"
+                  >
+                    {isRejecting ? (
+                      <Loader className="size-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3" />
+                    )}
+                    {isRejecting ? 'Rejecting…' : 'Reject'}
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    'h-7 gap-1 px-2 text-[11px]',
+                    canShortlist
+                      ? 'border-emerald-400/60 text-emerald-600 hover:bg-emerald-500/10 dark:border-emerald-500/40 dark:text-emerald-200'
+                      : 'text-muted-foreground',
+                  )}
+                  onClick={() => {
+                    setActionError(null)
+                    setIsShortlistOpen(true)
+                  }}
+                  disabled={!canShortlist || isShortlisting}
+                  title={
+                    canShortlist
+                      ? undefined
+                      : isRejected
+                        ? 'Rejected candidates cannot be shortlisted'
+                        : 'No further stage in this pipeline'
+                  }
+                  data-testid="candidate-shortlist"
+                >
+                  {isShortlisting ? (
+                    <Loader className="size-3 animate-spin" />
+                  ) : (
+                    <Check className="size-3" />
+                  )}
+                  {isShortlisting
+                    ? 'Shortlisting…'
+                    : isRejected
+                      ? 'Rejected'
+                      : 'Shortlist'}
+                </Button>
               </div>
             </div>
+            {actionError ? (
+              <p className="text-[11px] text-destructive" role="alert">
+                {actionError}
+              </p>
+            ) : null}
           </div>
         </div>
       </CardContent>
@@ -177,6 +350,83 @@ export function CandidateCard({ application, job }: CandidateCardProps) {
         open={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
       />
+
+      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <DialogContent data-testid="candidate-reject-dialog">
+          <DialogHeader>
+            <DialogTitle>Reject Candidate</DialogTitle>
+            <DialogDescription>
+              This candidate will be marked Rejected on the board. Are you sure
+              you want to reject {name}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsRejectOpen(false)}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleRejectConfirm}
+              disabled={isRejecting}
+              data-testid="candidate-reject-confirm"
+            >
+              {isRejecting ? 'Rejecting…' : 'Yes, Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isShortlistOpen} onOpenChange={setIsShortlistOpen}>
+        <DialogContent data-testid="candidate-shortlist-dialog">
+          <DialogHeader>
+            <DialogTitle>Shortlist Candidate</DialogTitle>
+            <DialogDescription>
+              Move {name} to the next hiring stage. Sending a Reachout ports
+              with a later ticket; this advances the pipeline stage now.
+            </DialogDescription>
+          </DialogHeader>
+          {nextStage ? (
+            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-primary">
+              <div className="flex items-center justify-center gap-3 text-sm font-medium">
+                <span className="font-semibold">
+                  {currentStageName(application)}
+                </span>
+                <ArrowRight className="size-4" />
+                <span className="font-semibold text-emerald-600 dark:text-emerald-300">
+                  {nextStage.name}
+                </span>
+              </div>
+              <p className="mt-2 text-center text-xs">
+                This candidate will be moved to the next hiring stage
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsShortlistOpen(false)}
+              disabled={isShortlisting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleShortlistConfirm}
+              disabled={!nextStage || isShortlisting}
+              data-testid="candidate-shortlist-confirm"
+            >
+              {isShortlisting ? 'Shortlisting…' : 'Confirm Shortlist'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

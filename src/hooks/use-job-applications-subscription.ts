@@ -1,12 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { QueryKey } from '@tanstack/react-query'
-import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { supabaseBrowser } from '#/lib/supabase'
 import {
   jobApplicationsQueryKey,
   jobStagesQueryKey,
 } from '#/lib/job-applications-shared'
+
+type JobApplicationRealtimeRow = {
+  id?: string
+  current_stage_id?: string | null
+  status?: string | null
+}
 
 /**
  * Realtime bridge for the candidate board — the port's first Realtime
@@ -14,14 +20,17 @@ import {
  * one Supabase Realtime channel per selected Job, scoped to `job_applications`
  * rows for that Job, invalidating the React Query caches that own the board.
  *
+ * Event-type narrowing matches the source: invalidate on INSERT, on UPDATE
+ * that changes `current_stage_id`, and on UPDATE that changes `status`. Other
+ * UPDATEs (e.g. `starred`) are skipped — mutations invalidate their own keys.
+ *
  * Because reads go through user-scoped server functions (ADR-0004), the client
  * never reads business data directly — but Realtime channels still authorize
  * via the user JWT on the browser client, and RLS filters the payloads, so the
  * invalidation is the only client-side effect. The board uses job-wide query
  * keys (`['job-applications', jobId, companyId]`, `['job-stages', jobId,
- * companyId]`), so any change to the Job's applications refetches the whole
- * board — the source's per-stage narrowing ports when the per-stage infinite
- * query lands.
+ * companyId]`), so any qualifying change refetches the whole board — the
+ * source's per-stage narrowing ports when the per-stage infinite query lands.
  *
  * @param jobId     the selected Job id (no-op when empty)
  * @param companyId the Member's company id (namespaces the invalidated keys)
@@ -39,6 +48,12 @@ export function useJobApplicationsSubscription(
     const applicationsKey = jobApplicationsQueryKey(jobId, companyId)
     const stagesKey = jobStagesQueryKey(jobId, companyId)
     const keysToInvalidate: QueryKey[] = [applicationsKey, stagesKey]
+
+    const invalidateBoard = () => {
+      for (const key of keysToInvalidate) {
+        void queryClient.invalidateQueries({ queryKey: key })
+      }
+    }
 
     if (channelRef.current) {
       supabaseBrowser.removeChannel(channelRef.current)
@@ -58,14 +73,26 @@ export function useJobApplicationsSubscription(
           table: 'job_applications',
           filter: `job_id=eq.${jobId}`,
         },
-        (payload) => {
-          // Any INSERT / UPDATE / DELETE on this Job's applications refreshes
-          // the board. (The source narrows per affected stage; the job-wide key
-          // makes that unnecessary here — a background refetch re-sorts the
-          // whole board.) `payload` is intentionally unused beyond triggering.
-          void payload
-          for (const key of keysToInvalidate) {
-            void queryClient.invalidateQueries({ queryKey: key })
+        (payload: RealtimePostgresChangesPayload<JobApplicationRealtimeRow>) => {
+          const next = payload.new as JobApplicationRealtimeRow | Record<string, never>
+          const prev = payload.old as JobApplicationRealtimeRow | Record<string, never>
+
+          const isNewApplication = payload.eventType === 'INSERT'
+          const isStageChange =
+            payload.eventType === 'UPDATE' &&
+            'current_stage_id' in next &&
+            'current_stage_id' in prev &&
+            next.current_stage_id !== prev.current_stage_id
+          const isStatusChange =
+            payload.eventType === 'UPDATE' &&
+            'status' in next &&
+            'status' in prev &&
+            next.status !== prev.status
+
+          // Source parity: mutations that only touch fields like `starred`
+          // handle their own cache invalidation; skip the double-fetch here.
+          if (isNewApplication || isStageChange || isStatusChange) {
+            invalidateBoard()
           }
         },
       )
