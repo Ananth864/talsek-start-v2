@@ -8,6 +8,7 @@ import type { ModelMessage, Schema } from 'ai'
 import type { z } from 'zod'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createXai } from '@ai-sdk/xai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { serverEnv } from '../env'
 
 /**
@@ -16,11 +17,11 @@ import { serverEnv } from '../env'
  * reliability layer ports near-verbatim; only the environment access changes
  * (`Deno.env.get` → validated `serverEnv`).
  *
- * Provider scope: only the providers the Jobs domain uses are wired here —
- * OpenAI (primary) and xAI/Grok (fallback). Gemini + Groq are not installed;
- * they land with the resume/email AI-pipeline domains that exercise them. A
- * caller requesting an unconfigured provider gets a clear error rather than a
- * silent failure.
+ * Provider scope for the domains ported so far: OpenAI, xAI/Grok, and Gemini
+ * (Resume Extraction primary / Email Analysis fallback — #9). Groq remains
+ * unwired until a domain selects it as a language-model primary/fallback
+ * (Whisper transcription is a separate path). A caller requesting an
+ * unconfigured provider gets a clear error rather than a silent failure.
  */
 
 type JSONValue =
@@ -32,10 +33,12 @@ type JSONValue =
   | JSONValue[]
 type ProviderOptions = Record<string, Record<string, JSONValue>>
 
-export type AiProvider = 'openai' | 'grok'
+export type AiProvider = 'openai' | 'grok' | 'gemini'
 
 function getModelName(provider: AiProvider): string {
-  return provider === 'openai' ? 'GPT-5 Mini' : 'Grok-4 Fast'
+  if (provider === 'openai') return 'GPT-5 Mini'
+  if (provider === 'gemini') return 'Gemini 2.5 Flash'
+  return 'Grok-4 Fast'
 }
 
 /**
@@ -55,6 +58,17 @@ function getModelByProvider(provider: AiProvider) {
       baseURL: serverEnv.OPENAI_BASE_URL,
     })
     return openai('gpt-5-mini')
+  }
+  if (provider === 'gemini') {
+    if (!serverEnv.GEMINI_API_KEY) {
+      throw new Error(
+        'GEMINI_API_KEY is not configured — set it to use the Gemini provider.',
+      )
+    }
+    const google = createGoogleGenerativeAI({
+      apiKey: serverEnv.GEMINI_API_KEY,
+    })
+    return google('gemini-2.5-flash')
   }
   // grok (xAI)
   if (!serverEnv.GROK_API_KEY) {

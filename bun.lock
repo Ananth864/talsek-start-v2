@@ -5,6 +5,7 @@
     "": {
       "name": "talsek_start",
       "dependencies": {
+        "@ai-sdk/google": "^2",
         "@ai-sdk/openai": "^2",
         "@ai-sdk/xai": "^2",
         "@radix-ui/react-checkbox": "^1.2.2",
@@ -61,6 +62,8 @@
   },
   "packages": {
     "@ai-sdk/gateway": ["@ai-sdk/gateway@2.0.124", "", { "dependencies": { "@ai-sdk/provider": "2.0.3", "@ai-sdk/provider-utils": "3.0.31", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-qrzQl7/Extk7GRPNYqOq7l/3RkO04pNW2t8Jx3Z6uNctxW/xV26mJ6LxbxAy/daqY7QGMaY/SThpH17GoqFByw=="],
+
+    "@ai-sdk/google": ["@ai-sdk/google@2.0.86", "", { "dependencies": { "@ai-sdk/provider": "2.0.3", "@ai-sdk/provider-utils": "3.0.31" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-MudH/IVlfPu6Z8KJBUEhGgfzRJ1WYfaFikshlYxbrwbKYQXXCnx17cts2rIO5RZwJ9Uq2trM8q9WYZyZCOZ6MA=="],
 
     "@ai-sdk/openai": ["@ai-sdk/openai@2.0.117", "", { "dependencies": { "@ai-sdk/provider": "2.0.3", "@ai-sdk/provider-utils": "3.0.31" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-fqr2OwpegPlS58NUAat4+6cAOR/x1askt5dXKY1rCjDyhHJYxm2OZM9fZnG9I717ny4uRSp2mhsMio2uthA0Pg=="],
 

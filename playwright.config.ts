@@ -41,5 +41,11 @@ export default defineConfig({
         reuseExistingServer: true,
         timeout: 120_000,
         cwd: target === 'source' ? '../talsek' : undefined,
+        // Stub the Resume AI pipeline so #9 E2E exercises the sync chain
+        // without multi-minute hedged provider calls (ADR-0014 §5).
+        env:
+          target === 'new'
+            ? { ...process.env, AI_PIPELINE_STUB: '1' }
+            : undefined,
       },
 })

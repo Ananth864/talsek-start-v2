@@ -9,6 +9,7 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  RefreshCw,
   Star,
   TrendingUp,
   XCircle,
@@ -37,6 +38,7 @@ import {
   parseEmailBody,
 } from '#/lib/candidate-profile-model'
 import { matchBadgeVariant } from '#/lib/job-applications-shared'
+import { useProcessJobApplicationPipeline } from '#/hooks/use-process-job-application-pipeline'
 import { CandidateProfilePDFRenderer } from './candidate-profile-pdf-renderer'
 import type { JobApplicationRow } from '#/server/fn/job-applications'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
@@ -118,7 +120,9 @@ export function CandidateProfileDialog({
 }: CandidateProfileDialogProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [pipelineError, setPipelineError] = useState<string | null>(null)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
+  const processPipeline = useProcessJobApplicationPipeline()
 
   const model = candidateProfileModel(application, job)
   const {
@@ -158,6 +162,20 @@ export function CandidateProfileDialog({
       setExportError('Failed to export the profile as PDF.')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const handleRerunPipeline = async () => {
+    setPipelineError(null)
+    try {
+      await processPipeline.mutateAsync({ applicationId: application.id })
+    } catch (error) {
+      console.error('Resume AI pipeline failed:', error)
+      setPipelineError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to run the Resume AI pipeline.',
+      )
     }
   }
 
@@ -222,6 +240,25 @@ export function CandidateProfileDialog({
               <Button
                 size="sm"
                 variant="outline"
+                onClick={handleRerunPipeline}
+                disabled={processPipeline.isPending || !application.resume_url}
+                data-testid="profile-rerun-ai"
+              >
+                {processPipeline.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Running AI…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="size-4" />
+                    Re-run AI
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={handleDownloadPdf}
                 disabled={isExporting}
                 data-testid="profile-download-pdf"
@@ -242,6 +279,14 @@ export function CandidateProfileDialog({
           </div>
           {exportError ? (
             <p className="text-sm text-destructive">{exportError}</p>
+          ) : null}
+          {pipelineError ? (
+            <p
+              className="text-sm text-destructive"
+              data-testid="profile-rerun-ai-error"
+            >
+              {pipelineError}
+            </p>
           ) : null}
         </DialogHeader>
 
@@ -351,7 +396,9 @@ export function CandidateProfileDialog({
                   ) : null}
 
                   <div className="grid grid-cols-1 gap-6">
-                    {analysis && analysis.strengths_for_role.length > 0 ? (
+                    {analysis &&
+                    Array.isArray(analysis.strengths_for_role) &&
+                    analysis.strengths_for_role.length > 0 ? (
                       <Card>
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-base">
@@ -375,7 +422,9 @@ export function CandidateProfileDialog({
                       </Card>
                     ) : null}
 
-                    {analysis && analysis.potential_concerns.length > 0 ? (
+                    {analysis &&
+                    Array.isArray(analysis.potential_concerns) &&
+                    analysis.potential_concerns.length > 0 ? (
                       <Card>
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-base">
