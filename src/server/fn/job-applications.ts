@@ -128,8 +128,8 @@ export const fetchJobStages = createServerFn({ method: 'GET' })
 // Ports the source's client-side star / reject updates and the stage-advance
 // half of shortlist as user-scoped server functions (ADR-0002/ADR-0004). The
 // Reachout send (source `bulk-shortlist-candidates` edge fn) is deferred
-// to the bulk-shortlist / reachout tickets (#10 / #16); Shortlist on the card
-// advances `current_stage_id` only. UPDATEs run on `context.supabase`, so the
+// to #16; Shortlist on the card and bulk shortlist (#10) advance
+// `current_stage_id` only (ADR-0016). UPDATEs run on `context.supabase`, so the
 // admin-only `job_applications` UPDATE RLS policy applies (ADR-0013).
 
 const applicationIdSchema = z.object({

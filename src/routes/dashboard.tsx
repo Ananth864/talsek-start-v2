@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   createFileRoute,
+  Link,
   redirect,
   useNavigate,
 } from '@tanstack/react-router'
 import { useQuery, queryOptions } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { fetchJobs, fetchMemberProfile } from '#/server/fn/jobs'
 import { getAuthState, signOut } from '#/server/fn/auth'
 import { jobsQueryKey } from '#/lib/jobs-shared'
@@ -188,6 +189,12 @@ function DashboardPage() {
       <header className="flex items-center justify-between border-b p-4">
         <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/bulk-upload" data-testid="bulk-upload-nav">
+              <Upload className="size-4" />
+              Bulk upload
+            </Link>
+          </Button>
           {canCreateJob ? (
             <Button
               size="sm"

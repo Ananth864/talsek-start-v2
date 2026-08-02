@@ -11,6 +11,7 @@ import {
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
+import { Checkbox } from '#/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,11 @@ type CandidateCardProps = {
   application: JobApplicationRow
   job: JobWithCompanyRow
   stages: JobStageRow[]
+  /** When set, the card is in bulk-selection mode (ticket #10). */
+  selection?: {
+    selected: boolean
+    onToggle: () => void
+  }
 }
 
 function formatDate(iso: string | null | undefined) {
@@ -57,9 +63,15 @@ function formatDate(iso: string | null | undefined) {
 /**
  * A candidate row in the board. Ports the source's `CandidateCard` read surface
  * plus the #8 write actions: star toggle, Shortlist (stage advance; Reachout
- * send deferred to #10/#16), and Reject with confirmation.
+ * send deferred to #16), and Reject with confirmation. Optional `selection`
+ * enables bulk shortlist checkboxes (#10).
  */
-export function CandidateCard({ application, job, stages }: CandidateCardProps) {
+export function CandidateCard({
+  application,
+  job,
+  stages,
+  selection,
+}: CandidateCardProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [isShortlistOpen, setIsShortlistOpen] = useState(false)
@@ -155,13 +167,24 @@ export function CandidateCard({ application, job, stages }: CandidateCardProps) 
   return (
     <Card
       data-testid="candidate-card"
+      data-application-id={application.id}
       className={cn(
         'border border-l-4 bg-card transition-shadow hover:shadow-md',
         scoreBand(score).border,
+        selection?.selected && 'ring-2 ring-primary/40',
       )}
     >
       <CardContent className="p-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          {selection ? (
+            <Checkbox
+              checked={selection.selected}
+              onCheckedChange={() => selection.onToggle()}
+              aria-label={`Select ${name}`}
+              data-testid="candidate-bulk-select"
+              className="mt-1"
+            />
+          ) : null}
           <div className="flex min-w-0 max-w-full items-center gap-3 lg:basis-[34%] lg:max-w-[34%]">
             <ScoreRing score={score} />
             <div className="min-w-0 flex-1">
@@ -388,7 +411,7 @@ export function CandidateCard({ application, job, stages }: CandidateCardProps) 
             <DialogTitle>Shortlist Candidate</DialogTitle>
             <DialogDescription>
               Move {name} to the next hiring stage. Sending a Reachout ports
-              with a later ticket; this advances the pipeline stage now.
+              with ticket #16; this advances the pipeline stage now.
             </DialogDescription>
           </DialogHeader>
           {nextStage ? (
