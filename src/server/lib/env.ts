@@ -13,6 +13,12 @@ export const serverEnv = createEnv({
     SUPABASE_ANON_KEY: z.string().min(1),
     // Only required for admin/webhook/cron flows; user-scoped flows work without it.
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    // AI providers (ADR-0005). Optional: when absent, AI-backed server functions
+    // fall back to a deterministic stub so the flow is exercisable in dev/E2E
+    // without real provider credentials. Production sets these.
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    OPENAI_BASE_URL: z.string().url().optional(),
+    GROK_API_KEY: z.string().min(1).optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},

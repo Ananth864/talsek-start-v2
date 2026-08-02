@@ -1,16 +1,18 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   createFileRoute,
   redirect,
   useNavigate,
 } from '@tanstack/react-router'
 import { useQuery, queryOptions } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import { fetchJobs, fetchMemberProfile } from '#/server/fn/jobs'
 import { getAuthState, signOut } from '#/server/fn/auth'
 import { jobsQueryKey } from '#/lib/jobs-shared'
 import { Button } from '#/components/ui/button'
 import { JobsList } from '#/components/jobs/jobs-list'
 import { JobDetail } from '#/components/jobs/job-detail'
+import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 
 export const Route = createFileRoute('/dashboard')({
   validateSearch: (search: Record<string, unknown>): {
@@ -32,8 +34,15 @@ export const Route = createFileRoute('/dashboard')({
     // Load the Member's company context once here so it flows into the loader
     // (for the query key) and the component (for cache reads). Identity is
     // verified by the guard above; RLS owns company scoping on every read.
+    // The permissions capability flags are surfaced to the component for UX
+    // gating (e.g. showing the Create-Job button); the authoritative
+    // `canCreateJob` check lives in the createJob server fn (ADR-0004).
     const profile = await fetchMemberProfile()
-    return { companyId: profile?.company_id ?? null }
+    return {
+      companyId: profile?.company_id ?? null,
+      canCreateJob: Boolean(profile?.permissions.canCreateJob),
+      companyName: profile?.companies?.name ?? '',
+    }
   },
   loader: async ({ context }) => {
     // Prefetch + dehydrate the Jobs list for SSR first paint (ADR-0007). The
@@ -53,9 +62,10 @@ const jobsQueryOptions = (companyId: string | null) =>
   })
 
 function DashboardPage() {
-  const { companyId } = Route.useRouteContext()
+  const { companyId, canCreateJob, companyName } = Route.useRouteContext()
   const navigate = useNavigate()
   const search = Route.useSearch()
+  const [createOpen, setCreateOpen] = useState(false)
 
   const { data: jobs = [], isLoading, error } = useQuery(
     jobsQueryOptions(companyId),
@@ -125,17 +135,29 @@ function DashboardPage() {
     <div className="mx-auto flex h-svh max-w-6xl flex-col">
       <header className="flex items-center justify-between border-b p-4">
         <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault()
-            await signOut()
-            window.location.href = '/signin'
-          }}
-        >
-          <Button type="submit" variant="ghost" size="sm">
-            Sign out
-          </Button>
-        </form>
+        <div className="flex items-center gap-2">
+          {canCreateJob ? (
+            <Button
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+              data-testid="create-job-button"
+            >
+              <Plus className="size-4" />
+              Create job
+            </Button>
+          ) : null}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              await signOut()
+              window.location.href = '/signin'
+            }}
+          >
+            <Button type="submit" variant="ghost" size="sm">
+              Sign out
+            </Button>
+          </form>
+        </div>
       </header>
 
       <main className="flex flex-1 flex-col overflow-hidden md:flex-row">
@@ -150,6 +172,14 @@ function DashboardPage() {
         />
         <JobDetail job={selectedJob} />
       </main>
+
+      {canCreateJob ? (
+        <JobCreationDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          companyName={companyName}
+        />
+      ) : null}
     </div>
   )
 }

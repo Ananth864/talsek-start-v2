@@ -1,16 +1,27 @@
 // Shared JSON shapes -------------------------------------------------
 // Audit log metadata (currently unstructured but JSON object if present)
 //
-// NOTE: the precise shapes for CreateJobInput / FormQuestion /
-// JobMatchCoreAnalysis / ParsedJobData / ResumeExtraction are ported with
-// their owning domains (AI pipeline + forms). Kept loose here so the
-// generated Database type compiles standalone without dragging in the
-// (replaced) edge-function schema tree.
-type CreateJobInput = Record<string, unknown>
+// NOTE: the precise shapes for FormQuestion / JobMatchCoreAnalysis /
+// ResumeExtraction are ported with their owning domains (AI pipeline + forms).
+// Kept loose here so the generated Database type compiles standalone without
+// dragging in the (replaced) edge-function schema tree.
+// `ParsedJobData` and `ScreeningInterviewInformation` are narrowed to concrete
+// shapes now that the Jobs write path (#5) owns them — this also makes both
+// JSON columns serializable across the server-function boundary (ADR-0009 §1),
+// so they are re-added to the canonical Jobs select.
 type FormQuestion = Record<string, unknown>
 type JobMatchCoreAnalysis = Record<string, unknown>
-type ParsedJobData = Record<string, unknown>
 type ResumeExtraction = Record<string, unknown>
+
+// AI-extracted job-description analysis (parse-job-description output). Mirrors
+// the source's `jobParsingSchema` so the create-job payload and the stored
+// column share one typed shape.
+export type ParsedJobData = {
+  preferred_requirements: string[]
+  non_negotiables: string[]
+  role_readiness_summary: string
+  role_readiness_questions: string[]
+}
 
 // Company settings payload stored in JSONB column
 export type ReachoutTemplateJson = {
@@ -80,11 +91,28 @@ export type PotentialConcernJson = {
 export type ResumeExtractionJson = ResumeExtraction;
 
 // Job parsing outputs
-export type ParsedJobDataJson = ParsedJobData;
+export type ParsedJobDataJson = ParsedJobData
 
-// Screening interview configuration stored on job
-export type ScreeningInterviewInformationJson =
-  CreateJobInput["screeningInterviewInformation"];
+// Screening interview configuration stored on job. For `resume_only` an empty
+// object is stored; for `resume_interview` the full shape is populated. Matches
+// the source's `screeningInterviewInformationSchema` + the column comment.
+export type ScreeningInterviewInformationJson = {
+  expected_joining_date:
+    | 'Immediately (0-1 Month)'
+    | 'In 1-2 Months'
+    | 'In 2-3 Months'
+  job_type: {
+    mode:
+      | 'Remote (Anywhere)'
+      | 'Remote (In Country)'
+      | 'Hybrid'
+      | 'Work From office'
+    location: string
+    work_arrangement: string
+  }
+  shift_timings: { start: string; end: string }
+  travel_requirements: string
+}
 
 // Interview session context
 export type InterviewQuestionTypeJson =

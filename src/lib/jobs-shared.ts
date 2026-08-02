@@ -15,6 +15,24 @@ import type { JobWithCompanyRow } from '#/server/fn/jobs'
 export const jobsQueryKey = (companyId: string | null | undefined) =>
   ['jobs', companyId ?? null] as const
 
+/**
+ * The Jobs query-key prefix used by create/update mutations (and, later,
+ * realtime) to invalidate every company-namespaced Jobs query. Centralised here
+ * so the prefix value lives next to `jobsQueryKey` rather than being re-literalled
+ * at each invalidation site (ADR-0009 §2).
+ */
+export const JOBS_QUERY_KEY_PREFIX = ['jobs'] as const
+
+/**
+ * Currency symbol by ISO code, used to format a Job's salary range for storage
+ * (source parity: `${symbol}${amount}`). Client-safe so the create dialog and
+ * the server fn share one table.
+ */
+export const SALARY_CURRENCY_PREFIX = {
+  USD: '$',
+  INR: '₹',
+} as const
+
 const STATUS_LABEL: Record<string, string> = {
   active: 'Active',
   paused: 'Paused',
