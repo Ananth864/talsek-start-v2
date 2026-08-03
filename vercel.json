@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/billing-auto-refill",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/daily-email-notifications",
+      "schedule": "30 14 * * *"
     }
   ]
 }

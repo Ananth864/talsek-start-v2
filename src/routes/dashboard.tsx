@@ -6,7 +6,7 @@ import {
   useNavigate,
 } from '@tanstack/react-router'
 import { useQuery, queryOptions } from '@tanstack/react-query'
-import { Plus, Upload } from 'lucide-react'
+import { Bell, Plus, Upload } from 'lucide-react'
 import { fetchJobs, fetchMemberProfile } from '#/server/fn/jobs'
 import { getAuthState, signOut } from '#/server/fn/auth'
 import { jobsQueryKey } from '#/lib/jobs-shared'
@@ -14,10 +14,17 @@ import { jobApplicationsQueryOptions } from '#/hooks/use-job-applications'
 import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
 import { useJobApplicationsSubscription } from '#/hooks/use-job-applications-subscription'
 import { Button } from '#/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import { JobsList } from '#/components/jobs/jobs-list'
 import { JobDetail } from '#/components/jobs/job-detail'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 import { CandidatesList } from '#/components/candidates/candidates-list'
+import { NotificationPreferencesPanel } from '#/components/notification-preferences'
 
 export const Route = createFileRoute('/dashboard')({
   validateSearch: (search: Record<string, unknown>): {
@@ -46,6 +53,7 @@ export const Route = createFileRoute('/dashboard')({
     // `canCreateJob` check lives in the createJob server fn (ADR-0004).
     const profile = await fetchMemberProfile()
     return {
+      userId: profile?.id ?? null,
       companyId: profile?.company_id ?? null,
       canCreateJob: Boolean(profile?.permissions.canCreateJob),
       canManageTemplates: Boolean(profile?.permissions.canManageTemplates),
@@ -88,11 +96,12 @@ const jobsQueryOptions = (companyId: string | null) =>
   })
 
 function DashboardPage() {
-  const { companyId, canCreateJob, canManageForms, companyName } =
+  const { userId, companyId, canCreateJob, canManageForms, companyName } =
     Route.useRouteContext()
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [createOpen, setCreateOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   const { data: jobs = [], isLoading, error } = useQuery(
     jobsQueryOptions(companyId),
@@ -215,6 +224,15 @@ function DashboardPage() {
               Billing
             </Link>
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="notifications-nav"
+            onClick={() => setNotificationsOpen(true)}
+          >
+            <Bell className="size-4" />
+            Notifications
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link to="/bulk-upload" data-testid="bulk-upload-nav">
               <Upload className="size-4" />
@@ -281,6 +299,15 @@ function DashboardPage() {
           companyName={companyName}
         />
       ) : null}
+
+      <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <DialogContent data-testid="notifications-dialog">
+          <DialogHeader>
+            <DialogTitle>Notification preferences</DialogTitle>
+          </DialogHeader>
+          <NotificationPreferencesPanel userId={userId} />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

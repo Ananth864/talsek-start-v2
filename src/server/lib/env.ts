@@ -42,13 +42,22 @@ export const serverEnv = createEnv({
     BILLING_STUB: z.enum(['1', 'true']).optional(),
     // Guards /api/cron/* (ticket #14). Vercel Cron sends Authorization: Bearer.
     CRON_SECRET: z.string().min(1).optional(),
-    // Resend (ticket #15 invite email; #17 will deepen notifications).
-    // Optional locally: when absent (or EMAIL_STUB set), invite sends no-op.
+    // Resend (ticket #15 invite; #17 digests / booking confirmations).
+    // Optional locally: when absent (or EMAIL_STUB set), sends no-op.
     RESEND_API_KEY: z.string().min(1).optional(),
     RESEND_INVITE_FROM: z.string().min(1).optional(),
     RESEND_INVITE_REPLY_TO: z.string().min(1).optional(),
     RESEND_INVITE_SUBJECT: z.string().min(1).optional(),
+    RESEND_NOTIFICATIONS_FROM: z.string().min(1).optional(),
     EMAIL_STUB: z.enum(['1', 'true']).optional(),
+    // Signed inbound email webhook (SendGrid Inbound Parse → /api/webhooks/email).
+    // Bearer token or ?secret= query (ADR-0022). Playwright pins a value.
+    EMAIL_WEBHOOK_SECRET: z.string().min(1).optional(),
+    // Cal.com booking confirmation webhook (/api/webhooks/cal-booking).
+    CAL_WEBHOOK_SECRET: z.string().min(1).optional(),
+    CAL_BOOKING_FROM_EMAIL: z.string().min(1).optional(),
+    CAL_BOOKING_REPLY_TO_EMAIL: z.string().min(1).optional(),
+    CAL_BOOKING_VIDEO_URL: z.string().url().optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},

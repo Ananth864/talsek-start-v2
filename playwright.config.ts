@@ -55,6 +55,16 @@ export default defineConfig({
                   process.env.CRON_SECRET && process.env.CRON_SECRET.length > 0
                     ? process.env.CRON_SECRET
                     : 'e2e-cron-secret',
+                EMAIL_WEBHOOK_SECRET:
+                  process.env.EMAIL_WEBHOOK_SECRET &&
+                  process.env.EMAIL_WEBHOOK_SECRET.length > 0
+                    ? process.env.EMAIL_WEBHOOK_SECRET
+                    : 'e2e-email-webhook-secret',
+                CAL_WEBHOOK_SECRET:
+                  process.env.CAL_WEBHOOK_SECRET &&
+                  process.env.CAL_WEBHOOK_SECRET.length > 0
+                    ? process.env.CAL_WEBHOOK_SECRET
+                    : 'e2e-cal-webhook-secret',
               }
             : undefined,
       },

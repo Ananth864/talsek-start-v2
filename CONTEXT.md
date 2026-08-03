@@ -123,3 +123,23 @@ score and recommendation. Triggered after Resume Extraction completes.
 
 **Email Analysis**:
 AI assessment of an inbound candidate email's substance for the recruiter.
+
+## Notifications & email
+
+**Notification Preferences**:
+A Member's opt-in for outbound email digests, stored as
+`profiles.email_notifications_enabled` (default true). Distinct from
+`Profile.permissions` capability flags.
+_Avoid_: settings (too generic), email-settings.
+
+**Daily Digest**:
+A once-per-day Resend summary of new Job Applications (last 24h IST), gated by
+Notification Preferences via `application_summary_view`. Triggered by
+secret-guarded Vercel Cron.
+_Avoid_: daily-email, notification-blast.
+
+**Inbound Email Webhook**:
+Signed API route that receives candidate resumes via email (SendGrid Inbound
+Parse shape), creates a Job Application with `processing_source: "email"`, and
+runs the AI pipeline (including Email Analysis when a body is present).
+_Avoid_: email-ingest (prefer the webhook name).
