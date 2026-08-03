@@ -48,6 +48,8 @@ export const Route = createFileRoute('/dashboard')({
     return {
       companyId: profile?.company_id ?? null,
       canCreateJob: Boolean(profile?.permissions.canCreateJob),
+      canManageTemplates: Boolean(profile?.permissions.canManageTemplates),
+      canManageForms: Boolean(profile?.permissions.canManageForms),
       companyName: profile?.companies?.name ?? '',
     }
   },
@@ -86,7 +88,8 @@ const jobsQueryOptions = (companyId: string | null) =>
   })
 
 function DashboardPage() {
-  const { companyId, canCreateJob, companyName } = Route.useRouteContext()
+  const { companyId, canCreateJob, canManageForms, companyName } =
+    Route.useRouteContext()
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [createOpen, setCreateOpen] = useState(false)
@@ -195,6 +198,19 @@ function DashboardPage() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
+            <Link
+              to="/reachout-templates"
+              data-testid="reachout-templates-nav"
+            >
+              Templates
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/form-settings" data-testid="form-settings-nav">
+              Forms
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/billing" data-testid="billing-nav">
               Billing
             </Link>
@@ -241,7 +257,11 @@ function DashboardPage() {
         />
         {selectedJob ? (
           <div className="flex flex-1 flex-col overflow-hidden">
-            <JobDetail job={selectedJob} />
+            <JobDetail
+              job={selectedJob}
+              companyId={companyId}
+              canManageForms={canManageForms}
+            />
             <CandidatesList
               job={selectedJob}
               companyId={companyId}

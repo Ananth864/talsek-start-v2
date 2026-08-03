@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import type { FormQuestion, FormSubmissionDataJson } from '#/integrations/supabase/types'
+import { MANDATORY_QUESTIONS } from '#/lib/form-questions-shared'
 import {
   CandidateTokenError,
   candidateTokenMiddleware,
@@ -9,48 +10,6 @@ import {
   InsufficientCreditsError,
   processJobApplicationPipeline,
 } from '../lib/ai/process-job-application-pipeline'
-
-const MANDATORY_QUESTIONS: FormQuestion[] = [
-  {
-    id: 'name',
-    baseId: 'name',
-    type: 'text',
-    label: 'Full Name',
-    placeholder: 'Enter your full name',
-    required: true,
-    isMandatory: true,
-    isCustom: false,
-  },
-  {
-    id: 'email',
-    baseId: 'email',
-    type: 'email',
-    label: 'Email Address',
-    placeholder: 'Enter your email address',
-    required: true,
-    isMandatory: true,
-    isCustom: false,
-  },
-  {
-    id: 'phone',
-    baseId: 'phone',
-    type: 'number',
-    label: 'Phone Number',
-    placeholder: 'Enter your phone number',
-    required: true,
-    isMandatory: true,
-    isCustom: false,
-  },
-  {
-    id: 'resume',
-    baseId: 'resume',
-    type: 'file',
-    label: 'Resume',
-    required: true,
-    isMandatory: true,
-    isCustom: false,
-  },
-]
 
 function buildQuestions(
   jobSpecific: FormQuestion[] | null,

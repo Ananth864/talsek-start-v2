@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Globe, Mail, MapPin, Banknote } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import {
   Card,
   CardContent,
@@ -7,12 +9,15 @@ import {
   CardTitle,
 } from '#/components/ui/card'
 import { Separator } from '#/components/ui/separator'
+import { JobFormConfigDialog } from '#/components/forms/job-form-config-dialog'
 import { countIncludedRequirements } from '#/lib/requirements'
 import { getFormConfig, jobStatusMeta } from '#/lib/jobs-shared'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
 
 type JobDetailProps = {
   job?: JobWithCompanyRow
+  companyId?: string | null
+  canManageForms?: boolean
 }
 
 function formatDate(iso: string | null | undefined) {
@@ -21,23 +26,47 @@ function formatDate(iso: string | null | undefined) {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString()
 }
 
-function FormState({ job }: { job: JobWithCompanyRow }) {
+function FormState({
+  job,
+  onConfigure,
+  canManageForms,
+}: {
+  job: JobWithCompanyRow
+  onConfigure: () => void
+  canManageForms: boolean
+}) {
   const formConfig = getFormConfig(job)
-  if (!formConfig) {
-    return <DetailRow label="Application form" value="Not configured" />
-  }
   const expired =
-    formConfig.expires_at && new Date(formConfig.expires_at) < new Date()
-  const state = !formConfig.is_enabled
-    ? 'Disabled'
-    : expired
-      ? 'Expired'
-      : 'Enabled'
+    formConfig?.expires_at && new Date(formConfig.expires_at) < new Date()
+  const state = !formConfig
+    ? 'Not configured'
+    : !formConfig.is_enabled
+      ? 'Disabled'
+      : expired
+        ? 'Expired'
+        : 'Enabled'
+  const detail = formConfig
+    ? `${state} · token ${formConfig.form_url_token.slice(0, 8)}…`
+    : state
+
   return (
-    <DetailRow
-      label="Application form"
-      value={`${state} · token ${formConfig.form_url_token.slice(0, 8)}…`}
-    />
+    <div className="flex items-start justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">Form Config</span>
+      <div className="flex flex-col items-end gap-1">
+        <span className="text-right font-medium break-words">{detail}</span>
+        {canManageForms ? (
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            onClick={onConfigure}
+            data-testid="configure-job-form"
+          >
+            {formConfig ? 'Edit form' : 'Configure form'}
+          </Button>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
@@ -67,7 +96,13 @@ function DetailRow({
  * source shows alongside it is a later ticket; this pane establishes the
  * detail context a selected Job opens into.
  */
-export function JobDetail({ job }: JobDetailProps) {
+export function JobDetail({
+  job,
+  companyId = null,
+  canManageForms = false,
+}: JobDetailProps) {
+  const [formConfigOpen, setFormConfigOpen] = useState(false)
+
   if (!job) {
     return (
       <div
@@ -152,9 +187,21 @@ export function JobDetail({ job }: JobDetailProps) {
 
           <Separator />
 
-          <FormState job={job} />
+          <FormState
+            job={job}
+            canManageForms={canManageForms}
+            onConfigure={() => setFormConfigOpen(true)}
+          />
         </CardContent>
       </Card>
+
+      <JobFormConfigDialog
+        open={formConfigOpen}
+        onOpenChange={setFormConfigOpen}
+        companyId={companyId}
+        jobId={job.id}
+        jobTitle={job.title}
+      />
     </div>
   )
 }
