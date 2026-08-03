@@ -40,6 +40,8 @@ export const serverEnv = createEnv({
     APP_ENV: z.string().min(1).optional(),
     // When "1"/"true", billing server fns skip live Dodo calls (Playwright).
     BILLING_STUB: z.enum(['1', 'true']).optional(),
+    // Guards /api/cron/* (ticket #14). Vercel Cron sends Authorization: Bearer.
+    CRON_SECRET: z.string().min(1).optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},

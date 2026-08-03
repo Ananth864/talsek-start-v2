@@ -661,3 +661,100 @@ export const getInvoicePdf = createServerFn({ method: 'GET' })
       filename: `invoice-${data.paymentId}.pdf`,
     }
   })
+
+// ─── Auto-refill settings (#14) ──────────────────────────────────────────
+
+export type BillingSettingsRow = {
+  company_id: string
+  auto_refill_enabled: boolean
+  auto_refill_threshold_credits: number
+  auto_refill_amount_cents: number
+  low_balance_alert_threshold: number
+  last_auto_refill_at: string
+}
+
+export const fetchBillingSettings = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<BillingSettingsRow | null> => {
+    await requireMemberCompanyId(
+      context.supabase,
+      context.session.user.id,
+    )
+    // Company scoping via RLS (ADR-0004) — no manual .eq('company_id').
+    const { data, error } = await context.supabase
+      .from('company_settings')
+      .select(
+        `company_id, auto_refill_enabled, auto_refill_threshold_credits,
+         auto_refill_amount_cents, low_balance_alert_threshold, last_auto_refill_at`,
+      )
+      .maybeSingle()
+    if (error) {
+      throw new Error(`Failed to load billing settings: ${error.message}`)
+    }
+    return data
+  })
+
+const updateBillingSettingsInput = z.object({
+  auto_refill_enabled: z.boolean(),
+  auto_refill_threshold_credits: z.number().int().min(50).max(10000),
+  auto_refill_amount_cents: z
+    .number()
+    .int()
+    .min(100, 'Minimum auto-refill amount is $1.00'),
+})
+
+export const updateBillingSettings = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(updateBillingSettingsInput)
+  .handler(async ({ context, data }): Promise<BillingSettingsRow> => {
+    const companyId = await requireMemberCompanyId(
+      context.supabase,
+      context.session.user.id,
+    )
+
+    // User-scoped writes — RLS `user_is_company_admin` gates UPDATE/INSERT
+    // (ADR-0004 / ADR-0019 §7). Do not bypass with getAdminClient.
+    const { data: existing } = await context.supabase
+      .from('company_settings')
+      .select('company_id')
+      .maybeSingle()
+
+    if (existing) {
+      const { data: updated, error } = await context.supabase
+        .from('company_settings')
+        .update({
+          auto_refill_enabled: data.auto_refill_enabled,
+          auto_refill_threshold_credits: data.auto_refill_threshold_credits,
+          auto_refill_amount_cents: data.auto_refill_amount_cents,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('company_id', companyId)
+        .select(
+          `company_id, auto_refill_enabled, auto_refill_threshold_credits,
+           auto_refill_amount_cents, low_balance_alert_threshold, last_auto_refill_at`,
+        )
+        .single()
+      if (error) {
+        throw new Error(`Failed to update billing settings: ${error.message}`)
+      }
+      return updated
+    }
+
+    const { data: inserted, error } = await context.supabase
+      .from('company_settings')
+      .insert({
+        company_id: companyId,
+        auto_refill_enabled: data.auto_refill_enabled,
+        auto_refill_threshold_credits: data.auto_refill_threshold_credits,
+        auto_refill_amount_cents: data.auto_refill_amount_cents,
+      })
+      .select(
+        `company_id, auto_refill_enabled, auto_refill_threshold_credits,
+         auto_refill_amount_cents, low_balance_alert_threshold, last_auto_refill_at`,
+      )
+      .single()
+    if (error) {
+      throw new Error(`Failed to create billing settings: ${error.message}`)
+    }
+    return inserted
+  })

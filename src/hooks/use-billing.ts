@@ -1,13 +1,16 @@
-import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchActiveSubscriptions,
+  fetchBillingSettings,
   fetchCompanyPayments,
   fetchCreditBalance,
   fetchServiceRates,
+  updateBillingSettings,
 } from '#/server/fn/billing'
 import type {
   ActiveSubscriptions,
   BillingPaymentRow,
+  BillingSettingsRow,
 } from '#/server/fn/billing'
 
 export const creditBalanceQueryKey = (companyId: string | null) =>
@@ -90,6 +93,43 @@ export function useServiceRates(companyId: string | null) {
   return useQuery(serviceRatesQueryOptions(companyId))
 }
 
+export const billingSettingsQueryKey = (companyId: string | null) =>
+  ['billing-settings', companyId] as const
+
+export const billingSettingsQueryOptions = (companyId: string | null) =>
+  queryOptions({
+    queryKey: billingSettingsQueryKey(companyId),
+    queryFn: () => fetchBillingSettings(),
+    enabled: !!companyId,
+    staleTime: 60_000,
+  })
+
+export function useBillingSettings(companyId: string | null) {
+  const query = useQuery(billingSettingsQueryOptions(companyId))
+  return {
+    settings: query.data ?? null,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}
+
+export function useUpdateBillingSettings(companyId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (updates: {
+      auto_refill_enabled: boolean
+      auto_refill_threshold_credits: number
+      auto_refill_amount_cents: number
+    }) => updateBillingSettings({ data: updates }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: billingSettingsQueryKey(companyId),
+      })
+    },
+  })
+}
+
 export function useInvalidateBilling(companyId: string | null) {
   const queryClient = useQueryClient()
   return () => {
@@ -102,7 +142,10 @@ export function useInvalidateBilling(companyId: string | null) {
     void queryClient.invalidateQueries({
       queryKey: companyPaymentsQueryKey(companyId),
     })
+    void queryClient.invalidateQueries({
+      queryKey: billingSettingsQueryKey(companyId),
+    })
   }
 }
 
-export type { BillingPaymentRow, ActiveSubscriptions }
+export type { BillingPaymentRow, ActiveSubscriptions, BillingSettingsRow }

@@ -37,6 +37,7 @@ import {
   resolveCurrentPlanLabel,
 } from '#/lib/billing-shared'
 import type { PlanType } from '#/lib/billing-shared'
+import { AutoRefillSettings } from '#/components/billing/auto-refill-settings'
 import { CustomTopupInput } from '#/components/billing/custom-topup-input'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -563,6 +564,10 @@ function BillingPage() {
             </Card>
 
             <CustomTopupInput companyId={companyId} onMessage={onMessage} />
+
+            {companyId ? (
+              <AutoRefillSettings companyId={companyId} onMessage={onMessage} />
+            ) : null}
 
             <Card className="border-0 shadow-md">
               <CardHeader>

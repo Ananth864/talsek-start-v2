@@ -92,3 +92,23 @@ export async function requireMemberCompanyId(
   if (!data?.company_id) throw new Error('Member has no company')
   return data.company_id
 }
+
+/** Reverse lookup for webhook company resolution (service-role). */
+export async function lookupCompanyByDodoCustomer(
+  dodoCustomerId: string,
+): Promise<string | null> {
+  const admin = getAdminClient()
+  const { data, error } = await admin
+    .from('billing_customers')
+    .select('company_id')
+    .eq('dodo_customer_id', dodoCustomerId)
+    .maybeSingle()
+  if (error) {
+    console.error(
+      'Failed to lookup company by Dodo customer:',
+      error.message,
+    )
+    return null
+  }
+  return data?.company_id ?? null
+}
