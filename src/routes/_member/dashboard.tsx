@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, queryOptions } from '@tanstack/react-query'
 import { fetchJobs } from '#/server/fn/jobs'
-import { jobsQueryKey } from '#/lib/jobs-shared'
+import { jobsQueryKey, filterJobsBySearch } from '#/lib/jobs-shared'
 import { jobApplicationsQueryOptions } from '#/hooks/use-job-applications'
 import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
 import { useJobApplicationsSubscription } from '#/hooks/use-job-applications-subscription'
@@ -124,15 +124,10 @@ function DashboardContent({
   // Dashboard level.
   useJobApplicationsSubscription(selectedJobId, companyId)
 
-  const filteredJobs = useMemo(() => {
-    if (!searchTerm.trim()) return jobs
-    const q = searchTerm.toLowerCase().trim()
-    return jobs.filter(
-      (job) =>
-        job.title.toLowerCase().includes(q) ||
-        job.job_posting_link.toLowerCase().includes(q),
-    )
-  }, [jobs, searchTerm])
+  const filteredJobs = useMemo(
+    () => filterJobsBySearch(jobs, searchTerm),
+    [jobs, searchTerm],
+  )
 
   // Selection is carried by the `?jobId=` search param (source parity). The
   // selected Job is resolved from the full list so it stays available even when
@@ -144,9 +139,12 @@ function DashboardContent({
   // (source parity: the held id would otherwise reference a hidden Job).
   useEffect(() => {
     if (filteredJobs.length > 0) {
-      const stillValid =
+      const validInAll =
         !!selectedJobId && jobs.some((job) => job.id === selectedJobId)
-      if (!stillValid) {
+      const validInFiltered =
+        !!selectedJobId &&
+        filteredJobs.some((job) => job.id === selectedJobId)
+      if (!selectedJobId || (!validInAll && !validInFiltered)) {
         void navigate({
           to: '/dashboard',
           search: {
@@ -156,7 +154,7 @@ function DashboardContent({
           replace: true,
         })
       }
-    } else if (jobs.length > 0 && selectedJobId) {
+    } else if (filteredJobs.length === 0 && selectedJobId && jobs.length > 0) {
       void navigate({
         to: '/dashboard',
         search: { jobSearch: searchTerm || undefined },
@@ -204,43 +202,54 @@ function DashboardContent({
   }
 
   return (
-    <div className="flex h-svh flex-col">
-      <header className="flex items-center justify-between border-b px-4 py-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
-      </header>
+    <div className="flex h-svh flex-col overflow-hidden">
+      {/* Visually hidden page title — source has no Jobs chrome header (#37). */}
+      <h1 className="sr-only">Jobs</h1>
 
-      <main className="flex flex-1 flex-col overflow-hidden md:flex-row">
-        <JobsList
-          jobs={filteredJobs}
-          selectedJobId={selectedJobId}
-          onJobSelect={handleJobSelect}
-          searchTerm={searchTerm}
-          onSearchTermChange={handleSearchChange}
-          loading={isLoading}
-          error={error}
-          companyId={companyId}
-          canCreateJob={canCreateJob}
-          canManageForms={canManageForms}
-          onCreateJob={() => setCreateOpen(true)}
-        />
-        {selectedJob ? (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <CandidatesList
-              job={selectedJob}
-              companyId={companyId}
-              userId={userId}
-              canSendReachout={canSendReachout}
-              activeStageId={selectedStageId}
-              onStageChange={handleStageSelect}
-            />
+      <main className="flex flex-1 flex-col overflow-hidden overflow-x-hidden md:flex-row">
+        {isLoading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-muted-foreground">Loading jobs…</div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-destructive">
+              Error loading jobs: {error.message}
+            </div>
           </div>
         ) : (
-          <div
-            data-testid="candidates-empty"
-            className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
-          >
-            Select a job to view its candidates.
-          </div>
+          <>
+            <JobsList
+              jobs={jobs}
+              selectedJobId={selectedJobId}
+              onJobSelect={handleJobSelect}
+              searchTerm={searchTerm}
+              onSearchTermChange={handleSearchChange}
+              companyId={companyId}
+              canCreateJob={canCreateJob}
+              canManageForms={canManageForms}
+              onCreateJob={() => setCreateOpen(true)}
+            />
+            {selectedJob ? (
+              <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                <CandidatesList
+                  job={selectedJob}
+                  companyId={companyId}
+                  userId={userId}
+                  canSendReachout={canSendReachout}
+                  activeStageId={selectedStageId}
+                  onStageChange={handleStageSelect}
+                />
+              </div>
+            ) : (
+              <div
+                data-testid="candidates-empty"
+                className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+              >
+                Select a job to view its candidates.
+              </div>
+            )}
+          </>
         )}
       </main>
 

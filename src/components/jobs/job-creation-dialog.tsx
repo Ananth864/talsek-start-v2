@@ -274,9 +274,11 @@ export function JobCreationDialog({
         >
           <DialogHeader>
             <DialogTitle>
-              {step === 1 ? 'Create a job' : 'Review requirements'}
+              {step === 1 ? 'Job Details' : 'Review Requirements'}
             </DialogTitle>
             <DialogDescription>
+              <span data-testid="job-creation-step">Step {step} of 2</span>
+              {' — '}
               {step === 1
                 ? 'Paste a raw job description and Talsek extracts structured requirements.'
                 : 'Edit the extracted requirements, then create the job.'}
@@ -420,7 +422,7 @@ export function JobCreationDialog({
                   Back
                 </Button>
                 <Button onClick={handleSubmit} disabled={creating}>
-                  {creating ? 'Creating…' : 'Create job'}
+                  {creating ? 'Creating…' : 'Create Job Posting'}
                 </Button>
               </DialogFooter>
             </div>

@@ -73,3 +73,17 @@ export function getJobApplyFormLink(
   if (config.expires_at && new Date(config.expires_at) < new Date()) return null
   return `${origin}/apply/${config.form_url_token}`
 }
+
+/** Title / posting-code filter used by the dashboard Jobs panel (#37). */
+export function filterJobsBySearch(
+  jobs: JobWithCompanyRow[],
+  searchTerm: string,
+): JobWithCompanyRow[] {
+  if (!searchTerm.trim()) return jobs
+  const q = searchTerm.toLowerCase().trim()
+  return jobs.filter(
+    (job) =>
+      job.title.toLowerCase().includes(q) ||
+      job.job_posting_link.toLowerCase().includes(q),
+  )
+}
