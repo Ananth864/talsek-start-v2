@@ -10,6 +10,11 @@ type DashboardCompanyGuardProps = {
   userName?: string | null
 }
 
+const handleClose = async () => {
+  await signOut()
+  window.location.href = '/signin'
+}
+
 /**
  * Blocks dashboard (and any wrapped Member surface) until the Profile has a
  * Company. Closing the dialog signs the Member out — company setup cannot be
@@ -36,11 +41,6 @@ export function DashboardCompanyGuard({
     })
     // Re-run beforeLoad so companyId flows into the Jobs query key.
     await router.invalidate()
-  }
-
-  const handleClose = async () => {
-    await signOut()
-    window.location.href = '/signin'
   }
 
   return (

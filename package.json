@@ -30,11 +30,9 @@
     "@radix-ui/react-checkbox": "^1.2.2",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
-    "@radix-ui/react-hover-card": "^1.1.10",
     "@radix-ui/react-separator": "^1.1.4",
     "@radix-ui/react-slot": "^1.2.0",
     "@radix-ui/react-tooltip": "^1.2.16",
-    "@sentry/tanstackstart-react": "^10.67.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",
     "@t3-oss/env-core": "^0.13.10",
@@ -47,7 +45,6 @@
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
-    "@tanstack/store": "latest",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.1",
     "ai": "^5",
@@ -94,8 +91,7 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "lightningcss",
-      "sharp",
-      "@sentry/cli"
+      "sharp"
     ]
   }
 }

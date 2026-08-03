@@ -71,6 +71,32 @@ const isValidEmail = (email: string) =>
 
 const createRowId = () => crypto.randomUUID()
 
+const toStoredRows = (rowsToStore: BulkFileRow[]): StoredBulkFileRow[] =>
+  rowsToStore.map((r) => ({
+    id: r.id,
+    fileName: r.fileName,
+    fileSize: r.fileSize,
+    status: r.status,
+    message: r.message,
+    candidateEmail: r.candidateEmail,
+    manualEmail: r.manualEmail,
+  }))
+
+const mergeUpdateIntoStorage = (
+  id: string,
+  updates: Partial<StoredBulkFileRow>,
+) => {
+  try {
+    const stored = JSON.parse(
+      sessionStorage.getItem(STORAGE_KEY_ROWS) ?? '[]',
+    ) as StoredBulkFileRow[]
+    const next = stored.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    sessionStorage.setItem(STORAGE_KEY_ROWS, JSON.stringify(next))
+  } catch {
+    // ignore storage errors
+  }
+}
+
 type BulkUploadPageProps = {
   companyId: string | null
 }
@@ -90,32 +116,6 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
   const [rows, setRows] = useState<BulkFileRow[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
-
-  const toStoredRows = (rowsToStore: BulkFileRow[]): StoredBulkFileRow[] =>
-    rowsToStore.map((r) => ({
-      id: r.id,
-      fileName: r.fileName,
-      fileSize: r.fileSize,
-      status: r.status,
-      message: r.message,
-      candidateEmail: r.candidateEmail,
-      manualEmail: r.manualEmail,
-    }))
-
-  const mergeUpdateIntoStorage = (
-    id: string,
-    updates: Partial<StoredBulkFileRow>,
-  ) => {
-    try {
-      const stored = JSON.parse(
-        sessionStorage.getItem(STORAGE_KEY_ROWS) ?? '[]',
-      ) as StoredBulkFileRow[]
-      const next = stored.map((r) => (r.id === id ? { ...r, ...updates } : r))
-      sessionStorage.setItem(STORAGE_KEY_ROWS, JSON.stringify(next))
-    } catch {
-      // ignore storage errors
-    }
-  }
 
   useEffect(() => {
     const stored = sessionStorage.getItem(STORAGE_KEY_ROWS)

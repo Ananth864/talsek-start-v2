@@ -128,6 +128,48 @@ function nextRequirementId(
   return `${prefix}_${max + 1}`
 }
 
+const toggleRequirement = (
+  list: RequirementItemJson[],
+  id: string,
+  onChange: (next: RequirementItemJson[]) => void,
+) => {
+  onChange(
+    list.map((req) =>
+      req.id === id
+        ? { ...req, include: req.include === false ? true : false }
+        : req,
+    ),
+  )
+}
+
+const updateRequirementText = (
+  list: RequirementItemJson[],
+  id: string,
+  text: string,
+  onChange: (next: RequirementItemJson[]) => void,
+) => {
+  onChange(list.map((req) => (req.id === id ? { ...req, text } : req)))
+}
+
+const removeRequirement = (
+  list: RequirementItemJson[],
+  id: string,
+  onChange: (next: RequirementItemJson[]) => void,
+) => {
+  onChange(list.filter((req) => req.id !== id))
+}
+
+const addRequirement = (
+  list: RequirementItemJson[],
+  prefix: 'preferred' | 'non_negotiable',
+  onChange: (next: RequirementItemJson[]) => void,
+) => {
+  onChange([
+    ...list,
+    { id: nextRequirementId(list, prefix), text: '', include: true },
+  ])
+}
+
 /**
  * Editable preferred / non-negotiable list: include/exclude, add, remove, and
  * text edit while in edit mode. View mode shows strikethrough for excluded
@@ -146,48 +188,6 @@ function RequirementsEditor({
   onPreferredChange: (next: RequirementItemJson[]) => void
   onNonNegotiablesChange: (next: RequirementItemJson[]) => void
 }) {
-  const toggle = (
-    list: RequirementItemJson[],
-    id: string,
-    onChange: (next: RequirementItemJson[]) => void,
-  ) => {
-    onChange(
-      list.map((req) =>
-        req.id === id
-          ? { ...req, include: req.include === false ? true : false }
-          : req,
-      ),
-    )
-  }
-
-  const updateText = (
-    list: RequirementItemJson[],
-    id: string,
-    text: string,
-    onChange: (next: RequirementItemJson[]) => void,
-  ) => {
-    onChange(list.map((req) => (req.id === id ? { ...req, text } : req)))
-  }
-
-  const remove = (
-    list: RequirementItemJson[],
-    id: string,
-    onChange: (next: RequirementItemJson[]) => void,
-  ) => {
-    onChange(list.filter((req) => req.id !== id))
-  }
-
-  const add = (
-    list: RequirementItemJson[],
-    prefix: 'preferred' | 'non_negotiable',
-    onChange: (next: RequirementItemJson[]) => void,
-  ) => {
-    onChange([
-      ...list,
-      { id: nextRequirementId(list, prefix), text: '', include: true },
-    ])
-  }
-
   const renderList = (
     label: string,
     testId: string,
@@ -220,7 +220,7 @@ function RequirementsEditor({
                   <Checkbox
                     checked={requirement.include !== false}
                     onCheckedChange={() =>
-                      toggle(list, requirement.id, onChange)
+                      toggleRequirement(list, requirement.id, onChange)
                     }
                     aria-label={`Include ${requirement.text || 'requirement'}`}
                     data-testid={`requirement-include-${requirement.id}`}
@@ -229,7 +229,12 @@ function RequirementsEditor({
                   <Input
                     value={requirement.text}
                     onChange={(e) =>
-                      updateText(list, requirement.id, e.target.value, onChange)
+                      updateRequirementText(
+                        list,
+                        requirement.id,
+                        e.target.value,
+                        onChange,
+                      )
                     }
                     aria-label={`${label} text`}
                     data-testid={`requirement-text-${requirement.id}`}
@@ -240,7 +245,9 @@ function RequirementsEditor({
                     variant="ghost"
                     size="icon"
                     className="size-8 shrink-0"
-                    onClick={() => remove(list, requirement.id, onChange)}
+                    onClick={() =>
+                      removeRequirement(list, requirement.id, onChange)
+                    }
                     aria-label={`Remove ${label.toLowerCase()} row`}
                     data-testid={`requirement-remove-${requirement.id}`}
                   >
@@ -277,7 +284,7 @@ function RequirementsEditor({
           variant="outline"
           size="sm"
           className="mt-2 w-fit"
-          onClick={() => add(list, prefix, onChange)}
+          onClick={() => addRequirement(list, prefix, onChange)}
           data-testid={`requirement-add-${prefix}`}
         >
           <Plus className="size-4" />

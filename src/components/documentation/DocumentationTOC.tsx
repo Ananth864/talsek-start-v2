@@ -11,6 +11,13 @@ type DocumentationTOCProps = {
   sections: Section[]
 }
 
+const scrollToSection = (id: string) => {
+  const element = document.getElementById(id)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
 export function DocumentationTOC({ sections }: DocumentationTOCProps) {
   const [activeId, setActiveId] = useState('')
 
@@ -35,13 +42,6 @@ export function DocumentationTOC({ sections }: DocumentationTOCProps) {
 
     return () => observer.disconnect()
   }, [sectionIds])
-
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
 
   return (
     <aside className="sticky top-32 hidden w-64 self-start lg:block xl:w-72">

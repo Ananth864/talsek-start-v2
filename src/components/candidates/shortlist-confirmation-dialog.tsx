@@ -24,6 +24,14 @@ const INTERVIEW_VARIABLE = {
   label: 'Interview Link',
 }
 
+const copyVariable = async (variable: string) => {
+  try {
+    await navigator.clipboard.writeText(variable)
+  } catch {
+    // Clipboard may be unavailable in some E2E / permission contexts.
+  }
+}
+
 type ShortlistConfirmationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -59,14 +67,6 @@ export function ShortlistConfirmationDialog({
 }: ShortlistConfirmationDialogProps) {
   const hasInterviewLink = messageBody.includes('{{interview_link}}')
   const isInterviewLinkMissing = requireInterviewLink && !hasInterviewLink
-
-  const copyVariable = async (variable: string) => {
-    try {
-      await navigator.clipboard.writeText(variable)
-    } catch {
-      // Clipboard may be unavailable in some E2E / permission contexts.
-    }
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

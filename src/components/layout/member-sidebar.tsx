@@ -58,6 +58,15 @@ type MemberSidebarProps = {
   avatarUrl?: string | null
 }
 
+const handleSignOut = async () => {
+  try {
+    await signOut()
+    window.location.href = '/signin'
+  } catch (error) {
+    console.error('[member-sidebar] Sign out failed:', error)
+  }
+}
+
 const dropdownButtonClasses =
   'w-full justify-between items-center gap-2 px-3 py-2 rounded-md bg-sidebar text-sidebar-foreground hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground transition-colors'
 
@@ -263,15 +272,6 @@ export function MemberSidebar({
   const { docsPath: currentDocsPath, pageName: currentPageName } =
     resolveDocsGuide(pathname)
   const isDocsActive = pathname.startsWith('/docs')
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      window.location.href = '/signin'
-    } catch (error) {
-      console.error('[member-sidebar] Sign out failed:', error)
-    }
-  }
 
   return (
     <>
