@@ -23,7 +23,7 @@ Manual companion to `dashboard-jobs.spec.ts` (ADR-0030 §5). Compare the port
 ## Create / success dialogs
 
 - [ ] Create opens 2-step wizard (ADR-0029): Job Details → Review Requirements
-- [ ] Step indicator “Step N of 2”; Back / Parse & review / Create Job Posting
+- [ ] Near-fullscreen wizard shell; progress segments; service-type cards; Key Details + JD two-column; sticky Cancel/Back | Next / Create Job Posting; confirm dialog before create
 - [ ] Success: forwarding email copy, optional form link, primary
       “Perfect! Let's start receiving applications” (Form Config remains opt-in)
 

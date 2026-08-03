@@ -147,7 +147,7 @@ test.describe('Dashboard / jobs layout parity', () => {
     await expect(page.getByTestId('job-detail')).toHaveCount(0)
   })
 
-  test('create-job opens dialog with 2-step primary actions', async ({
+  test('create-job opens fullscreen wizard with source chrome', async ({
     page,
   }) => {
     await signInAsMember(page)
@@ -159,15 +159,23 @@ test.describe('Dashboard / jobs layout parity', () => {
     await expect(dialog.getByTestId('job-creation-step')).toContainText(
       /Step 1 of 2/i,
     )
+    await expect(dialog.getByTestId('job-creation-progress')).toBeVisible()
     await expect(
-      dialog.getByRole('heading', { name: /Job Details|Select Screening/i }),
+      dialog.getByTestId('job-service-type-selection'),
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole('heading', { name: /Job Details/i }),
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole('heading', {
+        name: /Choose Your Screening Process/i,
+      }),
     ).toBeVisible()
     await expect(
       dialog.getByRole('button', { name: /^Cancel$/i }),
     ).toBeVisible()
-    await expect(
-      dialog.getByRole('button', { name: /Parse & review|Next/i }),
-    ).toBeVisible()
+    await expect(dialog.getByTestId('job-creation-next')).toHaveText(/^Next$/i)
+    await expect(dialog.getByTestId('job-description-input')).toBeVisible()
   })
 
   test('job-details pencil opens Edit Requirements entry point', async ({
