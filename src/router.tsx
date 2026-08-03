@@ -5,6 +5,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import TanstackQueryProvider, {
   getContext,
 } from './integrations/tanstack-query/root-provider'
+import { NotFoundPage } from '#/components/not-found'
 
 export function getRouter() {
   const context = getContext()
@@ -15,6 +16,7 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    defaultNotFoundComponent: NotFoundPage,
 
     Wrap: (props: { children: ReactNode }) => {
       return (

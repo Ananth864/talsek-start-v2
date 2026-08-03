@@ -23,6 +23,7 @@ import {
 import { JobsList } from '#/components/jobs/jobs-list'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 import { CandidatesList } from '#/components/candidates/candidates-list'
+import { CreditsExhaustedBanner } from '#/components/billing/credits-exhausted-banner'
 import { NotificationPreferencesPanel } from '#/components/notification-preferences'
 import { DashboardCompanyGuard } from '#/components/auth/dashboard-company-guard'
 
@@ -363,6 +364,8 @@ function DashboardContent({
           <NotificationPreferencesPanel userId={userId} />
         </DialogContent>
       </Dialog>
+
+      <CreditsExhaustedBanner companyId={companyId} />
     </div>
   )
 }

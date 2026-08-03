@@ -50,6 +50,8 @@ export function useShortlistActions({
   const [messageBody, setMessageBody] = useState('')
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({})
   const [preparingId, setPreparingId] = useState<string | null>(null)
+  const [isInsufficientCreditsModalOpen, setIsInsufficientCreditsModalOpen] =
+    useState(false)
 
   const templatesQuery = useReachoutTemplates(companyId)
   const saveTemplate = useSaveReachoutTemplate(companyId)
@@ -128,17 +130,13 @@ export function useShortlistActions({
       }
 
       const kind = templateKindForNextStage(target.name)
-      if (
-        kind === 'interview' &&
-        !creditsLoading &&
-        !ratesLoading &&
-        creditBalance < interviewCost
-      ) {
-        setErrorFor(
-          applicationId,
-          `Insufficient credits to shortlist for interview. Available: ${creditBalance}, required: ${interviewCost}. Top up on Billing.`,
-        )
-        return
+      if (kind === 'interview') {
+        // Wait until balance/rates are known — never skip the paid-action gate.
+        if (creditsLoading || ratesLoading) return
+        if (creditBalance < interviewCost) {
+          setIsInsufficientCreditsModalOpen(true)
+          return
+        }
       }
 
       setActiveApplicationId(applicationId)
@@ -321,6 +319,10 @@ export function useShortlistActions({
     setIsTemplateModalOpen,
     isShortlistModalOpen,
     setIsShortlistModalOpen,
+    isInsufficientCreditsModalOpen,
+    setIsInsufficientCreditsModalOpen,
+    creditBalance,
+    interviewCost,
     messageSubject,
     setMessageSubject,
     messageBody,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Users, XCircle } from 'lucide-react'
+import { Filter, Search, Users, XCircle } from 'lucide-react'
 import { useJobApplications } from '#/hooks/use-job-applications'
 import { useJobStages } from '#/hooks/use-job-stages'
 import { useBulkActionMode } from '#/hooks/use-bulk-action-mode'
@@ -10,15 +10,28 @@ import { useReachoutTemplates } from '#/hooks/use-reachout-templates'
 import { useCreditBalance, useServiceRates } from '#/hooks/use-billing'
 import { nextStageForApplication } from '#/lib/candidate-stage-navigation'
 import {
+  FILTER_OPTIONS,
+  filterCandidates,
+} from '#/lib/candidate-filters'
+import type { CandidateFilter } from '#/lib/candidate-filters'
+import {
   hasConfiguredTemplate,
   templateKindForNextStage,
 } from '#/lib/email-template-engine'
 import { parsedSummary } from '#/lib/parsed-candidate'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
 import { BulkActionConfirmBar } from '#/components/bulk/bulk-action-confirm-bar'
 import { BulkShortlistDialog } from '#/components/bulk/bulk-shortlist-dialog'
 import { BulkRejectDialog } from '#/components/bulk/bulk-reject-dialog'
+import { InsufficientCreditsModal } from '#/components/billing/insufficient-credits-modal'
 import { StageTabs } from './stage-tabs'
 import { CandidateCard } from './candidate-card'
 import { ShortlistConfirmationDialog } from './shortlist-confirmation-dialog'
@@ -65,12 +78,16 @@ export function CandidatesList({
   const interviewCost = serviceRates?.screening_interview_cost ?? 40
 
   const [search, setSearch] = useState('')
+  const [selectedFilter, setSelectedFilter] = useState<CandidateFilter>('all')
   const [isBulkShortlistOpen, setIsBulkShortlistOpen] = useState(false)
   const [isBulkRejectOpen, setIsBulkRejectOpen] = useState(false)
   const [isBulkTemplateSetupOpen, setIsBulkTemplateSetupOpen] = useState(false)
   const [bulkSubject, setBulkSubject] = useState('')
   const [bulkBody, setBulkBody] = useState('')
   const [bulkError, setBulkError] = useState<string | null>(null)
+  const [bulkCreditsGate, setBulkCreditsGate] = useState<{
+    required: number
+  } | null>(null)
   const bulkShortlist = useBulkShortlist()
   const bulkReject = useBulkReject()
 
@@ -95,10 +112,12 @@ export function CandidatesList({
     return map
   }, [applications])
 
+  // Stage → fit/status → search (source `useInfiniteCandidatesByStage` order).
   const visible = useMemo(() => {
-    let rows = applications.filter(
+    const inStage = applications.filter(
       (app) => app.current_stage_id === effectiveStageId,
     )
+    let rows = filterCandidates(inStage, selectedFilter, job)
     const term = search.trim().toLowerCase()
     if (term) {
       rows = rows.filter((app) => {
@@ -108,7 +127,7 @@ export function CandidatesList({
       })
     }
     return rows
-  }, [applications, effectiveStageId, search])
+  }, [applications, effectiveStageId, selectedFilter, job, search])
 
   const visibleIds = useMemo(() => visible.map((a) => a.id), [visible])
   const bulkState = useBulkActionMode(visibleIds)
@@ -185,16 +204,12 @@ export function CandidatesList({
       setBulkError('No further stage in this pipeline')
       return
     }
-    if (
-      bulkTemplateType === 'interview' &&
-      !creditsLoading &&
-      !ratesLoading
-    ) {
+    if (bulkTemplateType === 'interview') {
+      // Wait until balance/rates are known — never skip the paid-action gate.
+      if (creditsLoading || ratesLoading) return
       const totalCost = interviewCost * bulkState.selectedCount
       if (creditBalance < totalCost) {
-        setBulkError(
-          `Insufficient credits. Bulk interview shortlist requires ${totalCost} credits (${interviewCost} per candidate). You have ${creditBalance} credits.`,
-        )
+        setBulkCreditsGate({ required: totalCost })
         return
       }
     }
@@ -312,6 +327,18 @@ export function CandidatesList({
     : 'Candidate'
 
   const bulkPending = bulkShortlist.isPending || bulkReject.isPending
+  const insufficientCreditsOpen =
+    shortlist.isInsufficientCreditsModalOpen || !!bulkCreditsGate
+  const insufficientCreditsRequired =
+    bulkCreditsGate?.required ?? shortlist.interviewCost
+  const insufficientCreditsDescription = bulkCreditsGate
+    ? 'bulk interview shortlisting'
+    : 'scheduling an interview'
+
+  const closeInsufficientCredits = () => {
+    shortlist.setIsInsufficientCreditsModalOpen(false)
+    setBulkCreditsGate(null)
+  }
 
   return (
     <div
@@ -392,6 +419,35 @@ export function CandidatesList({
               </Button>
             </>
           )}
+          <Select
+            value={selectedFilter}
+            onValueChange={(value) =>
+              setSelectedFilter(value as CandidateFilter)
+            }
+            disabled={bulkState.isBulkMode}
+          >
+            <SelectTrigger
+              size="sm"
+              className="h-8 gap-1.5"
+              data-testid="fit-filter"
+              aria-label="Filter candidates by fit"
+            >
+              <Filter className="size-3.5" />
+              <SelectValue placeholder="Filter" />
+            </SelectTrigger>
+            <SelectContent align="end" className="w-64">
+              {FILTER_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  title={option.description}
+                  data-testid={`fit-filter-${option.value}`}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="relative w-full max-w-[220px]">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -401,6 +457,7 @@ export function CandidatesList({
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 pl-8 text-xs"
               aria-label="Search candidates"
+              data-testid="candidate-search"
               disabled={bulkState.isBulkMode}
             />
           </div>
@@ -426,7 +483,9 @@ export function CandidatesList({
           </p>
         ) : visible.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
-            No candidates in this stage.
+            {search.trim() || selectedFilter !== 'all'
+              ? 'No candidates match this filter.'
+              : 'No candidates in this stage.'}
           </p>
         ) : (
           <ul data-testid="candidate-cards" className="flex flex-col gap-2">
@@ -521,6 +580,14 @@ export function CandidatesList({
         candidateCount={bulkState.selectedCount}
         onConfirm={handleBulkRejectConfirm}
         isLoading={bulkReject.isPending}
+      />
+
+      <InsufficientCreditsModal
+        isOpen={insufficientCreditsOpen}
+        onClose={closeInsufficientCredits}
+        currentBalance={shortlist.creditBalance}
+        requiredCredits={insufficientCreditsRequired}
+        actionDescription={insufficientCreditsDescription}
       />
     </div>
   )
