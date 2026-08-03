@@ -15,7 +15,9 @@ export function getRouter() {
     context,
     scrollRestoration: true,
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    // Intent preloads stay fresh briefly so hovering nav doesn't re-hit
+    // loaders on every mouseenter (default 0 felt like lag on sidebar hops).
+    defaultPreloadStaleTime: 30_000,
     defaultNotFoundComponent: NotFoundPage,
 
     Wrap: (props: { children: ReactNode }) => {

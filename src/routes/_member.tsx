@@ -13,13 +13,22 @@ import {
   SidebarTrigger,
 } from '#/components/ui/sidebar'
 
+const MEMBER_AUTH_STALE_MS = 60_000
+
 /**
  * Pathless layout for all session-gated Member routes: shared auth/profile
  * context, company setup guard, and the collapsible sidebar shell (#25).
  */
 export const Route = createFileRoute('/_member')({
-  beforeLoad: async ({ location }) => {
-    const { user } = await getAuthState()
+  // Keep layout context fresh briefly so sidebar page hops don't re-hit
+  // getAuthState + fetchMemberProfile on every navigation (SPA kept auth in memory).
+  staleTime: MEMBER_AUTH_STALE_MS,
+  beforeLoad: async ({ context, location }) => {
+    const { user } = await context.queryClient.ensureQueryData({
+      queryKey: ['member-auth-state'],
+      queryFn: () => getAuthState(),
+      staleTime: MEMBER_AUTH_STALE_MS,
+    })
     if (!user) {
       throw redirect({
         to: '/signin',
@@ -27,7 +36,11 @@ export const Route = createFileRoute('/_member')({
       })
     }
 
-    const profile = await fetchMemberProfile()
+    const profile = await context.queryClient.ensureQueryData({
+      queryKey: ['member-profile', user.id],
+      queryFn: () => fetchMemberProfile(),
+      staleTime: MEMBER_AUTH_STALE_MS,
+    })
     const firstName = profile?.first_name.trim() ?? ''
     const lastName = profile?.last_name.trim() ?? ''
     const userName = `${firstName} ${lastName}`.trim() || null

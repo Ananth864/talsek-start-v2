@@ -27,30 +27,30 @@ export const Route = createFileRoute('/_member/dashboard')({
   // gating (Create Job) live on that parent; the authoritative `canCreateJob`
   // check remains in the createJob server fn (ADR-0004).
   //
-  // Read the selected Job id from the search params into the loader so the
-  // candidate board can be prefetched + dehydrated for SSR first paint when a
-  // Job is held in the URL (ADR-0007). Selections made client-side (clicking a
-  // Job) fire the query after the navigation instead.
+  // Prefetch the selected Job's board for SSR first paint (ADR-0007 / ADR-0011).
+  // On the client, never await board fetches — awaiting ensureQueryData blocks
+  // navigation and made Job switches feel lagged vs the SPA.
   loaderDeps: ({ search }) => ({ jobId: search.jobId }),
   loader: async ({ context, deps }) => {
     // Skip Jobs prefetch until the Member has a Company — the company guard
     // blocks the board until setup completes (#19 / ADR-0004).
     if (!context.companyId) return
-    // Prefetch + dehydrate the Jobs list for SSR first paint (ADR-0007). The
-    // query key matches the source so realtime/mutation invalidation ports
-    // unchanged. Also seed the candidate board layout preference (#26).
-    await Promise.all([
-      context.queryClient.ensureQueryData(
-        jobsQueryOptions(context.companyId),
-      ),
-      context.queryClient.ensureQueryData(
-        candidateListViewQueryOptions(context.userId),
-      ),
-    ])
-    // Prefetch the selected Job's candidate board + pipeline stages so the
-    // board is present in the first-paint HTML when a Job is in the URL.
-    if (deps.jobId) {
-      await Promise.all([
+
+    const isServer = typeof document === 'undefined'
+
+    const seedShell = () =>
+      Promise.all([
+        context.queryClient.ensureQueryData(
+          jobsQueryOptions(context.companyId),
+        ),
+        context.queryClient.ensureQueryData(
+          candidateListViewQueryOptions(context.userId),
+        ),
+      ])
+
+    const seedBoard = () => {
+      if (!deps.jobId) return Promise.resolve()
+      return Promise.all([
         context.queryClient.ensureQueryData(
           jobApplicationsQueryOptions(deps.jobId, context.companyId),
         ),
@@ -58,6 +58,23 @@ export const Route = createFileRoute('/_member/dashboard')({
           jobStagesQueryOptions(deps.jobId, context.companyId),
         ),
       ])
+    }
+
+    if (isServer) {
+      await Promise.all([seedShell(), seedBoard()])
+      return
+    }
+
+    // Client: kick off without blocking the route transition (TanStack deferred
+    // loading pattern). Hooks pick up cache as it fills.
+    void seedShell()
+    if (deps.jobId) {
+      void context.queryClient.prefetchQuery(
+        jobApplicationsQueryOptions(deps.jobId, context.companyId),
+      )
+      void context.queryClient.prefetchQuery(
+        jobStagesQueryOptions(deps.jobId, context.companyId),
+      )
     }
   },
   component: DashboardPage,

@@ -6,10 +6,9 @@ import { jobApplicationsQueryKey } from '#/lib/job-applications-shared'
  * Port of the source's `useCandidates` (job-wide candidate board query), moved
  * behind the user-scoped `fetchJobApplications` server fn (ADR-0004/ADR-0007).
  * The query key matches the source's `['job-applications', jobId, companyId]`
- * verbatim so realtime/mutation invalidation ports unchanged. `staleTime` is
- * left at React Query's default and refetches are driven by the realtime
- * subscription (`useJobApplicationsSubscription`), mirroring the source's
- * invalidation-only model.
+ * verbatim so realtime/mutation invalidation ports unchanged. `staleTime:
+ * Infinity` matches the SPA — refetches are driven by realtime invalidation
+ * (`useJobApplicationsSubscription`), not time-based staleness.
  */
 export function jobApplicationsQueryOptions(
   jobId: string | null | undefined,
@@ -19,6 +18,9 @@ export function jobApplicationsQueryOptions(
     queryKey: jobApplicationsQueryKey(jobId, companyId),
     queryFn: () => fetchJobApplications({ data: { jobId: jobId! } }),
     enabled: Boolean(jobId) && Boolean(companyId),
+    staleTime: Infinity,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 }
 

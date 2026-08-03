@@ -17,6 +17,8 @@ export function jobStagesQueryOptions(
     queryKey: jobStagesQueryKey(jobId, companyId),
     queryFn: () => fetchJobStages({ data: { jobId: jobId! } }),
     enabled: Boolean(jobId) && Boolean(companyId),
+    // Source useJobStages: stages rarely change.
+    staleTime: 10 * 60 * 1000,
   })
 }
 
