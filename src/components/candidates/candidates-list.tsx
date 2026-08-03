@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Filter, Search, Users, XCircle } from 'lucide-react'
+import { ChevronDown, Filter } from 'lucide-react'
 import { useJobApplications } from '#/hooks/use-job-applications'
 import { useJobStages } from '#/hooks/use-job-stages'
 import { useBulkActionMode } from '#/hooks/use-bulk-action-mode'
@@ -20,16 +20,15 @@ import {
   templateKindForNextStage,
 } from '#/lib/email-template-engine'
 import { parsedSummary } from '#/lib/parsed-candidate'
-import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#/components/ui/select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import { BulkActionConfirmBar } from '#/components/bulk/bulk-action-confirm-bar'
+import { BulkActionDropdown } from '#/components/bulk/bulk-action-dropdown'
 import { BulkShortlistDialog } from '#/components/bulk/bulk-shortlist-dialog'
 import { BulkRejectDialog } from '#/components/bulk/bulk-reject-dialog'
 import { InsufficientCreditsModal } from '#/components/billing/insufficient-credits-modal'
@@ -82,7 +81,6 @@ export function CandidatesList({
     useServiceRates(companyId)
   const interviewCost = serviceRates?.screening_interview_cost ?? 40
 
-  const [search, setSearch] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<CandidateFilter>('all')
   const [isBulkShortlistOpen, setIsBulkShortlistOpen] = useState(false)
   const [isBulkRejectOpen, setIsBulkRejectOpen] = useState(false)
@@ -117,22 +115,13 @@ export function CandidatesList({
     return map
   }, [applications])
 
-  // Stage → fit/status → search (source `useInfiniteCandidatesByStage` order).
+  // Stage → fit/status (source `useInfiniteCandidatesByStage` order).
   const visible = useMemo(() => {
     const inStage = applications.filter(
       (app) => app.current_stage_id === effectiveStageId,
     )
-    let rows = filterCandidates(inStage, selectedFilter, job)
-    const term = search.trim().toLowerCase()
-    if (term) {
-      rows = rows.filter((app) => {
-        const name = app.candidate_name.toLowerCase()
-        const email = app.candidate.email.toLowerCase()
-        return name.includes(term) || email.includes(term)
-      })
-    }
-    return rows
-  }, [applications, effectiveStageId, selectedFilter, job, search])
+    return filterCandidates(inStage, selectedFilter, job)
+  }, [applications, effectiveStageId, selectedFilter, job])
 
   const visibleIds = useMemo(() => visible.map((a) => a.id), [visible])
   const bulkState = useBulkActionMode(visibleIds)
@@ -151,11 +140,6 @@ export function CandidatesList({
     'Current Stage'
 
   const bulkTemplateType = templateKindForNextStage(nextStage?.name)
-
-  const activeCount = applications.filter((a) => a.status === 'active').length
-  const rejectedCount = applications.filter(
-    (a) => a.status === 'rejected',
-  ).length
 
   const handleToggleSelectAll = () => {
     if (bulkState.isAllSelected) bulkState.clearSelection()
@@ -359,123 +343,104 @@ export function CandidatesList({
       data-can-send-reachout={canSendReachout ? 'true' : 'false'}
       className="flex flex-1 flex-col overflow-hidden"
     >
-      <StageTabs
-        stages={stages}
-        counts={counts}
-        activeStageId={effectiveStageId}
-        onSelect={onStageChange}
-      />
+      <div
+        data-testid="candidates-board-header"
+        className="flex-shrink-0 overflow-hidden border-b border-border px-6 py-4"
+      >
+        <div className="flex items-center justify-between gap-4 overflow-hidden">
+          <div className="min-w-0 flex-1">
+            {stages.length > 0 ? (
+              <StageTabs
+                stages={stages}
+                counts={counts}
+                activeStageId={effectiveStageId}
+                onSelect={onStageChange}
+                disabled={bulkState.isBulkMode}
+                className="w-full"
+              />
+            ) : (
+              <div className="flex h-10 items-center text-sm italic text-muted-foreground">
+                No stages configured
+              </div>
+            )}
+          </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium tabular-nums">{applications.length}</span>
-          <span>candidates</span>
-          <span aria-hidden>·</span>
-          <span className="tabular-nums">{activeCount} active</span>
-          <span aria-hidden>·</span>
-          <span className="tabular-nums">{rejectedCount} rejected</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {bulkState.isBulkMode ? (
-            <BulkActionConfirmBar
-              mode={bulkState.mode}
-              selectedCount={bulkState.selectedCount}
-              isAllSelected={bulkState.isAllSelected}
-              onCancel={bulkState.exitMode}
-              onToggleSelectAll={handleToggleSelectAll}
-              onConfirm={handleBulkConfirmClick}
-              confirmDisabled={
-                bulkPending ||
-                (bulkState.mode === 'selecting-shortlist' && !nextStage)
-              }
-            />
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5"
-                onClick={() => bulkState.enterMode('shortlist')}
-                disabled={!nextStage || visible.length === 0 || !canSendReachout}
-                data-testid="bulk-shortlist-enter"
-                data-can-send-reachout={canSendReachout ? 'true' : 'false'}
-                title={
-                  !canSendReachout
-                    ? 'You do not have permission to send Reachouts'
-                    : nextStage
-                      ? 'Select candidates to shortlist to the next stage'
-                      : 'Not available on last stage'
+          <div className="relative flex shrink-0 items-center gap-2">
+            {bulkState.isBulkMode ? (
+              <BulkActionConfirmBar
+                mode={bulkState.mode}
+                selectedCount={bulkState.selectedCount}
+                isAllSelected={bulkState.isAllSelected}
+                onCancel={bulkState.exitMode}
+                onToggleSelectAll={handleToggleSelectAll}
+                onConfirm={handleBulkConfirmClick}
+                confirmDisabled={
+                  bulkPending ||
+                  (bulkState.mode === 'selecting-shortlist' && !nextStage)
                 }
-              >
-                <Users className="size-3.5" />
-                Bulk shortlist
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5"
-                onClick={() => bulkState.enterMode('reject')}
-                disabled={visible.length === 0}
-                data-testid="bulk-reject-enter"
-                title="Select candidates to reject"
-              >
-                <XCircle className="size-3.5" />
-                Bulk reject
-              </Button>
-            </>
-          )}
-          <Select
-            value={selectedFilter}
-            onValueChange={(value) =>
-              setSelectedFilter(value as CandidateFilter)
-            }
-            disabled={bulkState.isBulkMode}
-          >
-            <SelectTrigger
-              size="sm"
-              className="h-8 gap-1.5"
-              data-testid="fit-filter"
-              aria-label="Filter candidates by fit"
-            >
-              <Filter className="size-3.5" />
-              <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent align="end" className="w-64">
-              {FILTER_OPTIONS.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  title={option.description}
-                  data-testid={`fit-filter-${option.value}`}
+              />
+            ) : (
+              <BulkActionDropdown
+                onSelectShortlist={() => bulkState.enterMode('shortlist')}
+                onSelectReject={() => bulkState.enterMode('reject')}
+                disableShortlist={!nextStage}
+                disableReject={!nextStage}
+                canSendReachout={canSendReachout}
+              />
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 shrink-0 gap-2"
+                  disabled={bulkState.isBulkMode}
+                  data-testid="fit-filter"
+                  data-filter={selectedFilter}
+                  aria-label="Filter candidates by fit"
                 >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="relative w-full max-w-[220px]">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search candidates…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-8 text-xs"
-              aria-label="Search candidates"
-              data-testid="candidate-search"
-              disabled={bulkState.isBulkMode}
-            />
+                  <Filter className="size-4 md:hidden" />
+                  <span className="hidden font-semibold md:inline">Filter</span>
+                  <ChevronDown className="size-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {FILTER_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onSelect={() => setSelectedFilter(option.value)}
+                    className={
+                      selectedFilter === option.value
+                        ? 'cursor-pointer bg-accent text-accent-foreground'
+                        : 'cursor-pointer'
+                    }
+                    data-testid={`fit-filter-${option.value}`}
+                    data-selected={
+                      selectedFilter === option.value ? 'true' : 'false'
+                    }
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {option.description}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
 
       {bulkError ? (
-        <p className="px-3 py-2 text-xs text-destructive" role="alert">
+        <p className="px-6 py-2 text-xs text-destructive" role="alert">
           {bulkError}
         </p>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {isLoading ? (
           <p className="p-4 text-sm text-muted-foreground">Loading candidates…</p>
         ) : error ? (
@@ -488,7 +453,7 @@ export function CandidatesList({
           </p>
         ) : visible.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
-            {search.trim() || selectedFilter !== 'all'
+            {selectedFilter !== 'all'
               ? 'No candidates match this filter.'
               : 'No candidates in this stage.'}
           </p>
@@ -499,7 +464,7 @@ export function CandidatesList({
             className={
               viewMode === 'grid'
                 ? 'grid gap-4'
-                : 'flex flex-col gap-2'
+                : 'flex flex-col gap-4'
             }
             style={
               viewMode === 'grid'

@@ -320,7 +320,7 @@ export function CandidateCard({
       size="sm"
       variant="outline"
       className={cn(
-        'h-7 gap-1 px-2 text-[11px]',
+        'h-7 gap-1 px-2 text-[11px] border-primary/40 text-primary hover:bg-primary/10',
         isGrid && 'h-8 w-full',
       )}
       onClick={(e) => openProfile('overview', e)}
@@ -397,33 +397,40 @@ export function CandidateCard({
     </Button>
   )
 
+  const resumeLink = application.resume_url ? (
+    <a
+      href={application.resume_url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+      onClick={(e) => e.stopPropagation()}
+    >
+      Resume
+      <ExternalLink className="size-3" />
+    </a>
+  ) : null
+
   const pipelineActions =
     stageKind !== 'final' && !isBulkMode ? (
       isGrid ? (
-        <div className="flex w-full flex-col gap-2">
+        <div
+          className="flex w-full flex-col gap-2"
+          data-testid="candidate-card-actions"
+        >
           {profileButton}
           <div className="flex gap-2">
-            {rejectButton}
             {shortlistButton}
+            {rejectButton}
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          {application.resume_url ? (
-            <a
-              href={application.resume_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Resume
-              <ExternalLink className="size-3" />
-            </a>
-          ) : null}
+        <div
+          className="flex flex-wrap items-center gap-2"
+          data-testid="candidate-card-actions"
+        >
           {profileButton}
-          {rejectButton}
           {shortlistButton}
+          {rejectButton}
         </div>
       )
     ) : null
@@ -450,21 +457,22 @@ export function CandidateCard({
               data-testid="candidate-view-profile"
             >
               <Eye className="size-3" />
-              AI Analysis
+              {isGrid ? 'Complete AI Analysis' : 'AI Analysis'}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled
-              className={cn(
-                'h-7 gap-1 px-2 text-[11px] border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-900/30 dark:text-emerald-200',
-                isGrid ? 'h-8 w-full' : 'flex-1',
-              )}
-              data-testid="candidate-shortlisted-badge"
-            >
-              <Check className="size-3" />
-              Shortlisted - Reachout Sent
-            </Button>
+            {!isGrid ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className={cn(
+                  'h-7 flex-1 gap-1 px-2 text-[11px] border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-900/30 dark:text-emerald-200',
+                )}
+                data-testid="candidate-shortlisted-badge"
+              >
+                <Check className="size-3" />
+                Shortlisted - Reachout Sent
+              </Button>
+            ) : null}
           </>
         ) : (
           <>
@@ -479,25 +487,27 @@ export function CandidateCard({
               data-testid="candidate-view-profile"
             >
               <Eye className="size-3" />
-              Resume Analysis
+              {isGrid ? 'Complete AI Analysis' : 'Resume Analysis'}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={interviewStatus === 'pending'}
-              className={cn(
-                'h-7 gap-1 px-2 text-[11px] border-primary/40 text-primary',
-                isGrid ? 'h-8 w-full' : 'flex-1',
-                interviewStatus === 'pending' && 'cursor-not-allowed opacity-50',
-              )}
-              onClick={(e) => openProfile('interview', e)}
-              data-testid="candidate-interview-analysis"
-            >
-              <Eye className="size-3" />
-              {interviewStatus === 'pending'
-                ? 'Interview Pending'
-                : 'Interview Analysis'}
-            </Button>
+            {!isGrid ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={interviewStatus === 'pending'}
+                className={cn(
+                  'h-7 flex-1 gap-1 px-2 text-[11px] border-primary/40 text-primary',
+                  interviewStatus === 'pending' &&
+                    'cursor-not-allowed opacity-50',
+                )}
+                onClick={(e) => openProfile('interview', e)}
+                data-testid="candidate-interview-analysis"
+              >
+                <Eye className="size-3" />
+                {interviewStatus === 'pending'
+                  ? 'Interview Pending'
+                  : 'Interview Analysis'}
+              </Button>
+            ) : null}
           </>
         )}
       </div>
@@ -532,6 +542,9 @@ export function CandidateCard({
         <p className="truncate text-xs text-muted-foreground" title={email}>
           {email}
         </p>
+      ) : null}
+      {!isGrid && resumeLink ? (
+        <div className="mt-0.5">{resumeLink}</div>
       ) : null}
       {!isGrid ? (
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
@@ -595,16 +608,7 @@ export function CandidateCard({
                   />
                 ) : null}
                 {application.resume_url ? (
-                  <a
-                    href={application.resume_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Resume
-                    <ExternalLink className="size-3" />
-                  </a>
+                  resumeLink
                 ) : (
                   <span className="text-[11px] text-muted-foreground">
                     No resume
@@ -719,8 +723,8 @@ export function CandidateCard({
           <DialogHeader>
             <DialogTitle>Reject Candidate</DialogTitle>
             <DialogDescription>
-              This candidate will be marked Rejected on the board. Are you sure
-              you want to reject {name}?
+              This candidate card will disappear from your dashboard view. Are
+              you sure you want to reject this candidate?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

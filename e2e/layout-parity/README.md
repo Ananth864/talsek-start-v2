@@ -18,5 +18,6 @@ Desktop viewport is fixed at 1280×800. No screenshots.
 |------|---------|
 | `member-shell.spec.ts` | Member shell (#36) |
 | `dashboard-jobs.spec.ts` | Dashboard / Jobs board (#37) |
+| `candidate-board.spec.ts` | Candidate board + adaptive card (#38) |
 
 Manual checklists (`*.checklist.md`) accompany each surface.
