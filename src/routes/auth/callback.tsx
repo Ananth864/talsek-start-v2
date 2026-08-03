@@ -12,10 +12,10 @@ export const Route = createFileRoute('/auth/callback')({
   validateSearch: (search: Record<string, unknown>): { code?: string } => ({
     code: typeof search.code === 'string' ? search.code : undefined,
   }),
+  loaderDeps: ({ search }) => ({ code: search.code }),
   beforeLoad: async ({ search }) => {
     if (!search.code) throw redirect({ to: '/signin' })
   },
-  loaderDeps: ({ search }) => ({ code: search.code }),
   loader: async ({ deps }) => {
     const res = await exchangeAuthCode({ data: { code: deps.code! } })
     const { returnTo } = await consumeAuthReturnTo()

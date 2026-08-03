@@ -27,11 +27,11 @@ export const Route = createFileRoute('/reset-password')({
   validateSearch: (search: Record<string, unknown>): { code?: string } => ({
     code: typeof search.code === 'string' ? search.code : undefined,
   }),
+  loaderDeps: ({ search }) => ({ code: search.code }),
   beforeLoad: async ({ search }) => {
     // A code is required to establish the recovery session.
     if (!search.code) throw redirect({ to: '/forgot-password' })
   },
-  loaderDeps: ({ search }) => ({ code: search.code }),
   loader: async ({ deps }) => {
     const res = await exchangeAuthCode({ data: { code: deps.code! } })
     return { exchangeOk: res.ok }

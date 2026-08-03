@@ -21,6 +21,7 @@ export const Route = createFileRoute('/confirm-email')({
     code: typeof search.code === 'string' ? search.code : undefined,
     email: typeof search.email === 'string' ? search.email : undefined,
   }),
+  loaderDeps: ({ search }) => ({ code: search.code }),
   beforeLoad: async ({ search }) => {
     // Already signed in and not mid-confirmation → nothing to do here.
     if (!search.code) {
@@ -28,7 +29,6 @@ export const Route = createFileRoute('/confirm-email')({
       if (user) throw redirect({ to: '/dashboard' })
     }
   },
-  loaderDeps: ({ search }) => ({ code: search.code }),
   loader: async ({ deps }) => {
     if (!deps.code) return { mode: 'resend' as const }
     const res = await exchangeAuthCode({ data: { code: deps.code } })

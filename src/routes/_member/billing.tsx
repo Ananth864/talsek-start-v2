@@ -57,6 +57,16 @@ import {
 } from '#/components/ui/sheet'
 import { cn } from '#/lib/utils'
 
+/** Explicit locale + timeZone so SSR and the browser render the same date text. */
+function formatBillingDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
 export const Route = createFileRoute('/_member/billing')({
   validateSearch: (
     search: Record<string, unknown>,
@@ -118,12 +128,13 @@ function BillingPage() {
 
   useEffect(() => {
     if (!search.status) return
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     if (search.status === 'succeeded') {
       setBanner({
         kind: 'success',
         message: 'Payment successful! Your account will update shortly.',
       })
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         void refetchBalance()
         void refetchSubs()
         invalidate()
@@ -138,6 +149,9 @@ function BillingPage() {
       search: {},
       replace: true,
     })
+    return () => {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+    }
   }, [search.status, navigate, refetchBalance, refetchSubs, invalidate])
 
   const onMessage = (kind: 'success' | 'error', message: string) => {
@@ -299,9 +313,7 @@ function BillingPage() {
           ? isPendingCancellation
             ? `Cancels ${
                 normalSubscription?.current_period_end
-                  ? new Date(
-                      normalSubscription.current_period_end,
-                    ).toLocaleDateString()
+                  ? formatBillingDate(normalSubscription.current_period_end)
                   : 'at period end'
               }`
             : 'Cancel Plan'
@@ -350,9 +362,7 @@ function BillingPage() {
           ? isPendingCancellation
             ? `Cancels ${
                 normalSubscription?.current_period_end
-                  ? new Date(
-                      normalSubscription.current_period_end,
-                    ).toLocaleDateString()
+                  ? formatBillingDate(normalSubscription.current_period_end)
                   : 'at period end'
               }`
             : 'Cancel Plan'
@@ -968,14 +978,7 @@ function InvoicesPanel({
                       data-testid={`invoice-row-${payment.id}`}
                     >
                       <td className="px-6 py-4 text-sm">
-                        {new Date(payment.created_at).toLocaleDateString(
-                          'en-US',
-                          {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          },
-                        )}
+                        {formatBillingDate(payment.created_at)}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
                         {getPaymentDescription(payment)}

@@ -330,10 +330,9 @@ function JobCard({
     job.id,
     companyId,
   )
-  const formLink =
-    typeof window !== 'undefined'
-      ? getJobApplyFormLink(job, window.location.origin)
-      : null
+  // Availability is derived from Job data only so SSR and hydration match.
+  // Absolute origin is resolved in the click handler (browser-only).
+  const canCopyFormLink = getJobApplyFormLink(job, '') !== null
 
   const handleCopy = async (
     event: React.MouseEvent<HTMLButtonElement>,
@@ -348,6 +347,14 @@ function JobCard({
     } catch (error) {
       console.error('Failed to copy value:', error)
     }
+  }
+
+  const handleCopyFormLink = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    const link = getJobApplyFormLink(job, window.location.origin)
+    if (!link) return
+    void handleCopy(event, link, 'form')
   }
 
   return (
@@ -450,7 +457,7 @@ function JobCard({
                 <span className="hidden xl:inline">Email</span>
               </Button>
             ) : null}
-            {formLink ? (
+            {canCopyFormLink ? (
               <Button
                 type="button"
                 variant="outline"
@@ -459,7 +466,7 @@ function JobCard({
                 title="Copy Form Link"
                 aria-label={`Copy apply form link for ${job.title}`}
                 data-testid="copy-apply-link"
-                onClick={(e) => void handleCopy(e, formLink, 'form')}
+                onClick={handleCopyFormLink}
               >
                 {copiedTarget === 'form' ? (
                   <Check className="size-3 text-emerald-500" />

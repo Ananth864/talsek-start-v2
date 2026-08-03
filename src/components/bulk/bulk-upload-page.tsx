@@ -179,6 +179,11 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
         },
       })
     },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: JOB_APPLICATIONS_QUERY_KEY_PREFIX,
+      })
+    },
   })
 
   const updateRow = (id: string, updates: Partial<BulkFileRow>) => {
