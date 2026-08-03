@@ -29,7 +29,7 @@ export function MarketingFooter() {
             <ul className="space-y-2">
               <li>
                 <a
-                  href="#resume-matching"
+                  href="/#resume-matching"
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
                   Resume Matching
@@ -37,7 +37,7 @@ export function MarketingFooter() {
               </li>
               <li>
                 <a
-                  href="#screening-interview"
+                  href="/#screening-interview"
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
                   Screening Interview

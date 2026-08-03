@@ -38,13 +38,13 @@ const products: MenuItem[] = [
     title: 'Resume Matching',
     description: 'AI-powered candidate matching beyond keywords',
     icon: <FileSearch className="size-5 shrink-0 text-primary" />,
-    url: '#resume-matching',
+    url: '/#resume-matching',
   },
   {
     title: 'Screening Interview',
     description: 'Automated AI-driven interviews for quality evaluation',
     icon: <Video className="size-5 shrink-0 text-primary" />,
-    url: '#screening-interview',
+    url: '/#screening-interview',
   },
 ]
 
@@ -53,13 +53,13 @@ const solutions: MenuItem[] = [
     title: 'Best Fit Candidate',
     description: 'Find candidates with perfect skills and culture alignment',
     icon: <Target className="size-5 shrink-0 text-primary" />,
-    url: '#best-fit-candidate',
+    url: '/#best-fit-candidate',
   },
   {
     title: 'Interview Ready Candidate',
     description: 'Get pre-screened candidates ready for your interview',
     icon: <ArrowRight className="size-5 shrink-0 text-primary" />,
-    url: '#interview-ready-candidate',
+    url: '/#interview-ready-candidate',
   },
 ]
 

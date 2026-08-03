@@ -1,4 +1,5 @@
 import { HelpCircle } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import {
   Accordion,
   AccordionContent,
@@ -7,7 +8,6 @@ import {
 } from '#/components/ui/accordion'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import { useCalBooking } from '#/components/marketing/cal-booking-context'
 
 const faqs = [
   {
@@ -43,8 +43,6 @@ const faqs = [
 ]
 
 export function FAQs() {
-  const { openBooking } = useCalBooking()
-
   return (
     <section
       className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/20 pt-10 pb-20 md:pb-28 lg:pb-32"
@@ -100,9 +98,9 @@ export function FAQs() {
           <Button
             size="lg"
             className="rounded-xl px-6 py-3 font-medium"
-            onClick={openBooking}
+            asChild
           >
-            Contact Our Team
+            <Link to="/contact">Contact Our Team</Link>
           </Button>
         </div>
       </div>
