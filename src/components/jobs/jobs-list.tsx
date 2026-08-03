@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit3, Plus, Search } from 'lucide-react'
+import { Check, Edit3, Link as LinkIcon, Mail, Plus, Search } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
@@ -7,7 +7,11 @@ import { Input } from '#/components/ui/input'
 import { JobDetail } from '#/components/jobs/job-detail'
 import { cn } from '#/lib/utils'
 import { countIncludedRequirements } from '#/lib/requirements'
-import { getFormConfig, jobStatusMeta } from '#/lib/jobs-shared'
+import {
+  getFormConfig,
+  getJobApplyFormLink,
+  jobStatusMeta,
+} from '#/lib/jobs-shared'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
 
 type JobsListProps = {
@@ -107,98 +111,16 @@ export function JobsList({
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {jobs.map((job) => {
-                const formConfig = getFormConfig(job)
-                const isSelected = selectedJobId === job.id
-                const status = jobStatusMeta(job.status)
-                return (
-                  <li key={job.id} role="listitem">
-                    <Card
-                      data-testid="job-card"
-                      tabIndex={0}
-                      role="button"
-                      aria-pressed={isSelected}
-                      aria-label={`Select job ${job.title}`}
-                      onClick={() => onJobSelect(job.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          onJobSelect(job.id)
-                        }
-                      }}
-                      className={cn(
-                        'cursor-pointer transition-all hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                        isSelected
-                          ? 'border-2 border-primary/30 bg-primary/5'
-                          : 'hover:border-primary/40',
-                      )}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="truncate text-sm font-semibold">
-                              {job.title}
-                            </h3>
-                            <p
-                              className="mt-0.5 truncate text-xs text-muted-foreground"
-                              title={job.job_posting_link || ''}
-                            >
-                              {job.job_posting_link || 'No link'}
-                            </p>
-                          </div>
-                          <Badge variant={status.variant} className="shrink-0">
-                            {status.label}
-                          </Badge>
-                        </div>
-
-                        <div className="mt-3 flex items-center gap-3 text-xs">
-                          <span className="flex items-center gap-1.5">
-                            <span className="font-medium text-muted-foreground">
-                              PR
-                            </span>
-                            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-100 px-1 text-[10px] font-bold text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
-                              {countIncludedRequirements(
-                                job.preferred_requirements,
-                                'preferred',
-                              )}
-                            </span>
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <span className="font-medium text-muted-foreground">
-                              NN
-                            </span>
-                            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-100 px-1 text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-                              {countIncludedRequirements(
-                                job.non_negotiables,
-                                'non_negotiable',
-                              )}
-                            </span>
-                          </span>
-                          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                            {formConfig ? (
-                              <span className="text-[11px] text-muted-foreground">
-                                Form {formConfig.is_enabled ? 'on' : 'off'}
-                              </span>
-                            ) : null}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="size-6"
-                              title="View job details"
-                              aria-label={`View details for ${job.title}`}
-                              data-testid="open-job-details"
-                              onClick={(e) => openDetails(job, e)}
-                            >
-                              <Edit3 className="size-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </li>
-                )
-              })}
+              {jobs.map((job) => (
+                <li key={job.id} role="listitem">
+                  <JobCard
+                    job={job}
+                    isSelected={selectedJobId === job.id}
+                    onSelect={() => onJobSelect(job.id)}
+                    onOpenDetails={openDetails}
+                  />
+                </li>
+              ))}
             </ul>
           )}
         </div>
@@ -213,5 +135,162 @@ export function JobsList({
         canManageForms={canManageForms}
       />
     </>
+  )
+}
+
+function JobCard({
+  job,
+  isSelected,
+  onSelect,
+  onOpenDetails,
+}: {
+  job: JobWithCompanyRow
+  isSelected: boolean
+  onSelect: () => void
+  onOpenDetails: (job: JobWithCompanyRow, e: React.MouseEvent) => void
+}) {
+  const [copiedTarget, setCopiedTarget] = useState<'email' | 'form' | null>(
+    null,
+  )
+  const formConfig = getFormConfig(job)
+  const status = jobStatusMeta(job.status)
+  const formLink =
+    typeof window !== 'undefined'
+      ? getJobApplyFormLink(job, window.location.origin)
+      : null
+
+  const handleCopy = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    value: string,
+    target: 'email' | 'form',
+  ) => {
+    event.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedTarget(target)
+      setTimeout(() => setCopiedTarget(null), 2000)
+    } catch (error) {
+      console.error('Failed to copy value:', error)
+    }
+  }
+
+  return (
+    <Card
+      data-testid="job-card"
+      tabIndex={0}
+      role="button"
+      aria-pressed={isSelected}
+      aria-label={`Select job ${job.title}`}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      className={cn(
+        'cursor-pointer transition-all hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        isSelected
+          ? 'border-2 border-primary/30 bg-primary/5'
+          : 'hover:border-primary/40',
+      )}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold">{job.title}</h3>
+            <p
+              className="mt-0.5 truncate text-xs text-muted-foreground"
+              title={job.job_posting_link || ''}
+            >
+              {job.job_posting_link || 'No link'}
+            </p>
+          </div>
+          <Badge variant={status.variant} className="shrink-0">
+            {status.label}
+          </Badge>
+        </div>
+
+        <div className="mt-3 flex items-center gap-3 text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium text-muted-foreground">PR</span>
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-100 px-1 text-[10px] font-bold text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
+              {countIncludedRequirements(
+                job.preferred_requirements,
+                'preferred',
+              )}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium text-muted-foreground">NN</span>
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-100 px-1 text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+              {countIncludedRequirements(
+                job.non_negotiables,
+                'non_negotiable',
+              )}
+            </span>
+          </span>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {formConfig ? (
+              <span className="text-[11px] text-muted-foreground">
+                Form {formConfig.is_enabled ? 'on' : 'off'}
+              </span>
+            ) : null}
+            {job.forwarding_email ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 px-2 text-[10px]"
+                title="Copy Forwarding Email"
+                aria-label={`Copy forwarding email for ${job.title}`}
+                data-testid="copy-forwarding-email"
+                onClick={(e) =>
+                  void handleCopy(e, job.forwarding_email, 'email')
+                }
+              >
+                {copiedTarget === 'email' ? (
+                  <Check className="size-3 text-emerald-500" />
+                ) : (
+                  <Mail className="size-3" />
+                )}
+                <span className="hidden xl:inline">Email</span>
+              </Button>
+            ) : null}
+            {formLink ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 px-2 text-[10px]"
+                title="Copy Form Link"
+                aria-label={`Copy apply form link for ${job.title}`}
+                data-testid="copy-apply-link"
+                onClick={(e) => void handleCopy(e, formLink, 'form')}
+              >
+                {copiedTarget === 'form' ? (
+                  <Check className="size-3 text-emerald-500" />
+                ) : (
+                  <LinkIcon className="size-3" />
+                )}
+                <span className="hidden xl:inline">Form</span>
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-6"
+              title="View job details"
+              aria-label={`View details for ${job.title}`}
+              data-testid="open-job-details"
+              onClick={(e) => onOpenDetails(job, e)}
+            >
+              <Edit3 className="size-3" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

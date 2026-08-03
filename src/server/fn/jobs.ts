@@ -102,8 +102,8 @@ export const fetchMemberProfile = createServerFn({ method: 'GET' })
 /**
  * Screening-interview configuration schema, matching
  * `ScreeningInterviewInformationJson`. For `resume_only` the dialog sends the
- * default shape; for `resume_interview` it builds from the (minimal) location
- * form. The full shift/travel form ports with the interview-config domain.
+ * default shape; for `resume_interview` it builds from the logistics form
+ * (joining date, location mode, shift, travel — #28).
  */
 const screeningInterviewInformationSchema = z.object({
   expected_joining_date: z.enum([

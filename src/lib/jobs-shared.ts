@@ -58,3 +58,18 @@ export function jobStatusMeta(status: string): {
 export function getFormConfig(job: JobWithCompanyRow) {
   return job.job_form_configs.length > 0 ? job.job_form_configs[0] : null
 }
+
+/**
+ * Absolute apply-form URL for a Job when its Form Config is enabled, has a
+ * token, and is not expired. Used by job-card copy actions and the post-create
+ * success dialog (#28).
+ */
+export function getJobApplyFormLink(
+  job: JobWithCompanyRow,
+  origin: string,
+): string | null {
+  const config = getFormConfig(job)
+  if (!config?.is_enabled || !config.form_url_token) return null
+  if (config.expires_at && new Date(config.expires_at) < new Date()) return null
+  return `${origin}/apply/${config.form_url_token}`
+}

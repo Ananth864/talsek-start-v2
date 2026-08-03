@@ -249,6 +249,8 @@ function DashboardContent({
           open={createOpen}
           onOpenChange={setCreateOpen}
           companyName={companyName}
+          companyId={companyId}
+          canManageForms={canManageForms}
         />
       ) : null}
 
