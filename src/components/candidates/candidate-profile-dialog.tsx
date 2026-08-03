@@ -39,7 +39,11 @@ import {
 } from '#/lib/candidate-profile-model'
 import { matchBadgeVariant } from '#/lib/job-applications-shared'
 import { useProcessJobApplicationPipeline } from '#/hooks/use-process-job-application-pipeline'
+import { useInterviewSession } from '#/hooks/use-interview-session'
+import { useFormSubmission } from '#/hooks/use-form-submission'
 import { CandidateProfilePDFRenderer } from './candidate-profile-pdf-renderer'
+import { InterviewAnalysis } from './interview-analysis'
+import { FormAnswersSection } from './form-answers-section'
 import type { JobApplicationRow } from '#/server/fn/job-applications'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
 
@@ -99,17 +103,13 @@ function RequirementDetailList({
 }
 
 /**
- * The candidate profile detail (ticket #7; source: `CandidateProfileDialog`).
- * Opens from the board card and reads the same cached board row (same query
- * key), so its data is consistent with the board by construction. Tabs:
- * Overview (score breakdown + AI recommendation/strengths/concerns),
- * Requirement Analysis (per-requirement verdicts + evidence), Interview
- * (empty state until the interview domain ports, #12), Resume Data (typed
- * `parsedProfile`), and Email. The header's Match badge is the persisted
- * `final_score` — identical to the card's ring (ADR-0011 §5); the Overview
- * breakdown components come from the source's `computeDynamicScore`. The
- * source's form-answers section (Requirement Analysis tab, form-processed
- * candidates) ports with the forms domain. "Download PDF" renders the hidden
+ * The candidate profile detail (tickets #7 / #22; source:
+ * `CandidateProfileDialog`). Opens from the board card and reads the same
+ * cached board row (same query key), so its data is consistent with the board
+ * by construction. Tabs: Overview, Requirement Analysis (plus Form Answers
+ * when `processing_source === 'form'`), Interview (session Q&A + conversation
+ * transcript), Resume Data, and Email. Header swaps Match → Interview score
+ * when a session exists (source parity). "Download PDF" renders the hidden
  * `CandidateProfilePDFRenderer` and saves client-side via jspdf.
  */
 export function CandidateProfileDialog({
@@ -123,6 +123,18 @@ export function CandidateProfileDialog({
   const [pipelineError, setPipelineError] = useState<string | null>(null)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   const processPipeline = useProcessJobApplicationPipeline()
+
+  const { session: interviewSession, score: interviewScore } =
+    useInterviewSession(application.id, open)
+  const isFormSource = application.processing_source === 'form'
+  const {
+    data: formSubmissionData,
+    isLoading: isLoadingFormData,
+  } = useFormSubmission(
+    application.candidate_id,
+    application.job_id,
+    open && isFormSource,
+  )
 
   const model = candidateProfileModel(application, job)
   const {
@@ -218,13 +230,31 @@ export function CandidateProfileDialog({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Badge
-                variant={matchBadgeVariant(matchScore)}
-                className="px-3 py-1 text-base"
-                data-testid="profile-match-score"
-              >
-                Match: {matchScore}%
-              </Badge>
+              {interviewSession ? (
+                <Badge
+                  variant={
+                    interviewScore.scorePercent !== null &&
+                    interviewScore.scorePercent >= 70
+                      ? 'default'
+                      : 'secondary'
+                  }
+                  className="px-3 py-1 text-base"
+                  data-testid="profile-interview-score"
+                >
+                  Interview:{' '}
+                  {interviewScore.scorePercent !== null
+                    ? `${interviewScore.scorePercent}%`
+                    : 'NA'}
+                </Badge>
+              ) : (
+                <Badge
+                  variant={matchBadgeVariant(matchScore)}
+                  className="px-3 py-1 text-base"
+                  data-testid="profile-match-score"
+                >
+                  Match: {matchScore}%
+                </Badge>
+              )}
               <div className="flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs font-medium">
                 {application.meets_all_non_negotiables ? (
                   <CheckCircle className="h-4 w-4 text-emerald-500" />
@@ -497,33 +527,57 @@ export function CandidateProfileDialog({
                           />
                         </div>
                       ) : null}
+
+                      {isFormSource ? (
+                        <FormAnswersSection
+                          isLoading={isLoadingFormData}
+                          data={formSubmissionData}
+                        />
+                      ) : null}
                     </>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border bg-muted p-12 text-center text-muted-foreground">
-                      <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                      <h3 className="text-lg font-medium text-foreground">
-                        No AI analysis available
-                      </h3>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        This application has not been analysed yet.
-                      </p>
+                    <div className="space-y-6">
+                      <div className="rounded-lg border border-dashed border-border bg-muted p-12 text-center text-muted-foreground">
+                        <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                        <h3 className="text-lg font-medium text-foreground">
+                          No AI analysis available
+                        </h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          This application has not been analysed yet.
+                        </p>
+                      </div>
+                      {isFormSource ? (
+                        <FormAnswersSection
+                          isLoading={isLoadingFormData}
+                          data={formSubmissionData}
+                        />
+                      ) : null}
                     </div>
                   )}
                 </TabsContent>
 
                 <TabsContent value="interview" className="mt-0 space-y-6">
-                  {/* Interview Sessions port with the interview domain (#12);
-                      until then the source's no-session empty state renders. */}
-                  <div className="rounded-lg border border-dashed border-border bg-muted p-12 text-center text-muted-foreground">
-                    <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                    <h3 className="text-lg font-medium text-foreground">
-                      No interview session found
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      This candidate has not participated in an interview
-                      session yet.
-                    </p>
-                  </div>
+                  {interviewSession ? (
+                    <InterviewAnalysis
+                      session={interviewSession}
+                      candidateName={candidateName}
+                      fallbackCreatedAt={application.updated_at}
+                    />
+                  ) : (
+                    <div
+                      className="rounded-lg border border-dashed border-border bg-muted p-12 text-center text-muted-foreground"
+                      data-testid="interview-empty-state"
+                    >
+                      <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                      <h3 className="text-lg font-medium text-foreground">
+                        No interview session found
+                      </h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        This candidate has not participated in an interview
+                        session yet.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="resume" className="mt-0 space-y-6">
