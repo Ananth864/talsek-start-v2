@@ -157,6 +157,11 @@ test.describe('reachout templates + form customization', () => {
     }
 
     await page.goto(`/dashboard?jobId=${job.id}`)
+    const selectedCard = page.getByTestId('job-card').and(
+      page.locator('[aria-pressed="true"]'),
+    )
+    await expect(selectedCard).toBeVisible()
+    await selectedCard.getByTestId('open-job-details').click()
     await expect(page.getByTestId('job-detail')).toBeVisible()
     await page.getByTestId('configure-job-form').click()
     await expect(page.getByTestId('job-form-config-dialog')).toBeVisible()

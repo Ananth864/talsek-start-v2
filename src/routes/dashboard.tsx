@@ -21,7 +21,6 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { JobsList } from '#/components/jobs/jobs-list'
-import { JobDetail } from '#/components/jobs/job-detail'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 import { CandidatesList } from '#/components/candidates/candidates-list'
 import { NotificationPreferencesPanel } from '#/components/notification-preferences'
@@ -324,14 +323,12 @@ function DashboardContent({
           onSearchTermChange={handleSearchChange}
           loading={isLoading}
           error={error}
+          companyId={companyId}
+          canCreateJob={canCreateJob}
+          canManageForms={canManageForms}
         />
         {selectedJob ? (
           <div className="flex flex-1 flex-col overflow-hidden">
-            <JobDetail
-              job={selectedJob}
-              companyId={companyId}
-              canManageForms={canManageForms}
-            />
             <CandidatesList
               job={selectedJob}
               companyId={companyId}
@@ -341,7 +338,12 @@ function DashboardContent({
             />
           </div>
         ) : (
-          <JobDetail job={undefined} />
+          <div
+            data-testid="candidates-empty"
+            className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+          >
+            Select a job to view its candidates.
+          </div>
         )}
       </main>
 

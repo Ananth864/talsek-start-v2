@@ -49,9 +49,10 @@ Job selection is **URL search-param driven** on `/dashboard` (`?jobId=` and
 `?jobSearch=`), faithful to the source: there is no `/jobs/:id` route, and the
 selected Job is resolved from the (full) list result by id, so it stays available
 even when filtered out of view. Selecting a Job updates the search params
-(`replace: true`) and opens its detail context (the right-hand pane); the first
-Job auto-selects when none is held. This establishes the two-pane dashboard the
-candidate-pipeline tickets extend.
+(`replace: true`) and drives the candidate board on the right; the first Job
+auto-selects when none is held. **Job Details** is a separate Dialog opened from
+the pencil control on a job card (source `JobDetails` parity) — not an inline
+detail pane. The board and the details modal are independent surfaces.
 
 ### 4. The Member's company context is loaded in the guard, not re-derived per query
 

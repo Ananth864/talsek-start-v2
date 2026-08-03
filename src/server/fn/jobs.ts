@@ -349,6 +349,92 @@ export const createJob = createServerFn({ method: 'POST' })
     return { id: job.id, forwardingEmail: job.forwarding_email }
   })
 
+// ─── Job requirements update (#23) ───────────────────────────────────────
+//
+// Ports the source's client-side `useUpdateJobRequirements` (direct Supabase
+// UPDATE) as a permission-checked server function. The source only toggled
+// include/exclude; the port also accepts add/remove of requirement rows so the
+// Member can refine scoring inputs after creation (spec story 12 / ticket #23).
+
+const requirementItemSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1),
+  include: z.boolean(),
+}) satisfies z.ZodType<RequirementItemJson>
+
+const updateJobRequirementsInputSchema = z.object({
+  jobId: z.string().uuid(),
+  preferred: z.array(requirementItemSchema),
+  nonNegotiables: z.array(requirementItemSchema),
+})
+
+/**
+ * Updates a Job's preferred + non-negotiable requirement lists. Enforces
+ * `canCreateJob` (Job management capability — ADR-0004) then UPDATEs on the
+ * user-scoped client so RLS re-validates company admin at Postgres
+ * ("Admins can update jobs"). At least one included preferred and one
+ * included non-negotiable are required (source save validation parity).
+ */
+export const updateJobRequirements = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(updateJobRequirementsInputSchema)
+  .handler(async ({ data, context }) => {
+    const { data: profile, error: profileError } = await context.supabase
+      .from('profiles')
+      .select('id, permissions')
+      .eq('id', context.session.user.id)
+      .maybeSingle()
+    if (profileError || !profile) {
+      throw new Error('Failed to load your member profile.')
+    }
+    if (!profile.permissions.canCreateJob) {
+      throw new Error('You do not have permission to update job requirements.')
+    }
+
+    const preferred = data.preferred
+      .map((req) => ({
+        id: req.id,
+        text: req.text.trim(),
+        include: req.include,
+      }))
+      .filter((req) => req.text.length > 0)
+    const nonNegotiables = data.nonNegotiables
+      .map((req) => ({
+        id: req.id,
+        text: req.text.trim(),
+        include: req.include,
+      }))
+      .filter((req) => req.text.length > 0)
+
+    if (!preferred.some((req) => req.include !== false)) {
+      throw new Error('Select at least one preferred requirement to save.')
+    }
+    if (!nonNegotiables.some((req) => req.include !== false)) {
+      throw new Error('Select at least one non-negotiable requirement to save.')
+    }
+
+    const { data: job, error: updateError } = await context.supabase
+      .from('jobs')
+      .update({
+        preferred_requirements: preferred,
+        non_negotiables: nonNegotiables,
+      })
+      .eq('id', data.jobId)
+      .select('id')
+      .maybeSingle()
+    if (updateError) {
+      throw new Error(updateError.message)
+    }
+    if (!job) {
+      throw new Error('Job not found or you do not have permission to update it.')
+    }
+
+    return { id: job.id }
+  })
+
 /** Re-exported create input type for the client mutation + dialog. */
 export type CreateJobInput = z.infer<typeof createJobInputSchema>
 export type ParseJobInput = z.infer<typeof parseJobInputSchema>
+export type UpdateJobRequirementsInput = z.infer<
+  typeof updateJobRequirementsInputSchema
+>
