@@ -2,7 +2,13 @@ import { createMiddleware } from '@tanstack/react-start'
 import { getRequestHeader, getRequestIP } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, FormQuestionsJson } from '#/integrations/supabase/types'
+import type {
+  Database,
+  FormQuestionsJson,
+  InterviewSessionContextJson,
+  QuestionCompletedJson,
+  QuestionFollowUpJson,
+} from '#/integrations/supabase/types'
 import { getAdminClient } from '../lib/supabase'
 import { checkIpRateLimit } from '../lib/rate-limit'
 import type { RateLimitBucket } from '../lib/rate-limit'
@@ -16,6 +22,10 @@ export class CandidateTokenError extends Error {
     | 'FORM_EXPIRED'
     | 'RATE_LIMITED'
     | 'INTERVIEW_NOT_FOUND'
+    | 'INTERVIEW_EXPIRED'
+    | 'INTERVIEW_ALREADY_STARTED'
+    | 'INTERVIEW_COMPLETED'
+    | 'INTERVIEW_INACTIVE'
 
   constructor(
     code: CandidateTokenError['code'],
@@ -44,14 +54,40 @@ export type FormTokenContext = {
   jobStatus: string | null
 }
 
+export type InterviewTokenContext = {
+  id: string
+  token: string
+  status: Database['public']['Enums']['interview_session_status']
+  expiresAt: string | null
+  currentQuestionIndex: number
+  questionsCompleted: QuestionCompletedJson[]
+  currentQuestionFollowUps: QuestionFollowUpJson[]
+  interviewContext: InterviewSessionContextJson
+  jobApplicationId: string
+  candidateId: string
+  jobId: string
+  companyId: string
+  candidateName: string
+  jobTitle: string
+  companyName: string
+  salaryRange: string | null
+}
+
+type InterviewRequireStatus = 'pending' | 'in_progress'
+
 type CandidateTokenMiddlewareOptions = {
   kind: CandidateTokenKind
   /**
    * When true (default), enforce the IP sliding-window limit for this kind.
    * Form GET / signed-upload prep pass `false` so a single apply journey is not
-   * burned by the source's 3/min submit budget (ADR-0015).
+   * burned by the source's 3/min submit budget (ADR-0015). Interview start /
+   * session GET / audio prep pass `false`; conversation uses the interview
+   * bucket. Transcription enforces its own `interview-transcribe` bucket in
+   * the handler (source: 10/min vs conversation 15/min).
    */
   rateLimit?: boolean
+  /** Interview-only: require a specific session status after load. */
+  requireStatus?: InterviewRequireStatus
 }
 
 function resolveClientIp(): string {
@@ -66,6 +102,12 @@ function resolveClientIp(): string {
 
 function rateLimitBucket(kind: CandidateTokenKind): RateLimitBucket {
   return kind === 'form' ? 'form-submit' : 'interview'
+}
+
+function rateLimitMessage(kind: CandidateTokenKind): string {
+  return kind === 'form'
+    ? 'Rate limit exceeded. Maximum 3 form submissions per minute. Try again after 1 minute.'
+    : 'Rate limit exceeded. Maximum 15 interview messages per minute. Try again after 1 minute.'
 }
 
 async function loadFormTokenContext(
@@ -150,11 +192,128 @@ async function loadFormTokenContext(
   }
 }
 
+async function loadInterviewTokenContext(
+  admin: SupabaseClient<Database>,
+  token: string,
+  requireStatus?: InterviewRequireStatus,
+): Promise<InterviewTokenContext> {
+  const { data, error } = await admin
+    .from('interview_sessions')
+    .select(
+      `
+      id,
+      token,
+      status,
+      expires_at,
+      current_question_index,
+      questions_completed,
+      current_question_follow_ups,
+      interview_context,
+      job_application_id,
+      candidate_id,
+      job_id,
+      job_applications (
+        candidate_name,
+        jobs (
+          title,
+          salary_range,
+          companies (
+            id,
+            name
+          )
+        )
+      )
+    `,
+    )
+    .eq('token', token)
+    .maybeSingle()
+
+  if (error || !data) {
+    throw new CandidateTokenError(
+      'INTERVIEW_NOT_FOUND',
+      'Invalid interview link',
+    )
+  }
+
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    throw new CandidateTokenError(
+      'INTERVIEW_EXPIRED',
+      'This interview link has expired',
+    )
+  }
+
+  if (data.status === 'expired') {
+    throw new CandidateTokenError(
+      'INTERVIEW_EXPIRED',
+      'This interview link has expired',
+    )
+  }
+
+  if (requireStatus === 'pending') {
+    if (data.status === 'completed') {
+      throw new CandidateTokenError(
+        'INTERVIEW_COMPLETED',
+        'This interview has already been completed',
+      )
+    }
+    if (data.status === 'in_progress') {
+      throw new CandidateTokenError(
+        'INTERVIEW_ALREADY_STARTED',
+        'This interview has already been started',
+      )
+    }
+  }
+
+  if (requireStatus === 'in_progress' && data.status !== 'in_progress') {
+    throw new CandidateTokenError(
+      'INTERVIEW_INACTIVE',
+      'Invalid or inactive interview session',
+    )
+  }
+
+  const jobApplication = data.job_applications as {
+    candidate_name: string | null
+    jobs: {
+      title: string | null
+      salary_range: string
+      companies: { id: string; name: string | null } | null
+    } | null
+  } | null
+
+  const job = jobApplication?.jobs
+  const company = job?.companies
+  if (!company?.id) {
+    throw new CandidateTokenError(
+      'INTERVIEW_NOT_FOUND',
+      'Invalid interview link',
+    )
+  }
+
+  return {
+    id: data.id,
+    token: data.token,
+    status: data.status,
+    expiresAt: data.expires_at,
+    currentQuestionIndex: data.current_question_index,
+    questionsCompleted: data.questions_completed,
+    currentQuestionFollowUps: data.current_question_follow_ups,
+    interviewContext: data.interview_context,
+    jobApplicationId: data.job_application_id,
+    candidateId: data.candidate_id,
+    jobId: data.job_id,
+    companyId: company.id,
+    candidateName: jobApplication?.candidate_name || 'Candidate',
+    jobTitle: job?.title || 'Position',
+    companyName: company.name || 'Company',
+    salaryRange: job?.salary_range ?? null,
+  }
+}
+
 /**
- * Applicant token middleware — validates a form (or, later, interview) token,
- * attaches the admin client + config to context, and optionally enforces IP
+ * Applicant token middleware — validates a form or interview token, attaches
+ * the admin client + config/session to context, and optionally enforces IP
  * rate limiting. Symmetric counterpart to `authMiddleware` (spec §Applicant
- * token flows; ADR-0004 / ADR-0015).
+ * token flows; ADR-0004 / ADR-0015 / ADR-0017).
  */
 export function candidateTokenMiddleware(
   options: CandidateTokenMiddlewareOptions,
@@ -165,7 +324,7 @@ export function candidateTokenMiddleware(
     .validator(
       z
         .object({
-          token: z.string().min(1, 'Form token is required'),
+          token: z.string().min(1, 'Token is required'),
         })
         .passthrough(),
     )
@@ -180,29 +339,38 @@ export function candidateTokenMiddleware(
         if (!result.success) {
           throw new CandidateTokenError(
             'RATE_LIMITED',
-            'Rate limit exceeded. Maximum 3 form submissions per minute. Try again after 1 minute.',
+            rateLimitMessage(options.kind),
           )
         }
       }
 
       const admin = getAdminClient()
+      const userAgent = getRequestHeader('user-agent') ?? 'unknown'
 
-      if (options.kind === 'interview') {
-        throw new CandidateTokenError(
-          'INTERVIEW_NOT_FOUND',
-          'Interview token flows are not implemented yet',
-        )
+      const context: {
+        admin: typeof admin
+        clientIp: string
+        userAgent: string
+        formConfig: FormTokenContext | undefined
+        interviewSession: InterviewTokenContext | undefined
+      } = {
+        admin,
+        clientIp,
+        userAgent,
+        formConfig: undefined,
+        interviewSession: undefined,
       }
 
-      const formConfig = await loadFormTokenContext(admin, data.token)
-
-      return next({
-        context: {
+      if (options.kind === 'interview') {
+        context.interviewSession = await loadInterviewTokenContext(
           admin,
-          clientIp,
-          formConfig,
-          userAgent: getRequestHeader('user-agent') ?? 'unknown',
-        },
-      })
+          data.token,
+          options.requireStatus,
+        )
+      } else {
+        context.formConfig = await loadFormTokenContext(admin, data.token)
+      }
+
+      return next({ context })
     })
 }

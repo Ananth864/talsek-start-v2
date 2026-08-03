@@ -19,11 +19,14 @@ export const serverEnv = createEnv({
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_BASE_URL: z.string().url().optional(),
     GROK_API_KEY: z.string().min(1).optional(),
+    // Groq — Whisper primary for interview transcription (#12 / ADR-0005).
+    GROQ_API_KEY: z.string().min(1).optional(),
     // Gemini — Resume Extraction primary + Email Analysis fallback (#9).
     GEMINI_API_KEY: z.string().min(1).optional(),
     // When "1"/"true", the Resume AI pipeline returns deterministic stubs
     // (skips provider calls + credit consume). Playwright sets this so E2E
     // exercises the sync chain without multi-minute hedged AI calls (ADR-0014).
+    // Also stubs interview conversation tool-calls + Whisper transcription (#12).
     AI_PIPELINE_STUB: z.enum(['1', 'true']).optional(),
     // Upstash Redis for Applicant IP rate limits (ADR-0015). Optional: when
     // absent, `checkIpRateLimit` falls back to an in-process sliding window

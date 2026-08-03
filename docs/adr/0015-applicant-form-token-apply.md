@@ -14,7 +14,7 @@ validates `token` from the server-function input, loads the Form Config (and
 later Interview Session) via `getAdminClient()`, and attaches
 `{ admin, formConfig, clientIp, userAgent }` to context. Invalid / disabled /
 expired tokens throw `CandidateTokenError` with stable codes. Interview kind is
-stubbed until #12.
+implemented in ADR-0017.
 
 ### 2. IP rate limit on submit only; Upstash with in-process fallback
 

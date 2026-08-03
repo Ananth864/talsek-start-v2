@@ -2,7 +2,10 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { serverEnv } from './env'
 
-export type RateLimitBucket = 'form-submit' | 'interview'
+export type RateLimitBucket =
+  | 'form-submit'
+  | 'interview'
+  | 'interview-transcribe'
 
 export type RateLimitResult = {
   success: boolean
@@ -17,8 +20,10 @@ const BUCKET_LIMITS: Record<
 > = {
   // Source form-submit: Upstash sliding window 3 / 1m.
   'form-submit': { limit: 3, windowMs: 60_000 },
-  // Source interview-conversation: 15 / 1m (wired when #12 lands).
+  // Source interview-conversation: 15 / 1m.
   interview: { limit: 15, windowMs: 60_000 },
+  // Source transcribe-audio: 10 / 1m.
+  'interview-transcribe': { limit: 10, windowMs: 60_000 },
 }
 
 let upstashLimiters: Partial<Record<RateLimitBucket, Ratelimit>> | null = null
@@ -42,6 +47,12 @@ function getUpstashLimiters(): Partial<Record<RateLimitBucket, Ratelimit>> | nul
       limiter: Ratelimit.slidingWindow(15, '1 m'),
       analytics: true,
       prefix: 'talsek:rl:interview',
+    }),
+    'interview-transcribe': new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, '1 m'),
+      analytics: true,
+      prefix: 'talsek:rl:interview-transcribe',
     }),
   }
   return upstashLimiters

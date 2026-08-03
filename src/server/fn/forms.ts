@@ -92,7 +92,7 @@ export const getFormByToken = createServerFn({ method: 'GET' })
   .middleware([candidateTokenMiddleware({ kind: 'form', rateLimit: false })])
   .validator(z.object({ token: z.string().min(1) }))
   .handler(async ({ context }) => {
-    const { formConfig } = context
+    const formConfig = context.formConfig!
     return {
       jobTitle: formConfig.jobTitle,
       companyName: formConfig.companyName,
@@ -123,7 +123,8 @@ export const prepareFormResumeUpload = createServerFn({ method: 'POST' })
   .validator(prepareUploadInputSchema)
   .handler(async ({ data, context }) => {
     try {
-      const { admin, formConfig } = context
+      const { admin } = context
+      const formConfig = context.formConfig!
 
       const { data: candidateId, error: candidateError } = await admin.rpc(
         'find_or_create_candidate',
@@ -200,7 +201,8 @@ export const submitFormApplication = createServerFn({ method: 'POST' })
   .validator(submitFormInputSchema)
   .handler(async ({ data, context }) => {
     try {
-      const { admin, formConfig, clientIp, userAgent } = context
+      const { admin, clientIp, userAgent } = context
+      const formConfig = context.formConfig!
 
       // Path must match the company/job prefix issued by prepareFormResumeUpload.
       const expectedPrefix = `${formConfig.companyId}/${formConfig.jobId}/`
