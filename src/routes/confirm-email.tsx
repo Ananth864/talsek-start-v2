@@ -1,15 +1,20 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { ArrowLeft, CheckCircle, Mail, RefreshCw } from 'lucide-react'
 import {
   getAuthState,
   exchangeAuthCode,
   resendConfirmation,
   signOut,
 } from '#/server/fn/auth'
+import {
+  AuthBackLink,
+  AuthCenteredShell,
+} from '#/components/auth/auth-centered-shell'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { Card, CardContent, CardHeader } from '#/components/ui/card'
 
 export const Route = createFileRoute('/confirm-email')({
   validateSearch: (search: Record<string, unknown>): { code?: string; email?: string } => ({
@@ -41,9 +46,17 @@ function ConfirmEmailPage() {
   const loader = Route.useLoaderData()
   const navigate = useNavigate()
   const [email, setEmail] = useState(initialEmail ?? '')
-  const [cooldown, setCooldown] = useState(0)
+  const [cooldown, setCooldown] = useState(initialEmail ? RESEND_COOLDOWN : 0)
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
+
+  // Source SimpleResendEmail starts a 60s cooldown after landing from sign-up.
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [cooldown])
 
   const onResend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,16 +67,8 @@ function ConfirmEmailPage() {
     setSending(false)
     if (res.ok) {
       setNotice('Confirmation email sent. Check your inbox.')
+      setEmailSent(true)
       setCooldown(RESEND_COOLDOWN)
-      const tick = setInterval(() => {
-        setCooldown((c) => {
-          if (c <= 1) {
-            clearInterval(tick)
-            return 0
-          }
-          return c - 1
-        })
-      }, 1000)
     } else {
       setNotice(res.error)
     }
@@ -78,58 +83,116 @@ function ConfirmEmailPage() {
   // Clicked the email link — PKCE code exchange already ran in the loader.
   if (code && loader.mode === 'confirmed') {
     return (
-      <div className="flex min-h-svh items-center justify-center p-4">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>Email confirmed</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm">
-              Welcome to Talsek! Your email is confirmed.
-            </p>
+      <AuthCenteredShell showBrand>
+        <Card data-testid="auth-card" className="border-0 shadow-lg">
+          <CardContent className="space-y-6 pt-8 text-center">
+            <div className="bg-primary/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full">
+              <CheckCircle className="text-primary h-12 w-12" aria-hidden />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold">Email Confirmed Successfully!</h1>
+              <p className="text-muted-foreground text-sm">
+                Welcome to Talsek! Your email is confirmed.
+              </p>
+            </div>
             <Button className="w-full" onClick={onContinue}>
               Continue to sign in
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthCenteredShell>
     )
   }
 
   if (code && loader.mode === 'error') {
     return (
-      <div className="flex min-h-svh items-center justify-center p-4">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>Confirmation link invalid</CardTitle>
+      <AuthCenteredShell showBrand>
+        <Card data-testid="auth-card" className="border-0 shadow-lg">
+          <CardHeader className="text-center">
+            <h1 className="text-2xl font-bold">Confirmation link invalid</h1>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">
+          <CardContent className="space-y-4 text-center">
+            <p className="text-muted-foreground text-sm">
               {loader.error}. The link may be expired or already used.
             </p>
-            <p className="text-sm">
-              <a href="/signup" className="hover:text-foreground">
-                Try signing up again
-              </a>
-            </p>
+            <Button asChild className="w-full" variant="outline">
+              <Link to="/signup">Try signing up again</Link>
+            </Button>
+            <AuthBackLink to="/signin" className="mb-0 justify-center">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Back to sign in
+            </AuthBackLink>
           </CardContent>
         </Card>
-      </div>
+      </AuthCenteredShell>
+    )
+  }
+
+  if (emailSent) {
+    return (
+      <AuthCenteredShell showBrand>
+        <Card data-testid="auth-card" className="border-0 shadow-lg">
+          <CardContent className="space-y-6 pt-8 text-center">
+            <div className="bg-primary/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full">
+              <CheckCircle className="text-primary h-12 w-12" aria-hidden />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold">Email Sent!</h1>
+              <p className="text-muted-foreground text-sm">
+                A new confirmation email has been sent
+                {email ? (
+                  <>
+                    {' '}
+                    to <strong>{email}</strong>
+                  </>
+                ) : null}
+                .
+              </p>
+            </div>
+            <p className="bg-muted rounded-lg border p-4 text-sm">
+              Please check your inbox and spam folder. The new confirmation link
+              will be valid for 24 hours.
+            </p>
+            {cooldown > 0 && (
+              <p className="text-muted-foreground text-sm">
+                You can resend again in {cooldown}s
+              </p>
+            )}
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              disabled={cooldown > 0}
+              onClick={() => setEmailSent(false)}
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend again'}
+            </Button>
+            <AuthBackLink to="/signin" className="mb-0 justify-center">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Back to sign in
+            </AuthBackLink>
+          </CardContent>
+        </Card>
+      </AuthCenteredShell>
     )
   }
 
   // Landed directly (e.g. right after sign-up) — show the "check your email" /
   // resend UI.
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Check your email</CardTitle>
+    <AuthCenteredShell showBrand>
+      <Card data-testid="auth-card" className="border-0 shadow-lg">
+        <CardHeader className="text-center">
+          <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+            <Mail className="text-primary h-8 w-8" aria-hidden />
+          </div>
+          <h1 className="text-2xl font-bold">Check your email</h1>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            We sent a confirmation link{initialEmail ? ` to ${initialEmail}` : ''}.
-            Click it to activate your account.
+          <p className="text-muted-foreground text-center text-sm">
+            We sent a confirmation link
+            {initialEmail ? ` to ${initialEmail}` : ''}. Click it to activate
+            your account.
           </p>
           <form onSubmit={onResend} className="space-y-3">
             {!initialEmail && (
@@ -147,24 +210,28 @@ function ConfirmEmailPage() {
             <Button
               type="submit"
               variant="outline"
-              className="w-full"
-              disabled={sending || cooldown > 0}
+              className="w-full gap-2"
+              disabled={sending || cooldown > 0 || !email}
             >
+              <RefreshCw className="h-4 w-4" aria-hidden />
               {cooldown > 0
                 ? `Resend in ${cooldown}s`
                 : sending
                   ? 'Sending…'
                   : 'Resend confirmation email'}
             </Button>
-            {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
+            {notice && (
+              <p className="text-muted-foreground text-sm">{notice}</p>
+            )}
           </form>
-          <p className="text-center text-sm">
-            <a href="/signin" className="hover:text-foreground">
+          <div className="flex justify-center">
+            <AuthBackLink to="/signin" className="mb-0">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
               Back to sign in
-            </a>
-          </p>
+            </AuthBackLink>
+          </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthCenteredShell>
   )
 }

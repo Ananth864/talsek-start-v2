@@ -1,10 +1,20 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
+import { ArrowLeft, CheckCircle, Mail, RefreshCw } from 'lucide-react'
 import { getAuthState, requestPasswordReset } from '#/server/fn/auth'
+import {
+  AuthBackLink,
+  AuthCenteredShell,
+} from '#/components/auth/auth-centered-shell'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from '#/components/ui/card'
 
 export const Route = createFileRoute('/forgot-password')({
   beforeLoad: async () => {
@@ -23,11 +33,22 @@ function maskEmail(email: string) {
   }@${domain}`
 }
 
+const SUCCESS_STEPS = [
+  'Check your email inbox (and spam folder) for the reset link',
+  "Click the 'Reset Password' link in the email, if you received it",
+  'Create your new password and sign in',
+] as const
+
 function ForgotPasswordPage() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
-  const masked = useMemo(() => maskEmail(email), [email])
+  const [emailSent, setEmailSent] = useState<string | null>(null)
+  const masked = useMemo(
+    () => (emailSent ? maskEmail(emailSent) : ''),
+    [emailSent],
+  )
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,57 +57,154 @@ function ForgotPasswordPage() {
     // the address exists (Supabase does not surface user-existence on reset).
     await requestPasswordReset({ data: { email } })
     setLoading(false)
+    setEmailSent(email)
     setSent(true)
   }
 
+  const resetForm = () => {
+    setSent(false)
+    setEmailSent(null)
+    setEmail('')
+  }
+
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Reset your password</CardTitle>
+    <AuthCenteredShell
+      backLink={
+        !sent ? (
+          <AuthBackLink to="/signin">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Back to sign in
+          </AuthBackLink>
+        ) : undefined
+      }
+    >
+      <Card data-testid="auth-card" className="border-0 shadow-lg">
+        <CardHeader className="space-y-1 pb-6">
+          <div className="text-center">
+            {sent ? (
+              <>
+                <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                  <CheckCircle className="text-primary h-8 w-8" aria-hidden />
+                </div>
+                <h1 className="text-2xl font-bold">Check your email</h1>
+                <p className="text-muted-foreground mt-2">
+                  If an account exists, you'll receive password reset
+                  instructions shortly.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                  <Mail className="text-primary h-8 w-8" aria-hidden />
+                </div>
+                <h1 className="text-2xl font-bold">Forgot your password?</h1>
+                <p className="text-muted-foreground mt-2">
+                  Enter your email and we'll send you reset instructions
+                </p>
+              </>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="space-y-6">
           {sent ? (
-            <div className="space-y-3">
-              <p className="text-sm">
-                If an account exists for{' '}
-                <span className="font-medium">{masked || 'your email'}</span>, a
-                reset link is on its way.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Check your inbox (and spam) for a link to choose a new password.
-              </p>
-              <p className="text-center text-sm">
-                <a href="/signin" className="hover:text-foreground">
+            <div className="space-y-6">
+              <div className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                <p className="text-sm font-medium">
+                  Password reset email sent to:
+                </p>
+                <p className="bg-muted rounded px-2 py-1 font-mono text-sm">
+                  {masked || 'your email'}
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  If an account exists for this address, a reset link is on its
+                  way.
+                </p>
+              </div>
+
+              <div
+                data-testid="forgot-success-steps"
+                className="text-muted-foreground space-y-3 text-sm"
+              >
+                <p className="text-foreground font-medium">What to do next:</p>
+                <div className="space-y-3">
+                  {SUCCESS_STEPS.map((step, index) => (
+                    <div key={step} className="flex items-start gap-3">
+                      <div className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <p>{step}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={resetForm}
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden />
+                  Send to different email
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => navigate({ to: '/signin' })}
+                >
                   Back to sign in
-                </a>
-              </p>
+                </Button>
+              </div>
             </div>
           ) : (
-            <form onSubmit={onSubmit} className="space-y-4">
+            <form onSubmit={onSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email address</Label>
                 <Input
                   id="email"
                   type="email"
+                  placeholder="Enter your email address"
                   autoComplete="email"
+                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Sending…' : 'Send reset link'}
+              <Button type="submit" className="w-full gap-2" disabled={loading}>
+                {loading ? (
+                  'Sending…'
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4" aria-hidden />
+                    Send reset link
+                  </>
+                )}
               </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                <a href="/signin" className="hover:text-foreground">
-                  Back to sign in
-                </a>
-              </p>
             </form>
           )}
         </CardContent>
+
+        {!sent && (
+          <CardFooter>
+            <p
+              data-testid="auth-secondary-link"
+              className="text-muted-foreground w-full text-center text-sm"
+            >
+              Remember your password?{' '}
+              <Link
+                to="/signin"
+                className="text-primary font-medium hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
+        )}
       </Card>
-    </div>
+    </AuthCenteredShell>
   )
 }
