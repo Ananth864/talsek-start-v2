@@ -5,12 +5,14 @@ import {
   fetchCompanyPayments,
   fetchCreditBalance,
   fetchServiceRates,
+  fetchUsageStats,
   updateBillingSettings,
 } from '#/server/fn/billing'
 import type {
   ActiveSubscriptions,
   BillingPaymentRow,
   BillingSettingsRow,
+  UsageStats,
 } from '#/server/fn/billing'
 
 export const creditBalanceQueryKey = (companyId: string | null) =>
@@ -93,6 +95,33 @@ export function useServiceRates(companyId: string | null) {
   return useQuery(serviceRatesQueryOptions(companyId))
 }
 
+export const usageStatsQueryKey = (companyId: string | null) =>
+  ['usage-stats', companyId] as const
+
+export const usageStatsQueryOptions = (companyId: string | null) =>
+  queryOptions({
+    queryKey: usageStatsQueryKey(companyId),
+    queryFn: () => fetchUsageStats(),
+    enabled: !!companyId,
+    staleTime: 60_000,
+  })
+
+export function useUsageStats(companyId: string | null) {
+  const query = useQuery(usageStatsQueryOptions(companyId))
+  const empty: UsageStats = {
+    dailyUsage: [],
+    categoryData: [],
+    jobUsageData: [],
+    totalCreditsUsed: 0,
+  }
+  return {
+    ...(query.data ?? empty),
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}
+
 export const billingSettingsQueryKey = (companyId: string | null) =>
   ['billing-settings', companyId] as const
 
@@ -145,7 +174,15 @@ export function useInvalidateBilling(companyId: string | null) {
     void queryClient.invalidateQueries({
       queryKey: billingSettingsQueryKey(companyId),
     })
+    void queryClient.invalidateQueries({
+      queryKey: usageStatsQueryKey(companyId),
+    })
   }
 }
 
-export type { BillingPaymentRow, ActiveSubscriptions, BillingSettingsRow }
+export type {
+  BillingPaymentRow,
+  ActiveSubscriptions,
+  BillingSettingsRow,
+  UsageStats,
+}

@@ -4,6 +4,7 @@ import {
   useNavigate,
 } from '@tanstack/react-router'
 import {
+  Activity,
   Check,
   CreditCard,
   Download,
@@ -25,6 +26,7 @@ import {
   useCreditBalance,
   useInvalidateBilling,
   useServiceRates,
+  useUsageStats,
 } from '#/hooks/use-billing'
 import type { BillingPaymentRow } from '#/hooks/use-billing'
 import {
@@ -35,6 +37,7 @@ import {
 import type { PlanType } from '#/lib/billing-shared'
 import { AutoRefillSettings } from '#/components/billing/auto-refill-settings'
 import { CustomTopupInput } from '#/components/billing/custom-topup-input'
+import { UsagePanel } from '#/components/billing/usage-panel'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import {
@@ -96,6 +99,14 @@ function BillingPage() {
     isLoading: paymentsLoading,
     error: paymentsError,
   } = useCompanyPayments(companyId)
+  const {
+    dailyUsage,
+    categoryData,
+    jobUsageData,
+    totalCreditsUsed,
+    isLoading: usageLoading,
+    error: usageError,
+  } = useUsageStats(companyId)
 
   const currentPlan = resolveCurrentPlanLabel(
     Boolean(walletAnchor),
@@ -414,6 +425,14 @@ function BillingPage() {
                 Billing
               </TabsTrigger>
               <TabsTrigger
+                value="usage"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-[#4366B0] rounded-none px-4"
+                data-testid="usage-tab"
+              >
+                <Activity className="mr-2 h-4 w-4" />
+                Usage
+              </TabsTrigger>
+              <TabsTrigger
                 value="invoices"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-[#4366B0] rounded-none px-4"
                 data-testid="invoices-tab"
@@ -597,6 +616,20 @@ function BillingPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="usage">
+            <UsagePanel
+              balance={balance}
+              usage={{
+                dailyUsage,
+                categoryData,
+                jobUsageData,
+                totalCreditsUsed,
+              }}
+              isLoading={usageLoading || balanceLoading}
+              error={usageError instanceof Error ? usageError : null}
+            />
           </TabsContent>
 
           <TabsContent value="invoices">

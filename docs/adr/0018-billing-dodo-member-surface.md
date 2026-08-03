@@ -47,5 +47,5 @@ when present, and invoice returns a minimal PDF. Live paths require
 
 - Credits from successful payments land when the #14 webhook grants them
   (ADR-0019); #13 starts the charge/checkout and surfaces history already in DB.
-- Usage charts (recharts) are not required for #13 ACs; the Billing + Invoices
-  tabs cover the ticket.
+- Usage tab (#30) adds recharts daily + by-service charts and a per-Job table
+  via `fetchUsageStats`, styled with `--chart-*` tokens.

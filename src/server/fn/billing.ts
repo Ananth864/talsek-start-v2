@@ -1,5 +1,5 @@
 /**
- * Member billing server functions (ticket #13 / ADR-0018).
+ * Member billing server functions (ticket #13 / ADR-0018; Usage tab #30).
  * Ports source edge fns: create-checkout, change-plan, cancel-subscription,
  * billing-create-topup, get-invoice — plus the read hooks they feed.
  */
@@ -12,6 +12,12 @@ import {
   requireMemberCompanyId,
 } from '../lib/billing-customer'
 import { getDodoClient, isBillingStub, PLAN_CODES } from '../lib/dodo'
+import {
+  buildCategoryUsage,
+  buildDailyUsage,
+  buildJobUsageRows,
+} from '#/lib/billing-usage'
+import type { UsageStats } from '#/lib/billing-usage'
 // ─── Shared helpers ──────────────────────────────────────────────────────
 
 async function loadActiveProductByPlanCode(planCode: string) {
@@ -247,6 +253,166 @@ export const fetchServiceRates = createServerFn({ method: 'GET' })
       resume_screening_cost: row ? row.resume_screening_cost : 5,
       screening_interview_cost: row ? row.screening_interview_cost : 40,
       plan_name: row ? row.plan_name : 'Pay as you go',
+    }
+  })
+
+export type { UsageStats }
+
+/**
+ * Aggregates credit_transactions for the Usage tab (source useUsageStats).
+ * Daily series = last 14 days; category + per-Job = all-time consumption.
+ */
+export const fetchUsageStats = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<UsageStats> => {
+    const companyId = await requireMemberCompanyId(
+      context.supabase,
+      context.session.user.id,
+    )
+    const fourteenDaysAgo = new Date()
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+
+    const [dailyResult, categoryResult, jobsResult, resumeTxResult, interviewTxResult] =
+      await Promise.all([
+        context.supabase
+          .from('credit_transactions')
+          .select('amount, created_at, transaction_type')
+          .eq('company_id', companyId)
+          .in('transaction_type', [
+            'resume_screening',
+            'screening_interview',
+            'consume',
+          ])
+          .gte('created_at', fourteenDaysAgo.toISOString())
+          .order('created_at', { ascending: true }),
+        context.supabase
+          .from('credit_transactions')
+          .select('amount, transaction_type')
+          .eq('company_id', companyId)
+          .in('transaction_type', ['resume_screening', 'screening_interview']),
+        context.supabase
+          .from('jobs')
+          .select('id, title')
+          .eq('company_id', companyId)
+          .eq('status', 'active'),
+        context.supabase
+          .from('credit_transactions')
+          .select('amount, reference_id')
+          .eq('company_id', companyId)
+          .eq('transaction_type', 'resume_screening')
+          .eq('reference_type', 'job_application'),
+        context.supabase
+          .from('credit_transactions')
+          .select('amount, reference_id')
+          .eq('company_id', companyId)
+          .eq('transaction_type', 'screening_interview')
+          .eq('reference_type', 'interview_session'),
+      ])
+
+    if (dailyResult.error) {
+      throw new Error(
+        `Failed to load daily usage: ${dailyResult.error.message}`,
+      )
+    }
+    if (categoryResult.error) {
+      throw new Error(
+        `Failed to load category usage: ${categoryResult.error.message}`,
+      )
+    }
+    if (jobsResult.error) {
+      throw new Error(`Failed to load jobs for usage: ${jobsResult.error.message}`)
+    }
+    if (resumeTxResult.error) {
+      throw new Error(
+        `Failed to load resume usage: ${resumeTxResult.error.message}`,
+      )
+    }
+    if (interviewTxResult.error) {
+      throw new Error(
+        `Failed to load interview usage: ${interviewTxResult.error.message}`,
+      )
+    }
+
+    let resumeCredits = 0
+    let interviewCredits = 0
+    for (const tx of categoryResult.data) {
+      const credits = Math.abs(tx.amount)
+      if (tx.transaction_type === 'resume_screening') resumeCredits += credits
+      else if (tx.transaction_type === 'screening_interview') {
+        interviewCredits += credits
+      }
+    }
+
+    const resumeByJob = new Map<string, { credits: number; count: number }>()
+    const resumeTxs = resumeTxResult.data
+    const appIds = resumeTxs
+      .map((t) => t.reference_id)
+      .filter((id): id is string => Boolean(id))
+    if (appIds.length > 0) {
+      const { data: apps, error: appsError } = await context.supabase
+        .from('job_applications')
+        .select('id, job_id')
+        .in('id', appIds)
+      if (appsError) {
+        throw new Error(
+          `Failed to resolve Job Applications for usage: ${appsError.message}`,
+        )
+      }
+      const appToJob = new Map(
+        apps.map((app) => [app.id, app.job_id] as const),
+      )
+      for (const tx of resumeTxs) {
+        const jobId = tx.reference_id
+          ? appToJob.get(tx.reference_id)
+          : undefined
+        if (!jobId) continue
+        const current = resumeByJob.get(jobId) ?? { credits: 0, count: 0 }
+        current.credits += Math.abs(tx.amount)
+        current.count += 1
+        resumeByJob.set(jobId, current)
+      }
+    }
+
+    const interviewByJob = new Map<string, { credits: number; count: number }>()
+    const interviewTxs = interviewTxResult.data
+    const sessionIds = interviewTxs
+      .map((t) => t.reference_id)
+      .filter((id): id is string => Boolean(id))
+    if (sessionIds.length > 0) {
+      const { data: sessions, error: sessionsError } = await context.supabase
+        .from('interview_sessions')
+        .select('id, job_id')
+        .in('id', sessionIds)
+      if (sessionsError) {
+        throw new Error(
+          `Failed to resolve Interview Sessions for usage: ${sessionsError.message}`,
+        )
+      }
+      const sessionToJob = new Map(
+        sessions.map((s) => [s.id, s.job_id] as const),
+      )
+      for (const tx of interviewTxs) {
+        const jobId = tx.reference_id
+          ? sessionToJob.get(tx.reference_id)
+          : undefined
+        if (!jobId) continue
+        const current = interviewByJob.get(jobId) ?? { credits: 0, count: 0 }
+        current.credits += Math.abs(tx.amount)
+        current.count += 1
+        interviewByJob.set(jobId, current)
+      }
+    }
+
+    const categoryData = buildCategoryUsage(resumeCredits, interviewCredits)
+    return {
+      dailyUsage: buildDailyUsage(dailyResult.data),
+      categoryData,
+      jobUsageData: buildJobUsageRows(
+        jobsResult.data,
+        resumeByJob,
+        interviewByJob,
+      ),
+      totalCreditsUsed: resumeCredits + interviewCredits,
     }
   })
 
