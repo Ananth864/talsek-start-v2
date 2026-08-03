@@ -272,9 +272,10 @@ test.describe('Board correctness (#24)', () => {
       ).toBeVisible()
     } else {
       for (let i = 0; i < rejectedCount; i++) {
-        await expect(
-          rejectedCards.nth(i).getByTestId('candidate-status'),
-        ).toHaveText(/rejected/i)
+        await expect(rejectedCards.nth(i)).toHaveAttribute(
+          'data-status',
+          'rejected',
+        )
       }
     }
 

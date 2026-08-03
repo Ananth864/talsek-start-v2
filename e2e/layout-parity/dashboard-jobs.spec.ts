@@ -58,6 +58,12 @@ test.describe('Dashboard / jobs layout parity', () => {
 
     await expect(card.getByTestId('open-job-details')).toBeVisible()
 
+    // Source JobCard has no Card py-6; denseness comes from CardContent p-3 only.
+    const paddingTop = await card.evaluate(
+      (el) => getComputedStyle(el).paddingTop,
+    )
+    expect(paddingTop).toBe('0px')
+
     // Copy controls are conditional on email / form link; assert order when present.
     const actions = card.getByTestId('job-card-actions')
     await expect(actions).toBeVisible()

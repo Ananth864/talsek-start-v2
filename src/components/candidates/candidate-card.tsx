@@ -1,15 +1,6 @@
 import { useState } from 'react'
 import type { MouseEvent } from 'react'
-import {
-  Check,
-  ExternalLink,
-  Eye,
-  Loader,
-  Sparkles,
-  Star,
-  Trash2,
-} from 'lucide-react'
-import { Badge } from '#/components/ui/badge'
+import { ExternalLink, Loader, Star } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { Checkbox } from '#/components/ui/checkbox'
@@ -29,7 +20,6 @@ import {
 import { parsedSummary } from '#/lib/parsed-candidate'
 import {
   aiAnalysisOf,
-  applicationStatusMeta,
   normalizedMatchScore,
   scoreBand,
 } from '#/lib/job-applications-shared'
@@ -72,9 +62,8 @@ function formatDate(iso: string | null | undefined) {
   if (!iso) return null
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return null
-  // Fixed locale so SSR HTML matches client hydration (avoids remounts that
-  // drop Shortlist click handlers under Playwright).
-  return d.toLocaleDateString('en-US')
+  // Source CandidateInfo uses "Mon DD"; fixed locale for SSR/client parity.
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function InterviewBadges({
@@ -127,17 +116,21 @@ function RequirementsSummary({
   nonNegotiablesMet,
   nonNegotiablesTotal,
   align = 'start',
+  layout = 'list',
 }: {
   preferredMet: number
   preferredTotal: number
   nonNegotiablesMet: number
   nonNegotiablesTotal: number
   align?: 'start' | 'end'
+  /** Source RequirementsBadges: list is md+ only; grid always shown. */
+  layout?: 'list' | 'grid'
 }) {
   return (
     <div
       className={cn(
-        'flex flex-col gap-1.5 text-[11px] text-muted-foreground',
+        'flex-col gap-1.5 text-[11px] text-muted-foreground',
+        layout === 'list' ? 'hidden md:flex' : 'flex',
         align === 'end' ? 'items-end' : 'items-start',
       )}
       data-testid="candidate-requirements-summary"
@@ -148,21 +141,22 @@ function RequirementsSummary({
           {preferredMet}/{preferredTotal}
         </span>
       </div>
-      {nonNegotiablesTotal > 0 ? (
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Non-Negotiables:</span>
-          <span
-            className={cn(
-              'rounded-md border px-1.5 py-0 font-semibold tabular-nums',
+      <div className="flex items-center gap-2">
+        <span className="font-medium">Non-Negotiables:</span>
+        <span
+          className={cn(
+            'rounded-md border px-1.5 py-0 font-semibold tabular-nums',
+            nonNegotiablesTotal > 0 &&
               nonNegotiablesMet === nonNegotiablesTotal
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-rose-600 dark:text-rose-400',
-            )}
-          >
-            {nonNegotiablesMet}/{nonNegotiablesTotal}
-          </span>
-        </div>
-      ) : null}
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : nonNegotiablesTotal > 0
+                ? 'text-rose-600 dark:text-rose-400'
+                : undefined,
+          )}
+        >
+          {nonNegotiablesMet}/{nonNegotiablesTotal}
+        </span>
+      </div>
     </div>
   )
 }
@@ -210,7 +204,6 @@ export function CandidateCard({
   const email = application.candidate.email
   const name = application.candidate_name || parsed.name || email || 'Candidate'
   const applied = formatDate(application.created_at)
-  const status = applicationStatusMeta(application.status)
   const isRejected = application.status === 'rejected'
   const nextStage = nextStageForApplication(application, stages)
   const canShortlistUi = Boolean(nextStage) && !isRejected
@@ -315,18 +308,23 @@ export function CandidateCard({
     </Button>
   ) : null
 
+  // Source CardActions: text-sm labels, equal flex-1 cells. Icons removed per
+  // layout parity (source hides icons at xl+; we keep labels only).
+  const actionBtn =
+    'h-8 flex-1 justify-center px-3 py-2 text-sm transition-colors'
+
   const profileButton = (
     <Button
       size="sm"
       variant="outline"
       className={cn(
-        'h-7 gap-1 px-2 text-[11px] border-primary/40 text-primary hover:bg-primary/10',
-        isGrid && 'h-8 w-full',
+        actionBtn,
+        'border-primary/40 text-primary hover:bg-primary/10',
+        isGrid && 'w-full flex-none',
       )}
       onClick={(e) => openProfile('overview', e)}
       data-testid="candidate-view-profile"
     >
-      <Sparkles className="size-3" />
       AI Analysis
     </Button>
   )
@@ -336,8 +334,8 @@ export function CandidateCard({
       size="sm"
       variant="outline"
       className={cn(
-        'h-7 gap-1 px-2 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10',
-        isGrid && 'h-8 flex-1',
+        actionBtn,
+        'border-destructive/40 text-destructive hover:bg-destructive/10',
       )}
       onClick={(e) => {
         e.stopPropagation()
@@ -348,11 +346,13 @@ export function CandidateCard({
       data-testid="candidate-reject"
     >
       {isRejecting ? (
-        <Loader className="size-3 animate-spin" />
+        <>
+          <Loader className="size-3.5 animate-spin" />
+          Rejecting…
+        </>
       ) : (
-        <Trash2 className="size-3" />
+        'Reject'
       )}
-      {isRejecting ? 'Rejecting…' : 'Reject'}
     </Button>
   ) : null
 
@@ -361,8 +361,7 @@ export function CandidateCard({
       size="sm"
       variant="outline"
       className={cn(
-        'h-7 gap-1 px-2 text-[11px]',
-        isGrid && 'h-8 flex-1',
+        actionBtn,
         canShortlistUi && canSendReachout
           ? 'border-emerald-400/60 text-emerald-600 hover:bg-emerald-500/10 dark:border-emerald-500/40 dark:text-emerald-200'
           : 'text-muted-foreground',
@@ -385,15 +384,15 @@ export function CandidateCard({
       data-testid="candidate-shortlist"
     >
       {isShortlisting ? (
-        <Loader className="size-3 animate-spin" />
+        <>
+          <Loader className="size-3.5 animate-spin" />
+          Shortlisting…
+        </>
+      ) : isRejected ? (
+        'Rejected'
       ) : (
-        <Check className="size-3" />
+        'Shortlist'
       )}
-      {isShortlisting
-        ? 'Shortlisting…'
-        : isRejected
-          ? 'Rejected'
-          : 'Shortlist'}
     </Button>
   )
 
@@ -402,13 +401,15 @@ export function CandidateCard({
       href={application.resume_url}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+      className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
       onClick={(e) => e.stopPropagation()}
     >
       Resume
       <ExternalLink className="size-3" />
     </a>
-  ) : null
+  ) : (
+    <span className="mt-0.5 text-[11px] text-muted-foreground">No resume</span>
+  )
 
   const pipelineActions =
     stageKind !== 'final' && !isBulkMode ? (
@@ -418,14 +419,14 @@ export function CandidateCard({
           data-testid="candidate-card-actions"
         >
           {profileButton}
-          <div className="flex gap-2">
+          <div className="grid w-full grid-cols-2 gap-2">
             {shortlistButton}
             {rejectButton}
           </div>
         </div>
       ) : (
         <div
-          className="flex flex-wrap items-center gap-2"
+          className="flex w-full flex-row gap-2"
           data-testid="candidate-card-actions"
         >
           {profileButton}
@@ -439,8 +440,8 @@ export function CandidateCard({
     stageKind === 'final' && !isBulkMode ? (
       <div
         className={cn(
-          'flex flex-wrap items-center gap-2',
-          isGrid ? 'w-full flex-col' : 'w-full',
+          'flex w-full flex-row gap-2',
+          isGrid && 'flex-col',
         )}
         data-testid="candidate-final-actions"
       >
@@ -450,13 +451,13 @@ export function CandidateCard({
               size="sm"
               variant="outline"
               className={cn(
-                'h-7 gap-1 px-2 text-[11px] border-primary/40 text-primary hover:bg-primary/10',
-                isGrid ? 'h-8 w-full' : 'flex-1',
+                actionBtn,
+                'border-primary/40 text-primary hover:bg-primary/10',
+                isGrid && 'w-full flex-none',
               )}
               onClick={(e) => openProfile('overview', e)}
               data-testid="candidate-view-profile"
             >
-              <Eye className="size-3" />
               {isGrid ? 'Complete AI Analysis' : 'AI Analysis'}
             </Button>
             {!isGrid ? (
@@ -465,11 +466,11 @@ export function CandidateCard({
                 variant="outline"
                 disabled
                 className={cn(
-                  'h-7 flex-1 gap-1 px-2 text-[11px] border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-900/30 dark:text-emerald-200',
+                  actionBtn,
+                  'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-900/30 dark:text-emerald-200',
                 )}
                 data-testid="candidate-shortlisted-badge"
               >
-                <Check className="size-3" />
                 Shortlisted - Reachout Sent
               </Button>
             ) : null}
@@ -480,13 +481,13 @@ export function CandidateCard({
               size="sm"
               variant="outline"
               className={cn(
-                'h-7 gap-1 px-2 text-[11px] border-primary/40 text-primary hover:bg-primary/10',
-                isGrid ? 'h-8 w-full' : 'flex-1',
+                actionBtn,
+                'border-primary/40 text-primary hover:bg-primary/10',
+                isGrid && 'w-full flex-none',
               )}
               onClick={(e) => openProfile('overview', e)}
               data-testid="candidate-view-profile"
             >
-              <Eye className="size-3" />
               {isGrid ? 'Complete AI Analysis' : 'Resume Analysis'}
             </Button>
             {!isGrid ? (
@@ -495,14 +496,14 @@ export function CandidateCard({
                 variant="outline"
                 disabled={interviewStatus === 'pending'}
                 className={cn(
-                  'h-7 flex-1 gap-1 px-2 text-[11px] border-primary/40 text-primary',
+                  actionBtn,
+                  'border-primary/40 text-primary',
                   interviewStatus === 'pending' &&
                     'cursor-not-allowed opacity-50',
                 )}
                 onClick={(e) => openProfile('interview', e)}
                 data-testid="candidate-interview-analysis"
               >
-                <Eye className="size-3" />
                 {interviewStatus === 'pending'
                   ? 'Interview Pending'
                   : 'Interview Analysis'}
@@ -518,7 +519,7 @@ export function CandidateCard({
       <InterviewBadges
         status={interviewStatus}
         scorePercent={interviewScorePercent}
-        align={isGrid ? 'end' : 'end'}
+        align="end"
       />
     ) : (
       <RequirementsSummary
@@ -526,37 +527,36 @@ export function CandidateCard({
         preferredTotal={preferredTotal}
         nonNegotiablesMet={nonNegMet}
         nonNegotiablesTotal={nonNegTotal}
-        align={isGrid || stageKind === 'final' ? 'end' : 'start'}
+        align={isGrid || stageKind === 'final' ? 'end' : 'end'}
+        layout={isGrid ? 'grid' : 'list'}
       />
     )
 
   const identityBlock = (
-    <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-1.5">
-        <h4 className="truncate text-sm font-semibold" title={name}>
+    <div className="min-w-0 flex-1 space-y-0.5">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="truncate font-semibold text-foreground" title={name}>
           {name}
         </h4>
         {starButton}
       </div>
-      {email && email !== name ? (
-        <p className="truncate text-xs text-muted-foreground" title={email}>
+      {email ? (
+        <p
+          className={cn(
+            'truncate text-xs text-muted-foreground',
+            !isGrid && 'hidden sm:block',
+          )}
+          title={email}
+        >
           {email}
         </p>
       ) : null}
-      {!isGrid && resumeLink ? (
-        <div className="mt-0.5">{resumeLink}</div>
-      ) : null}
-      {!isGrid ? (
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-          {parsed.currentRole ? (
-            <span className="truncate">{parsed.currentRole}</span>
-          ) : null}
-          {parsed.years != null ? <span>· {parsed.years}y exp</span> : null}
-          {parsed.location ? (
-            <span className="truncate">· {parsed.location}</span>
-          ) : null}
+      {!isGrid && applied ? (
+        <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
+          <span>{applied}</span>
         </div>
       ) : null}
+      {!isGrid ? resumeLink : null}
     </div>
   )
 
@@ -566,20 +566,26 @@ export function CandidateCard({
       data-application-id={application.id}
       data-layout={layout}
       data-stage-kind={stageKind}
+      data-status={application.status}
       className={cn(
-        'border border-l-4 bg-card transition-shadow',
+        // Reset shadcn v4 Card defaults (py-6 gap-6 rounded-xl) to source denseness.
+        'gap-0 rounded-lg border border-l-4 bg-card py-0 transition-shadow',
         scoreBand(score).border,
         selection?.selected && 'ring-2 ring-primary/40',
         isBulkMode && 'cursor-pointer hover:bg-accent/50',
         !isBulkMode && 'hover:shadow-md',
-        isGrid && 'flex h-full min-h-[260px] flex-col',
+        isGrid &&
+          cn(
+            'flex h-full flex-col',
+            stageKind === 'final' && hasInterviewStage
+              ? 'min-h-[280px]'
+              : 'min-h-[260px]',
+          ),
       )}
       onClick={isBulkMode ? handleCardClick : undefined}
     >
       <CardContent
-        className={cn(
-          isGrid ? 'flex flex-1 flex-col gap-4 p-4' : 'p-3',
-        )}
+        className={cn(isGrid ? 'flex flex-1 flex-col gap-4 p-4' : 'p-3')}
       >
         {isGrid ? (
           <>
@@ -593,7 +599,7 @@ export function CandidateCard({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : null}
-              {identityBlock}
+              <div className="min-w-0 flex-1">{identityBlock}</div>
             </div>
 
             <div className="flex flex-1 items-start gap-4">
@@ -607,13 +613,7 @@ export function CandidateCard({
                     align="end"
                   />
                 ) : null}
-                {application.resume_url ? (
-                  resumeLink
-                ) : (
-                  <span className="text-[11px] text-muted-foreground">
-                    No resume
-                  </span>
-                )}
+                {resumeLink}
               </div>
             </div>
 
@@ -633,36 +633,21 @@ export function CandidateCard({
           </>
         ) : (
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            {selection ? (
-              <Checkbox
-                checked={selection.selected}
-                onCheckedChange={() => selection.onToggle()}
-                aria-label={`Select ${name}`}
-                data-testid="candidate-bulk-select"
-                className="mt-1"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : null}
-            <div className="flex min-w-0 max-w-full items-center gap-3 lg:basis-[34%] lg:max-w-[34%]">
+            <div className="flex max-w-full min-w-0 flex-initial items-center gap-3 lg:basis-[30%] lg:max-w-[30%]">
+              {selection ? (
+                <Checkbox
+                  checked={selection.selected}
+                  onCheckedChange={() => selection.onToggle()}
+                  aria-label={`Select ${name}`}
+                  data-testid="candidate-bulk-select"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : null}
               <ScoreRing score={score} />
               {identityBlock}
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-2 lg:basis-[66%] lg:max-w-[66%] lg:items-end">
-              {stageKind === 'resume' && parsed.topSkills.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-1 self-stretch">
-                  {parsed.topSkills.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant="outline"
-                      className="text-[10px] font-normal"
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              ) : null}
-
+            <div className="flex min-w-0 w-full flex-1 flex-col gap-2 lg:basis-[70%] lg:max-w-[70%] lg:items-end">
               {stageKind === 'final' && hasInterviewStage ? (
                 <div className="hidden w-full grid-cols-2 gap-x-6 gap-y-1.5 md:grid">
                   <RequirementsSummary
@@ -671,6 +656,7 @@ export function CandidateCard({
                     nonNegotiablesMet={nonNegMet}
                     nonNegotiablesTotal={nonNegTotal}
                     align="start"
+                    layout="grid"
                   />
                   <InterviewBadges
                     status={interviewStatus}
@@ -682,20 +668,8 @@ export function CandidateCard({
                 stageMeta
               )}
 
-              <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant={status.variant} data-testid="candidate-status">
-                    {status.label}
-                  </Badge>
-                  {applied ? (
-                    <span className="text-[11px] text-muted-foreground">
-                      Applied {applied}
-                    </span>
-                  ) : null}
-                </div>
-                {pipelineActions}
-                {finalActions}
-              </div>
+              {pipelineActions}
+              {finalActions}
               {cardActionError ? (
                 <p
                   className="self-stretch text-[11px] text-destructive"

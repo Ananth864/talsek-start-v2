@@ -365,7 +365,9 @@ function JobCard({
         }
       }}
       className={cn(
-        'group relative cursor-pointer text-left transition-all hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        // Reset shadcn v4 Card defaults (py-6 gap-6 rounded-xl) to source denseness.
+        'group relative gap-0 rounded-lg py-0 text-left transition-all hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'cursor-pointer',
         isSelected
           ? 'border-2 border-primary/30 bg-primary/10 shadow-sm'
           : 'border-border hover:border-primary/40',

@@ -230,6 +230,14 @@ test.describe('Candidate board layout parity', () => {
 
     // Resume lives under identity, not in the action row (source CandidateInfo).
     await expect(actions.getByText(/^Resume$/i)).toHaveCount(0)
+
+    // Source list cards: no status badge; denseness from CardContent p-3 (no Card py-6).
+    await expect(card.getByTestId('candidate-status')).toHaveCount(0)
+    const paddingTop = await card.evaluate(
+      (el) => getComputedStyle(el).paddingTop,
+    )
+    expect(paddingTop).toBe('0px')
+    await expect(actions).toHaveClass(/w-full/)
   })
 
   test('profile dialog opens with source tab structure', async ({ page }) => {

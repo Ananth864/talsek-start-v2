@@ -46,7 +46,8 @@ test('selecting a Job shows its candidate board grouped by Hiring Stage', async 
   if (cardCount > 0) {
     await expect(cards.first()).toBeVisible()
     await expect(cards.first().getByRole('img', { name: /Match score/ })).toBeVisible()
-    await expect(cards.first().getByTestId('candidate-status')).toBeVisible()
+    // Status is on the card attribute (source list cards have no status badge).
+    await expect(cards.first()).toHaveAttribute('data-status', /.+/);
     await expect(cards.first().getByTestId('candidate-star-toggle')).toBeVisible()
     await expect(cards.first().getByTestId('candidate-shortlist')).toBeVisible()
 
