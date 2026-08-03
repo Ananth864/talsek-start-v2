@@ -165,13 +165,15 @@ replicating across the product's five domains.
 
 ## Testing Decisions
 
-**One seam: end-to-end characterisation tests with Playwright.** Good tests here assert external behaviour only — never framework implementation, because the implementation is precisely what is being replaced. There is no existing test prior art in the source repo (no test script, no test dependencies), so this seam is new.
+**Primary seam: end-to-end characterisation tests with Playwright.** Good tests here assert external behaviour only — never framework implementation, because the implementation is precisely what is being replaced. There is no existing test prior art in the source repo (no test script, no test dependencies), so this seam is new.
 
-The technique is characterisation: the Playwright specs are first authored and made green against the **running source app** to capture current behaviour, then the **same specs are replayed against the ported app** to verify parity. This directly enforces the spec's central success criterion (capability and UX unchanged) and is inherently framework-agnostic.
+The technique is characterisation: the Playwright specs are first authored and made green against the **running source app** to capture current behaviour, then the **same specs are replayed against the ported app** to verify parity. This directly enforces the spec's central success criterion (capability parity) and is inherently framework-agnostic.
 
 Covered journeys span both access regimes: the Member surface (sign-in/OAuth, Job creation and job-description parsing, candidate pipeline and Processing Status, Shortlist/Reachout, bulk upload, Member management, billing checkout) and the Applicant surface (Form apply by token, Interview by token, audio transcription). Because the AI calls are non-deterministic, E2E **intercepts and mocks AI provider responses**, asserting the flow rather than the model output.
 
 Runtime invariants that already exist (each edge function self-validates its output against a Zod schema via `safeParse`) are preserved as the pipeline is ported; they are treated as built-in contract checks, not as an additional test seam. Direct RLS-policy assertions are deliberately **not** introduced as a second seam; the incremental RLS audit (ADR-4) is instead verified through the E2E coverage of each domain plus careful policy review during porting.
+
+**Parallel seam (layout/UX parity, spec #34 / ADR-0030):** a separate Playwright suite under `e2e/layout-parity/` asserts source-faithful structure and interaction for Member shell, Member product, Auth, and Applicant — never screenshots, never merged into the behavioural characterisation specs. A side-by-side checklist vs `talsek` is the manual companion.
 
 ## Out of Scope
 
@@ -182,6 +184,19 @@ Runtime invariants that already exist (each edge function self-validates its out
   v4 theme): pages that were visually inconsistent in the source app may be
   cleaned up rather than reproduced faithfully. Characterisation tests assert
   behaviour, not pixels.
+  **Amended again (layout/UX parity, Aug 2026 / spec #34, ADR-0030):** for
+  **Member shell**, **Member product**, **Auth**, and **Applicant** (surfaces
+  1–4), the Aug 2026 relaxation no longer covers layout structure or
+  interaction UX. Those surfaces must be **source-faithful** in structure and
+  interaction (information architecture, control order/placement, dialog and
+  flow shape, denseness) against `talsek`. Ported design-system **paint**
+  (colors, fonts, radii) may still differ unless paint breaks hierarchy or
+  meaning. Marketing and documentation surfaces are **unchanged by this
+  amendment** — they remain under the Aug 2026 paint-consistency bar and out of
+  scope for the layout/UX workstream. Verification is a separate
+  `e2e/layout-parity/` Playwright suite (structure/interaction only; no
+  screenshots) plus a side-by-side checklist; do not merge into behavioural
+  characterisation specs.
 - Any change to the database schema, Row-Level Security intent, or the Supabase project itself. The new app points at the same Supabase project as the source; identity, data, and realtime carry over unchanged.
 - Replacing the auth provider, introducing a message queue, or migrating to TanStack AI — all explicitly considered and rejected (ADRs 1, 3, 5).
 - The source app's operation during transition. It keeps running against the shared Supabase project, with its edge functions remaining deployed but unused until cutover; eventual decommissioning is a separate piece of work.
