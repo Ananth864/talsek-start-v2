@@ -1,5 +1,6 @@
-import { Button } from '#/components/ui/button'
 import { CheckCircle, XCircle } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { BotBubble } from './chat-bubbles'
 
 type BooleanChoiceQuestionProps = {
   question: string
@@ -14,9 +15,10 @@ export function BooleanChoiceQuestion({
 }: BooleanChoiceQuestionProps) {
   return (
     <div className="space-y-4" data-testid="interview-boolean">
-      <p className="rounded-lg border border-border bg-muted/40 p-4 text-sm leading-relaxed">
-        {question}
-      </p>
+      <BotBubble>
+        <p className="text-sm leading-relaxed md:text-base">{question}</p>
+      </BotBubble>
+
       <div className="mx-auto flex w-full max-w-md gap-4">
         <Button
           type="button"

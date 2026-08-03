@@ -22,5 +22,6 @@ Desktop viewport is fixed at 1280×800. No screenshots.
 | `candidates-setup.spec.ts` | Candidates page, Bulk Upload, Templates, Forms (#39) |
 | `team-billing-get-started.spec.ts` | Team/Users, Billing, Get Started (#40) |
 | `auth-pages.spec.ts` | Sign-in, sign-up, forgot/reset, confirm email (#41) |
+| `applicant-apply-interview.spec.ts` | Applicant apply + interview token flows (#42) |
 
 Manual checklists (`*.checklist.md`) accompany each surface.

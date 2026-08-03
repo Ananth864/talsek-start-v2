@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { BotBubble } from './chat-bubbles'
 
 type ManualInputQuestionProps = {
   question: string
@@ -35,9 +36,10 @@ export function ManualInputQuestion({
 
   return (
     <div className="space-y-4" data-testid="interview-manual">
-      <p className="rounded-lg border border-border bg-muted/40 p-4 text-sm leading-relaxed">
-        {question}
-      </p>
+      <BotBubble>
+        <p className="text-sm leading-relaxed md:text-base">{question}</p>
+      </BotBubble>
+
       <div className="mx-auto w-full max-w-md space-y-3">
         <Input
           type="number"
@@ -51,6 +53,7 @@ export function ManualInputQuestion({
           }}
           placeholder={placeholder}
           disabled={disabled}
+          className="bg-background"
           data-testid="interview-manual-input"
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -61,7 +64,7 @@ export function ManualInputQuestion({
           disabled={disabled || !value.trim()}
           data-testid="interview-manual-submit"
         >
-          Submit answer
+          Submit Answer
         </Button>
       </div>
     </div>

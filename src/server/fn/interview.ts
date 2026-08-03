@@ -144,7 +144,19 @@ export const startInterview = createServerFn({ method: 'POST' })
           'Interview configuration error - no questions available',
         )
       }
-      const firstQuestion = interviewSession.interviewContext.questions[0]
+      const questions = interviewSession.interviewContext.questions
+      const firstQuestion = questions[0]
+      const totalQuestions = questions.length
+
+      // Source InterviewPage: progress bar tracks voice section up to the
+      // informative "manual input" marker (display_only). Fallback when absent.
+      const informativeMarker =
+        'Now we will move on to the manual input section. Please type or select the appropriate answer for each question.'
+      const markerIndex = questions.findIndex(
+        (q) => q.type === 'display_only' && q.question === informativeMarker,
+      )
+      const manualInputStartIndex =
+        markerIndex >= 0 ? markerIndex : Math.max(totalQuestions - 1, 1)
 
       return {
         success: true as const,
@@ -153,7 +165,8 @@ export const startInterview = createServerFn({ method: 'POST' })
         jobTitle: interviewSession.jobTitle,
         companyName: interviewSession.companyName,
         firstQuestion: toPublicQuestion(firstQuestion),
-        totalQuestions: interviewSession.interviewContext.questions.length,
+        totalQuestions,
+        manualInputStartIndex,
       }
     } catch (error) {
       asInterviewError(error)

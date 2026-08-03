@@ -173,16 +173,40 @@ export function CandidateApplyForm({
     }
   }
 
+  const formComplete = useMemo(() => {
+    const emailQ = questions.find((q) => q.baseId === 'email')
+    const nameQ = questions.find((q) => q.baseId === 'name')
+    const phoneQ = questions.find((q) => q.baseId === 'phone')
+    if (!emailQ || !nameQ || !phoneQ) return false
+    const email = (values[emailQ.id] ?? '').trim()
+    const name = (values[nameQ.id] ?? '').trim()
+    const phone = (values[phoneQ.id] ?? '').trim()
+    if (!name || !email.includes('@') || !phone) return false
+    if (validateResume(resumeFile)) return false
+    for (const q of fieldQuestions) {
+      if (q.baseId === 'email' || q.baseId === 'name' || q.baseId === 'phone') {
+        continue
+      }
+      if (!q.required && !q.isCustom) continue
+      const value = values[q.id] ?? ''
+      if (q.required && !String(value).trim()) return false
+      if (q.isCustom && countWords(String(value)) > 150) return false
+    }
+    return true
+  }, [fieldQuestions, questions, resumeFile, values])
+
   if (submitted) {
     return (
       <div
         className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-900"
         data-testid="apply-success"
       >
-        Your application has been submitted successfully and is being processed.
+        Your application was submitted. You&apos;ll receive updates via email.
       </div>
     )
   }
+
+  const showIncompleteHint = !isExpired && !loading && !formComplete
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" data-testid="apply-form">
@@ -229,12 +253,14 @@ export function CandidateApplyForm({
             ) : (
               <Input
                 id={q.id}
-                type={q.type === 'email' ? 'email' : q.type === 'url' ? 'url' : 'text'}
+                type={
+                  q.type === 'email' ? 'email' : q.type === 'url' ? 'url' : 'text'
+                }
                 inputMode={q.baseId === 'phone' ? 'tel' : undefined}
                 value={value}
                 placeholder={
                   q.baseId === 'phone'
-                    ? q.placeholder ?? '+1234567890'
+                    ? (q.placeholder ?? '+1234567890')
                     : q.placeholder
                 }
                 disabled={isExpired || loading}
@@ -270,7 +296,9 @@ export function CandidateApplyForm({
           data-testid="apply-resume"
           onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
         />
-        <p className="text-xs text-muted-foreground">PDF only, max 1MB</p>
+        <p className="text-xs text-muted-foreground">
+          PDF only. Max size: 1024 KB.
+        </p>
       </div>
 
       {formError ? (
@@ -282,13 +310,24 @@ export function CandidateApplyForm({
         </div>
       ) : null}
 
-      <Button
-        type="submit"
-        disabled={isExpired || loading}
-        data-testid="apply-submit"
-      >
-        {loading ? 'Submitting…' : 'Submit application'}
-      </Button>
+      <div className="pt-2">
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isExpired || loading || !formComplete}
+          data-testid="apply-submit"
+        >
+          {loading ? 'Submitting…' : 'Submit Application'}
+        </Button>
+        {showIncompleteHint ? (
+          <p
+            className="mt-2 text-center text-sm text-destructive"
+            data-testid="apply-incomplete-hint"
+          >
+            Some fields are entered correctly
+          </p>
+        ) : null}
+      </div>
     </form>
   )
 }

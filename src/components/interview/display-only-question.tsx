@@ -1,5 +1,6 @@
-import { Button } from '#/components/ui/button'
 import { ArrowRight, CheckCircle } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { BotBubble } from './chat-bubbles'
 
 type DisplayOnlyQuestionProps = {
   message: string
@@ -16,12 +17,16 @@ export function DisplayOnlyQuestion({
 }: DisplayOnlyQuestionProps) {
   return (
     <div className="space-y-6" data-testid="interview-display">
-      <p className="whitespace-pre-line rounded-lg border border-border bg-muted/40 p-4 text-sm leading-relaxed">
-        {message}
-      </p>
+      <BotBubble>
+        <p className="whitespace-pre-line text-sm leading-relaxed md:text-base">
+          {message}
+        </p>
+      </BotBubble>
+
       <div className="flex justify-center">
         <Button
           type="button"
+          className="px-8 py-3"
           onClick={onComplete}
           disabled={disabled}
           data-testid="interview-display-continue"
@@ -29,7 +34,7 @@ export function DisplayOnlyQuestion({
           {isLastQuestion ? (
             <>
               <CheckCircle className="mr-2 h-4 w-4" />
-              Complete interview
+              Complete Interview
             </>
           ) : (
             <>

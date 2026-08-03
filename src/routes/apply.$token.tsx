@@ -136,6 +136,8 @@ function ApplyPage() {
           <button
             type="button"
             className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/60 p-3 text-left transition-colors hover:bg-muted"
+            data-testid="apply-job-description-toggle"
+            aria-expanded={descriptionOpen}
             onClick={() => setDescriptionOpen((open) => !open)}
           >
             {descriptionOpen ? (
@@ -144,9 +146,12 @@ function ApplyPage() {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
             <span className="font-medium text-foreground">Job Description</span>
+            <span className="ml-auto text-sm text-muted-foreground">
+              {descriptionOpen ? 'Click to collapse' : 'Click to expand'}
+            </span>
           </button>
           {descriptionOpen ? (
-            <Card className="mt-2">
+            <Card className="mt-2" data-testid="apply-job-description">
               <CardContent className="p-4">
                 <div
                   className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert"
@@ -177,9 +182,18 @@ function ApplyPage() {
         </Card>
       )}
 
-      <p className="pt-2 text-center text-xs text-muted-foreground">
-        Made with Talsek
-      </p>
+      <div
+        className="flex items-center justify-center gap-2 pt-2"
+        data-testid="apply-footer-branding"
+      >
+        <p className="text-xs text-muted-foreground">Made with</p>
+        <img
+          src="/Talsek_logo_square.png"
+          alt="Talsek Logo"
+          className="h-3 w-3"
+        />
+        <p className="text-xs text-muted-foreground">Talsek</p>
+      </div>
     </div>
   )
 }

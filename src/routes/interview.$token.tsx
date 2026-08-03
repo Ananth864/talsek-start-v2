@@ -17,6 +17,7 @@ const interviewQueryOptions = (token: string) =>
   })
 
 export const Route = createFileRoute('/interview/$token')({
+  // Prefetch + dehydrate for SSR first paint (ADR-0007 / TanStack Start loader).
   loader: async ({ context, params }) => {
     try {
       await context.queryClient.ensureQueryData(
@@ -50,9 +51,11 @@ function InterviewPage() {
 
   if (sessionQuery.isLoading) {
     return (
-      <div className="mx-auto max-w-xl p-6">
-        <Card>
-          <CardContent className="p-6">Validating interview link…</CardContent>
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 px-6">
+        <Card className="max-w-xl w-full">
+          <CardContent className="p-6 text-center">
+            Validating interview link…
+          </CardContent>
         </Card>
       </div>
     )
@@ -68,10 +71,19 @@ function InterviewPage() {
 
   if (isInvalid && !sessionQuery.data) {
     return (
-      <div className="mx-auto max-w-xl p-6">
-        <Card className="border-red-200 bg-red-50 text-red-800">
-          <CardContent className="p-6" data-testid="interview-invalid">
-            {errorMessage || 'Invalid or expired interview link.'}
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 px-6">
+        <Card className="w-full max-w-md border-red-200 bg-card text-center shadow-lg">
+          <CardContent className="space-y-4 p-8" data-testid="interview-invalid">
+            <h1 className="text-2xl font-bold text-foreground">
+              Interview Link Invalid
+            </h1>
+            <p className="text-muted-foreground">
+              {errorMessage || 'Invalid or expired interview link.'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              If you believe this is an error, please reach out to the
+              recruiting team.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -80,9 +92,9 @@ function InterviewPage() {
 
   if (sessionQuery.error && !sessionQuery.data) {
     return (
-      <div className="mx-auto max-w-xl p-6">
-        <Card className="border-red-200 bg-red-50 text-red-800">
-          <CardContent className="p-6" data-testid="interview-load-error">
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 px-6">
+        <Card className="w-full max-w-md border-red-200 bg-card text-center shadow-lg">
+          <CardContent className="p-8" data-testid="interview-load-error">
             {errorMessage || 'Failed to load interview'}
           </CardContent>
         </Card>
@@ -103,6 +115,8 @@ function InterviewPage() {
         currentQuestion: started.firstQuestion,
         currentQuestionIndex: 0,
         totalQuestions: started.totalQuestions,
+        manualInputStartIndex: started.manualInputStartIndex,
+        conversationHistory: [],
         currentFollowUps: [],
         isProcessing: false,
         pendingTranscription: null,
@@ -119,7 +133,11 @@ function InterviewPage() {
   }
 
   if (stage === 'complete') {
-    return <CompletionStage />
+    return (
+      <div className="min-h-screen bg-muted/40">
+        <CompletionStage />
+      </div>
+    )
   }
 
   if (stage === 'interview' && interviewState) {
@@ -142,7 +160,7 @@ function InterviewPage() {
   }
 
   return (
-    <div data-testid="interview-page">
+    <div className="min-h-screen bg-muted/40" data-testid="interview-page">
       {startError ? (
         <div className="mx-auto max-w-2xl px-6 pt-6">
           <Card className="border-red-200 bg-red-50 text-red-800">

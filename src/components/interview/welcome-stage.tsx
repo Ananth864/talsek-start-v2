@@ -27,48 +27,72 @@ export function WelcomeStage({
     void requestPermission()
   }, [permissionRequested, requestPermission])
 
+  const beginLabel = isStarting
+    ? 'Starting Interview...'
+    : hasPermission
+      ? 'Begin Interview'
+      : hasPermission === null
+        ? 'Checking microphone…'
+        : 'Microphone Required'
+
   return (
     <div
-      className="mx-auto max-w-2xl space-y-6 px-6 py-12 text-center"
+      className="mx-auto max-w-2xl space-y-8 px-6 py-12 text-center"
       data-testid="interview-welcome"
     >
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold text-foreground">
-          Talsek Interview
-        </h1>
-        <p className="text-muted-foreground">
+      <div className="space-y-4">
+        <h1 className="text-4xl font-bold text-foreground">Talsek Interview</h1>
+        <p className="text-lg text-muted-foreground">
           You&apos;ve been invited to interview for the{' '}
           <strong className="text-foreground">{jobTitle}</strong> position at{' '}
           <strong className="text-foreground">{companyName}</strong>
         </p>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-6 text-left">
-        <h2 className="mb-3 text-lg font-medium">How this works</h2>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>1. Our AI will ask you questions in text format</li>
-          <li>2. You respond by speaking (up to 2 minutes per question)</li>
-          <li>3. Your responses are transcribed and reviewed</li>
-          <li>4. The process takes about 15 minutes</li>
+      <div
+        className="rounded-lg border border-border bg-card p-6 text-left shadow-sm"
+        data-testid="interview-how-this-works"
+      >
+        <h2 className="mb-4 text-xl font-semibold">How this works:</h2>
+        <ul className="space-y-2 text-muted-foreground">
+          <li className="flex items-start gap-2">
+            <span className="mt-1 text-primary">1.</span>
+            Our AI will ask you questions in text format
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 text-primary">2.</span>
+            You respond by speaking your answer (up to 2 minutes per question)
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 text-primary">3.</span>
+            Your responses will be transcribed and reviewed
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 text-primary">4.</span>
+            The entire process takes about 15 minutes
+          </li>
         </ul>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-6">
-        <h3 className="mb-4 flex items-center justify-center gap-2 text-base font-medium">
+      <div
+        className="rounded-lg border border-border bg-card p-6 shadow-sm"
+        data-testid="interview-mic-check"
+      >
+        <h3 className="mb-4 flex items-center justify-center gap-2 text-lg font-semibold">
           <Mic className="h-5 w-5" />
-          Microphone check
+          Microphone Check
         </h3>
         <div className="flex items-center justify-center gap-3">
           {hasPermission === null ? (
             <span className="text-muted-foreground">
-              Checking microphone access…
+              Checking microphone access...
             </span>
           ) : null}
           {hasPermission === true ? (
             <>
               <CheckCircle className="h-6 w-6 text-green-600" />
               <span className="font-medium text-green-700">
-                Microphone ready
+                Microphone ready!
               </span>
             </>
           ) : null}
@@ -83,7 +107,7 @@ export function WelcomeStage({
                 variant="outline"
                 onClick={() => void requestPermission()}
               >
-                Grant microphone access
+                Grant Microphone Access
               </Button>
             </div>
           ) : null}
@@ -93,22 +117,13 @@ export function WelcomeStage({
       <Button
         type="button"
         size="lg"
+        className="px-8 py-3 text-lg"
         onClick={onBegin}
-        disabled={isStarting || hasPermission === null}
+        disabled={!hasPermission || isStarting}
         data-testid="interview-begin"
       >
-        {isStarting
-          ? 'Starting interview…'
-          : hasPermission === null
-            ? 'Checking microphone…'
-            : 'Begin interview'}
+        {beginLabel}
       </Button>
-      {hasPermission === false ? (
-        <p className="text-sm text-muted-foreground">
-          Microphone unavailable — you can still type answers during the
-          interview.
-        </p>
-      ) : null}
     </div>
   )
 }
