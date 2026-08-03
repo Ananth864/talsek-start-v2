@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Bell,
+  Book,
   ChevronsUpDown,
   CreditCard,
   FileText,
@@ -136,6 +137,55 @@ const ADMIN_NAV: NavItem[] = [
   },
 ]
 
+/** Contextual docs Guide mapping for Member routes (source DashboardSidebar). */
+const ROUTE_DOCS_GUIDE: Record<string, { docsPath: string; pageName: string }> =
+  {
+    '/get-started': {
+      docsPath: '/docs/get-started',
+      pageName: 'Get Started',
+    },
+    '/dashboard': {
+      docsPath: '/docs/dashboard/overview',
+      pageName: 'Dashboard',
+    },
+    '/form-settings': {
+      docsPath: '/docs/get-started/customize-application-form',
+      pageName: 'Customize Form',
+    },
+    '/reachout-templates': {
+      docsPath: '/docs/get-started/set-reachout-template',
+      pageName: 'Reachout',
+    },
+    '/bulk-upload': {
+      docsPath: '/docs/bulk-upload',
+      pageName: 'Bulk Upload',
+    },
+    '/candidates': {
+      docsPath: '/docs/candidates-page',
+      pageName: 'Candidates',
+    },
+    '/users': {
+      docsPath: '/docs/get-started/add-team-members',
+      pageName: 'Team',
+    },
+    '/billing': {
+      docsPath: '/docs/billing/overview',
+      pageName: 'Billing',
+    },
+  }
+
+function resolveDocsGuide(pathname: string): {
+  docsPath: string
+  pageName: string
+} {
+  for (const [route, guide] of Object.entries(ROUTE_DOCS_GUIDE)) {
+    if (pathname === route || pathname.startsWith(`${route}/`)) {
+      return guide
+    }
+  }
+  return { docsPath: '/docs/get-started', pageName: 'Get Started' }
+}
+
 function NavEntries({
   items,
   pathname,
@@ -210,6 +260,10 @@ export function MemberSidebar({
   const themeToggleLabel =
     theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'
 
+  const { docsPath: currentDocsPath, pageName: currentPageName } =
+    resolveDocsGuide(pathname)
+  const isDocsActive = pathname.startsWith('/docs')
+
   const handleSignOut = async () => {
     try {
       await signOut()
@@ -266,6 +320,31 @@ export function MemberSidebar({
         </SidebarContent>
 
         <SidebarFooter className="px-3 py-4">
+          <SidebarMenu>
+            <SidebarMenuItem className="mb-2">
+              <SidebarMenuButton
+                asChild
+                isActive={isDocsActive}
+                tooltip={`${currentPageName} Guide`}
+                variant="outline"
+                className="group-data-[collapsible=icon]:translate-x-[3px]"
+              >
+                <a
+                  href={currentDocsPath}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="docs-guide-link"
+                  className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                >
+                  <Book className="h-4 w-4" />
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    {currentPageName} Guide
+                  </span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
           <DropdownMenu open={accountOpen} onOpenChange={setAccountOpen}>
             <DropdownMenuTrigger asChild>
               <Button

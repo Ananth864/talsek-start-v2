@@ -140,6 +140,116 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand scale used by DocLink (ADR-6) */
+  --color-talsek: #4366b0;
+  --color-talsek-dark: #36528d;
+  --color-talsek-light: #22d3ee;
+}
+
+/*
+ * Docs prose theme (ADR-6): ported from source typography.docs.
+ * Tokens already carry hsl() wrappers in :root / .dark.
+ */
+.prose-docs {
+  --tw-prose-body: var(--muted-foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-code: var(--primary);
+  max-width: none;
+}
+
+.prose-docs :where(h1, h2, h3, h4, h5, h6) {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.prose-docs :where(p) {
+  color: var(--muted-foreground);
+  line-height: 1.75rem;
+}
+
+.prose-docs :where(h2) {
+  font-size: 1.25rem;
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  padding-bottom: 0.5rem;
+}
+
+.prose-docs :where(h2):first-child {
+  margin-top: 0;
+}
+
+.prose-docs :where(a) {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.prose-docs :where(a):hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.prose-docs :where(blockquote) {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  background-color: color-mix(in srgb, var(--primary) 5%, transparent);
+  border-left-width: 4px;
+  border-left-color: var(--primary);
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.75rem 1.25rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.prose-docs :where(code) {
+  color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+.prose-docs :where(code)::before,
+.prose-docs :where(code)::after {
+  content: none;
+}
+
+.prose-docs :where(pre) {
+  background-color: color-mix(in srgb, var(--muted) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.prose-docs :where(ul) {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.prose-docs :where(li) {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-docs :where(li)::marker {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.prose-docs :where(hr) {
+  margin-top: 2.5rem;
+  margin-bottom: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 40%, transparent);
 }
 
 @layer base {
