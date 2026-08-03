@@ -60,6 +60,7 @@ export const Route = createFileRoute('/dashboard')({
       userId: profile?.id ?? null,
       companyId: profile?.company_id ?? null,
       canCreateJob: Boolean(profile?.permissions.canCreateJob),
+      canSendReachout: Boolean(profile?.permissions.canSendReachout),
       canManageTemplates: Boolean(profile?.permissions.canManageTemplates),
       canManageForms: Boolean(profile?.permissions.canManageForms),
       companyName: profile?.companies?.name ?? '',
@@ -109,6 +110,7 @@ function DashboardPage() {
     userId,
     companyId,
     canCreateJob,
+    canSendReachout,
     canManageForms,
     companyName,
     userEmail,
@@ -125,6 +127,7 @@ function DashboardPage() {
         userId={userId}
         companyId={companyId}
         canCreateJob={canCreateJob}
+        canSendReachout={canSendReachout}
         canManageForms={canManageForms}
         companyName={companyName}
       />
@@ -136,12 +139,14 @@ function DashboardContent({
   userId,
   companyId,
   canCreateJob,
+  canSendReachout,
   canManageForms,
   companyName,
 }: {
   userId: string | null
   companyId: string | null
   canCreateJob: boolean
+  canSendReachout: boolean
   canManageForms: boolean
   companyName: string
 }) {
@@ -330,6 +335,7 @@ function DashboardContent({
             <CandidatesList
               job={selectedJob}
               companyId={companyId}
+              canSendReachout={canSendReachout}
               activeStageId={selectedStageId}
               onStageChange={handleStageSelect}
             />

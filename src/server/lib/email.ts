@@ -104,19 +104,27 @@ function formatMessageHtml(message?: string | null): string {
   `
 }
 
+export type SendResendEmailResult = {
+  /** Resend message id, or a stub id when EMAIL_STUB is active. */
+  id: string
+  stubbed: boolean
+}
+
 /**
  * Shared Resend POST. Stub mode logs and returns without calling the API.
  */
 export async function sendResendEmail(
   params: SendResendEmailParams,
-): Promise<void> {
+): Promise<SendResendEmailResult> {
   if (isEmailStub()) {
+    const id = `stub-${crypto.randomUUID()}`
     console.info(`[email] stub ${params.kind} send`, {
       to: params.to,
       subject: params.subject,
       from: params.from,
+      id,
     })
-    return
+    return { id, stubbed: true }
   }
 
   const apiKey = serverEnv.RESEND_API_KEY
@@ -153,6 +161,12 @@ export async function sendResendEmail(
   if (!response.ok) {
     const errorText = await response.text()
     throw new Error(`Resend ${params.kind} failed: ${errorText}`)
+  }
+
+  const body = (await response.json()) as { id?: string }
+  return {
+    id: body.id ?? `resend-${crypto.randomUUID()}`,
+    stubbed: false,
   }
 }
 

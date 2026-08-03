@@ -161,10 +161,20 @@ test('pipeline actions are available on candidate cards (#8)', async ({
   const shortlist = firstCard.getByTestId('candidate-shortlist')
   if (await shortlist.isEnabled()) {
     await shortlist.click()
-    await expect(page.getByTestId('candidate-shortlist-dialog')).toBeVisible()
-    await expect(page.getByText(/will be moved to the next hiring stage/i)).toBeVisible()
-    await page.getByRole('button', { name: 'Cancel' }).click()
-    await expect(page.getByTestId('candidate-shortlist-dialog')).toHaveCount(0)
+    // May open template setup (no reply-to yet) or the Reachout confirm dialog.
+    const templateSetup = page.getByTestId('shortlist-template-setup-dialog')
+    const confirmDialog = page.getByTestId('candidate-shortlist-dialog')
+    await expect(templateSetup.or(confirmDialog)).toBeVisible()
+    if (await templateSetup.isVisible()) {
+      await page.getByRole('button', { name: 'Cancel' }).click()
+      await expect(templateSetup).toHaveCount(0)
+    } else {
+      await expect(
+        page.getByText(/will be moved to the next hiring stage/i),
+      ).toBeVisible()
+      await page.getByRole('button', { name: 'Cancel' }).click()
+      await expect(confirmDialog).toHaveCount(0)
+    }
   }
 })
 

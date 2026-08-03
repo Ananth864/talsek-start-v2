@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  ArrowRight,
   Check,
   ExternalLink,
   Loader,
@@ -29,12 +28,10 @@ import {
   scoreBand,
 } from '#/lib/job-applications-shared'
 import {
-  currentStageName,
   nextStageForApplication,
 } from '#/lib/candidate-stage-navigation'
 import { useToggleStarred } from '#/hooks/use-toggle-starred'
 import { useRejectCandidate } from '#/hooks/use-reject-candidate'
-import { useMoveJobApplicationStage } from '#/hooks/use-move-job-application-stage'
 import { ScoreRing } from './score-ring'
 import { CandidateProfileDialog } from './candidate-profile-dialog'
 import type {
@@ -47,6 +44,10 @@ type CandidateCardProps = {
   application: JobApplicationRow
   job: JobWithCompanyRow
   stages: JobStageRow[]
+  canSendReachout: boolean
+  isShortlisting: boolean
+  shortlistError: string | null
+  onShortlist: () => void
   /** When set, the card is in bulk-selection mode (ticket #10). */
   selection?: {
     selected: boolean
@@ -57,29 +58,33 @@ type CandidateCardProps = {
 function formatDate(iso: string | null | undefined) {
   if (!iso) return null
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString()
+  if (Number.isNaN(d.getTime())) return null
+  // Fixed locale so SSR HTML matches client hydration (avoids remounts that
+  // drop Shortlist click handlers under Playwright).
+  return d.toLocaleDateString('en-US')
 }
 
 /**
  * A candidate row in the board. Ports the source's `CandidateCard` read surface
- * plus the #8 write actions: star toggle, Shortlist (stage advance; Reachout
- * send deferred to #16), and Reject with confirmation. Optional `selection`
- * enables bulk shortlist checkboxes (#10).
+ * plus write actions: star, Shortlist (Reachout send owned by the list, #20),
+ * and Reject. Optional `selection` enables bulk shortlist checkboxes (#10).
  */
 export function CandidateCard({
   application,
   job,
   stages,
+  canSendReachout,
+  isShortlisting,
+  shortlistError,
+  onShortlist,
   selection,
 }: CandidateCardProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isRejectOpen, setIsRejectOpen] = useState(false)
-  const [isShortlistOpen, setIsShortlistOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const toggleStarred = useToggleStarred()
   const rejectCandidate = useRejectCandidate()
-  const moveStage = useMoveJobApplicationStage()
 
   const score = normalizedMatchScore(application)
   const parsed = parsedSummary(application.parsed_candidate_data)
@@ -89,7 +94,7 @@ export function CandidateCard({
   const status = applicationStatusMeta(application.status)
   const isRejected = application.status === 'rejected'
   const nextStage = nextStageForApplication(application, stages)
-  const canShortlist = Boolean(nextStage) && !isRejected
+  const canShortlistUi = Boolean(nextStage) && !isRejected
 
   const preferredTotal = countIncludedRequirements(
     job.preferred_requirements,
@@ -108,12 +113,8 @@ export function CandidateCard({
   const rejectingId = rejectCandidate.isPending
     ? rejectCandidate.variables.applicationId
     : null
-  const shortlistingId = moveStage.isPending
-    ? moveStage.variables.applicationId
-    : null
   const isStarring = starringId === application.id
   const isRejecting = rejectingId === application.id
-  const isShortlisting = shortlistingId === application.id
 
   const handleStarToggle = () => {
     setActionError(null)
@@ -144,25 +145,7 @@ export function CandidateCard({
     )
   }
 
-  const handleShortlistConfirm = () => {
-    if (!nextStage) return
-    setActionError(null)
-    moveStage.mutate(
-      {
-        applicationId: application.id,
-        jobId: job.id,
-        targetStageId: nextStage.id,
-      },
-      {
-        onSuccess: () => setIsShortlistOpen(false),
-        onError: (err) => {
-          setActionError(
-            err instanceof Error ? err.message : 'Failed to move candidate',
-          )
-        },
-      },
-    )
-  }
+  const cardActionError = shortlistError ?? actionError
 
   return (
     <Card
@@ -327,21 +310,21 @@ export function CandidateCard({
                   variant="outline"
                   className={cn(
                     'h-7 gap-1 px-2 text-[11px]',
-                    canShortlist
+                    canShortlistUi && canSendReachout
                       ? 'border-emerald-400/60 text-emerald-600 hover:bg-emerald-500/10 dark:border-emerald-500/40 dark:text-emerald-200'
                       : 'text-muted-foreground',
                   )}
-                  onClick={() => {
-                    setActionError(null)
-                    setIsShortlistOpen(true)
-                  }}
-                  disabled={!canShortlist || isShortlisting}
+                  onClick={onShortlist}
+                  disabled={!canShortlistUi || isShortlisting}
+                  data-can-send-reachout={canSendReachout ? 'true' : 'false'}
                   title={
-                    canShortlist
-                      ? undefined
-                      : isRejected
-                        ? 'Rejected candidates cannot be shortlisted'
-                        : 'No further stage in this pipeline'
+                    !canSendReachout
+                      ? 'You do not have permission to send Reachouts'
+                      : canShortlistUi
+                        ? undefined
+                        : isRejected
+                          ? 'Rejected candidates cannot be shortlisted'
+                          : 'No further stage in this pipeline'
                   }
                   data-testid="candidate-shortlist"
                 >
@@ -358,9 +341,13 @@ export function CandidateCard({
                 </Button>
               </div>
             </div>
-            {actionError ? (
-              <p className="text-[11px] text-destructive" role="alert">
-                {actionError}
+            {cardActionError ? (
+              <p
+                className="text-[11px] text-destructive"
+                role="alert"
+                data-testid="candidate-shortlist-error"
+              >
+                {cardActionError}
               </p>
             ) : null}
           </div>
@@ -400,52 +387,6 @@ export function CandidateCard({
               data-testid="candidate-reject-confirm"
             >
               {isRejecting ? 'Rejecting…' : 'Yes, Reject'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isShortlistOpen} onOpenChange={setIsShortlistOpen}>
-        <DialogContent data-testid="candidate-shortlist-dialog">
-          <DialogHeader>
-            <DialogTitle>Shortlist Candidate</DialogTitle>
-            <DialogDescription>
-              Move {name} to the next hiring stage. Sending a Reachout ports
-              with ticket #16; this advances the pipeline stage now.
-            </DialogDescription>
-          </DialogHeader>
-          {nextStage ? (
-            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-primary">
-              <div className="flex items-center justify-center gap-3 text-sm font-medium">
-                <span className="font-semibold">
-                  {currentStageName(application)}
-                </span>
-                <ArrowRight className="size-4" />
-                <span className="font-semibold text-emerald-600 dark:text-emerald-300">
-                  {nextStage.name}
-                </span>
-              </div>
-              <p className="mt-2 text-center text-xs">
-                This candidate will be moved to the next hiring stage
-              </p>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsShortlistOpen(false)}
-              disabled={isShortlisting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleShortlistConfirm}
-              disabled={!nextStage || isShortlisting}
-              data-testid="candidate-shortlist-confirm"
-            >
-              {isShortlisting ? 'Shortlisting…' : 'Confirm Shortlist'}
             </Button>
           </DialogFooter>
         </DialogContent>

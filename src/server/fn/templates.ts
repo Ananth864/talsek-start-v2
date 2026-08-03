@@ -58,8 +58,15 @@ export const fetchReachoutTemplates = createServerFn({ method: 'GET' })
     return {
       companyId: profile.company_id,
       canManageTemplates: Boolean(profile.permissions.canManageTemplates),
+      canSendReachout: Boolean(profile.permissions.canSendReachout),
       reachout: settings.reachout_template ?? fallbackTemplate('final'),
       interview: settings.interview_template ?? fallbackTemplate('interview'),
+      hasReachoutTemplate: Boolean(
+        settings.reachout_template?.reply_to_email.trim(),
+      ),
+      hasInterviewTemplate: Boolean(
+        settings.interview_template?.reply_to_email.trim(),
+      ),
     }
   })
 
@@ -70,8 +77,10 @@ const saveTemplateSchema = z.object({
 
 /**
  * Saves a Reachout or Interview template into `company_settings.settings`.
- * Authoritative `canManageTemplates` check (ADR-0004); write is user-scoped so
- * RLS admin-only UPDATE applies (same hardening as createJob / ADR-0010).
+ * Authoritative capability check: `canManageTemplates` (templates page) or
+ * `canSendReachout` (mid-flow Shortlist setup — source parity so Members are
+ * not dead-ended). Write is user-scoped so RLS admin-only UPDATE applies
+ * (same hardening as createJob / ADR-0010).
  */
 export const saveReachoutTemplate = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
@@ -85,7 +94,9 @@ export const saveReachoutTemplate = createServerFn({ method: 'POST' })
     if (profileError || !profile?.company_id) {
       throw new Error('Failed to load your member profile.')
     }
-    if (!profile.permissions.canManageTemplates) {
+    const canManage = Boolean(profile.permissions.canManageTemplates)
+    const canSend = Boolean(profile.permissions.canSendReachout)
+    if (!canManage && !canSend) {
       throw new Error('You do not have permission to manage templates.')
     }
 

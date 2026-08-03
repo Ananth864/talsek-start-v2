@@ -2,6 +2,8 @@ import { createServerFn } from '@tanstack/react-start'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
+import { getRequestOrigin } from '../lib/supabase'
+import { sendReachoutAndAdvance } from '../lib/reachout-send'
 import type { Database } from '#/integrations/supabase/types'
 
 /**
@@ -123,14 +125,15 @@ export const fetchJobStages = createServerFn({ method: 'GET' })
     return rows
   })
 
-// ─── Job Applications write path (#8) ────────────────────────────────────
+// ─── Job Applications write path (#8 / #20) ───────────────────────────────
 //
-// Ports the source's client-side star / reject updates and the stage-advance
-// half of shortlist as user-scoped server functions (ADR-0002/ADR-0004). The
-// Reachout send (source `bulk-shortlist-candidates` edge fn) is deferred
-// to #16; Shortlist on the card and bulk shortlist (#10) advance
-// `current_stage_id` only (ADR-0016). UPDATEs run on `context.supabase`, so the
-// admin-only `job_applications` UPDATE RLS policy applies (ADR-0013).
+// Ports the source's client-side star / reject updates and Shortlist (Reachout
+// send + stage advance via source `bulk-shortlist-candidates`). Star / reject
+// stay user-scoped UPDATEs; Shortlist is `shortlistJobApplication` (#20) which
+// sends via Resend, records `sent_reachout_emails`, and advances stage.
+// `moveJobApplicationStage` remains for non-Reachout stage moves if needed.
+// UPDATEs run on `context.supabase`, so the admin-only `job_applications`
+// UPDATE RLS policy applies (ADR-0013).
 
 const applicationIdSchema = z.object({
   applicationId: z.string().min(1),
@@ -145,9 +148,22 @@ const moveStageSchema = applicationIdSchema.extend({
   targetStageId: z.string().min(1),
 })
 
+const shortlistSchema = z.object({
+  applicationId: z.string().uuid(),
+  jobId: z.string().uuid(),
+  targetStageId: z.string().uuid(),
+  templateType: z.enum(['interview', 'final']),
+  customMessage: z.object({
+    subject: z.string().trim().min(1).max(500),
+    body: z.string().trim().min(1).max(10000),
+  }),
+  origin: z.string().url().optional(),
+})
+
 export type ToggleJobApplicationStarredInput = z.infer<typeof toggleStarredSchema>
 export type RejectJobApplicationInput = z.infer<typeof applicationIdSchema>
 export type MoveJobApplicationStageInput = z.infer<typeof moveStageSchema>
+export type ShortlistJobApplicationInput = z.infer<typeof shortlistSchema>
 
 /**
  * Toggle the starred flag on a Job Application (source: `useToggleStarred`).
@@ -186,10 +202,10 @@ export const rejectJobApplication = createServerFn({ method: 'POST' })
   })
 
 /**
- * Move a Job Application to another Job Stage on the same Job (the stage
- * advance half of source shortlist). Verifies the target stage belongs to the
- * declared Job before writing — the client supplies `jobId` for the check; RLS
- * still owns company scoping on both tables.
+ * Move a Job Application to another Job Stage on the same Job without sending
+ * a Reachout. Prefer `shortlistJobApplication` for Member Shortlist (which
+ * sends the Reachout then advances). Verifies the target stage belongs to the
+ * declared Job before writing — RLS still owns company scoping.
  */
 export const moveJobApplicationStage = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
@@ -216,4 +232,46 @@ export const moveJobApplicationStage = createServerFn({ method: 'POST' })
       throw new Error(`Failed to move candidate: ${error.message}`)
     }
     return { ok: true as const }
+  })
+
+/**
+ * Shortlist a Job Application: send the Reachout (Resend / EMAIL_STUB), record
+ * `sent_reachout_emails`, optionally create an Interview Session, then advance
+ * `current_stage_id`. Authoritative `canSendReachout` check (ADR-0004).
+ */
+export const shortlistJobApplication = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(shortlistSchema)
+  .handler(async ({ data, context }) => {
+    const { data: profile, error: profileError } = await context.supabase
+      .from('profiles')
+      .select('id, email, permissions')
+      .eq('id', context.session.user.id)
+      .maybeSingle()
+    if (profileError || !profile) {
+      throw new Error('Failed to load your member profile.')
+    }
+    if (!profile.permissions.canSendReachout) {
+      throw new Error(
+        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
+      )
+    }
+
+    const result = await sendReachoutAndAdvance({
+      client: context.supabase,
+      userId: context.session.user.id,
+      userEmail: profile.email || context.session.user.email,
+      applicationId: data.applicationId,
+      jobId: data.jobId,
+      targetStageId: data.targetStageId,
+      templateType: data.templateType,
+      customMessage: data.customMessage,
+      origin: data.origin ?? getRequestOrigin(),
+    })
+
+    return {
+      ok: true as const,
+      applicationId: result.applicationId,
+      emailRecordId: result.emailRecordId,
+    }
   })

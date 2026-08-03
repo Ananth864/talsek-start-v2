@@ -4,7 +4,9 @@ import { useJobApplications } from '#/hooks/use-job-applications'
 import { useJobStages } from '#/hooks/use-job-stages'
 import { useBulkActionMode } from '#/hooks/use-bulk-action-mode'
 import { useBulkShortlist } from '#/hooks/use-bulk-shortlist'
+import { useShortlistActions } from '#/hooks/use-shortlist-actions'
 import { nextStageForApplication } from '#/lib/candidate-stage-navigation'
+import { parsedSummary } from '#/lib/parsed-candidate'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import {
@@ -18,24 +20,28 @@ import {
 import { BulkActionConfirmBar } from '#/components/bulk/bulk-action-confirm-bar'
 import { StageTabs } from './stage-tabs'
 import { CandidateCard } from './candidate-card'
+import { ShortlistConfirmationDialog } from './shortlist-confirmation-dialog'
+import { ReachoutTemplateSetupDialog } from './reachout-template-setup-dialog'
 import type { JobWithCompanyRow } from '#/server/fn/jobs'
 
 type CandidatesListProps = {
   job: JobWithCompanyRow
   companyId: string | null
+  canSendReachout: boolean
   activeStageId: string | undefined
   onStageChange: (stageId: string) => void
 }
 
 /**
  * The candidate pipeline board for a selected Job (ticket #6 read path + #8
- * card actions + #10 bulk shortlist). Ports the source's `CandidatesList`:
- * stage tabs, search, and per-stage list. Bulk shortlist advances stage only
- * (Reachout deferred to #16 — ADR-0016).
+ * card actions + #10 bulk shortlist + #20 Reachout send on single Shortlist).
+ * Ports the source's `CandidatesList`: stage tabs, search, and per-stage list.
+ * Bulk shortlist still advances stage only (Reachout deferred to #21).
  */
 export function CandidatesList({
   job,
   companyId,
+  canSendReachout,
   activeStageId,
   onStageChange,
 }: CandidatesListProps) {
@@ -44,6 +50,13 @@ export function CandidatesList({
     companyId,
   )
   const { data: stages = [] } = useJobStages(job.id, companyId)
+  const shortlist = useShortlistActions({
+    job,
+    stages,
+    applications,
+    companyId,
+    canSendReachout,
+  })
   const [search, setSearch] = useState('')
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
@@ -91,7 +104,6 @@ export function CandidatesList({
   const nextStage = useMemo(() => {
     const sample = visible.at(0)
     if (sample) return nextStageForApplication(sample, stages)
-    // Resolve from stage order when the list is empty (disable UI).
     const currentIndex = stages.findIndex((s) => s.id === effectiveStageId)
     if (currentIndex < 0 || currentIndex >= stages.length - 1) return null
     const next = stages[currentIndex + 1]
@@ -156,9 +168,24 @@ export function CandidatesList({
     )
   }
 
+  const shortlistCandidateName = shortlist.application
+    ? shortlist.application.candidate_name ||
+      parsedSummary(shortlist.application.parsed_candidate_data).name ||
+      shortlist.application.candidate.email ||
+      'Candidate'
+    : 'Candidate'
+
   return (
     <div
       data-testid="candidates-list"
+      data-shortlist-active={shortlist.activeApplicationId ?? ''}
+      data-shortlist-modal={
+        shortlist.isShortlistModalOpen
+          ? 'confirm'
+          : shortlist.isTemplateModalOpen
+            ? 'setup'
+            : ''
+      }
       className="flex flex-1 flex-col overflow-hidden"
     >
       <StageTabs
@@ -249,6 +276,10 @@ export function CandidatesList({
                   application={app}
                   job={job}
                   stages={stages}
+                  canSendReachout={canSendReachout}
+                  isShortlisting={shortlist.shortlistingId === app.id}
+                  shortlistError={shortlist.actionErrorFor(app.id)}
+                  onShortlist={() => void shortlist.handleShortlistClick(app.id)}
                   selection={
                     bulkState.isBulkMode
                       ? {
@@ -263,6 +294,34 @@ export function CandidatesList({
           </ul>
         )}
       </div>
+
+      <ReachoutTemplateSetupDialog
+        open={shortlist.isTemplateModalOpen}
+        onOpenChange={shortlist.setIsTemplateModalOpen}
+        kind={shortlist.templateType}
+        template={
+          shortlist.templateType === 'interview'
+            ? shortlist.interviewTemplate
+            : shortlist.finalTemplate
+        }
+        onSave={shortlist.saveTemplate}
+        onSaved={shortlist.handleTemplateSaved}
+      />
+
+      <ShortlistConfirmationDialog
+        open={shortlist.isShortlistModalOpen}
+        onOpenChange={shortlist.setIsShortlistModalOpen}
+        candidateName={shortlistCandidateName}
+        currentStage={shortlist.currentStageLabel}
+        nextStage={shortlist.nextStage?.name}
+        messageSubject={shortlist.messageSubject}
+        messageBody={shortlist.messageBody}
+        onSubjectChange={shortlist.setMessageSubject}
+        onBodyChange={shortlist.setMessageBody}
+        onConfirm={shortlist.handleShortlistConfirm}
+        isLoading={shortlist.isSending}
+        requireInterviewLink={shortlist.templateType === 'interview'}
+      />
 
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <DialogContent data-testid="bulk-shortlist-dialog">
