@@ -1,8 +1,10 @@
 import { CheckSquare, Square, X } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
+import type { BulkActionMode } from '#/hooks/use-bulk-action-mode'
 
 type BulkActionConfirmBarProps = {
+  mode: BulkActionMode
   selectedCount: number
   isAllSelected: boolean
   onCancel: () => void
@@ -13,10 +15,11 @@ type BulkActionConfirmBarProps = {
 }
 
 /**
- * Confirm bar while selecting candidates for bulk shortlist.
- * Layout: [X Cancel] [☐ Select All] [Shortlist] — source parity, stage-only.
+ * Confirm bar while selecting candidates for bulk Shortlist or bulk reject.
+ * Layout: [X Cancel] [☐ Select All] [Shortlist|Reject] — source parity.
  */
 export function BulkActionConfirmBar({
+  mode,
   selectedCount,
   isAllSelected,
   onCancel,
@@ -25,10 +28,15 @@ export function BulkActionConfirmBar({
   confirmDisabled,
   className,
 }: BulkActionConfirmBarProps) {
+  const isShortlist = mode === 'selecting-shortlist'
+  const actionLabel = isShortlist ? 'Shortlist' : 'Reject'
+  const confirmVariant = isShortlist ? 'default' : 'destructive'
+
   return (
     <div
       className={cn('flex items-center', className)}
       data-testid="bulk-action-confirm-bar"
+      data-bulk-mode={mode}
     >
       <span className="mr-3 text-sm font-medium text-muted-foreground">
         {selectedCount} selected
@@ -62,14 +70,14 @@ export function BulkActionConfirmBar({
         </Button>
 
         <Button
-          variant="default"
+          variant={confirmVariant}
           size="sm"
           onClick={onConfirm}
           disabled={selectedCount === 0 || confirmDisabled}
           className="h-10 rounded-none px-4 font-semibold"
           data-testid="bulk-action-confirm"
         >
-          Shortlist
+          {actionLabel}
         </Button>
       </div>
     </div>

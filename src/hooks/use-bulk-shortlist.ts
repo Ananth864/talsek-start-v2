@@ -4,8 +4,8 @@ import type { BulkShortlistJobApplicationsInput } from '#/server/fn/bulk'
 import { JOB_APPLICATIONS_QUERY_KEY_PREFIX } from '#/lib/job-applications-shared'
 
 /**
- * Bulk stage advance for selected Job Applications (ticket #10).
- * Reachout send is deferred to #16 (ADR-0016).
+ * Bulk Shortlist: send Reachouts + advance stages for selected Job Applications
+ * (#21). Reuses the single-shortlist send path server-side.
  */
 export function useBulkShortlist() {
   const queryClient = useQueryClient()

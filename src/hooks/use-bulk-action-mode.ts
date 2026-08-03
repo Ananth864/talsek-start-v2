@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 
-export type BulkActionMode = 'idle' | 'selecting-shortlist'
+export type BulkActionMode =
+  | 'idle'
+  | 'selecting-shortlist'
+  | 'selecting-reject'
 
 export type BulkActionState = {
   mode: BulkActionMode
@@ -8,7 +11,7 @@ export type BulkActionState = {
   isBulkMode: boolean
   isAllSelected: boolean
   selectedCount: number
-  enterShortlistMode: () => void
+  enterMode: (type: 'shortlist' | 'reject') => void
   toggleSelection: (id: string) => void
   selectAll: (ids: string[]) => void
   clearSelection: () => void
@@ -16,9 +19,8 @@ export type BulkActionState = {
 }
 
 /**
- * Selection state machine for board bulk shortlist (ticket #10).
- * Ports the source's `useBulkActionMode`, narrowed to shortlist (reject bulk
- * and Reachout template UI remain later tickets).
+ * Selection state machine for board bulk Shortlist / bulk reject (#10 / #21).
+ * Ports the source's `useBulkActionMode`.
  */
 export function useBulkActionMode(
   totalCandidateIds: string[] = [],
@@ -34,8 +36,8 @@ export function useBulkActionMode(
     return totalCandidateIds.every((id) => selectedIds.has(id))
   }, [totalCandidateIds, selectedIds])
 
-  const enterShortlistMode = useCallback(() => {
-    setMode('selecting-shortlist')
+  const enterMode = useCallback((type: 'shortlist' | 'reject') => {
+    setMode(type === 'shortlist' ? 'selecting-shortlist' : 'selecting-reject')
     setSelectedIds(new Set())
   }, [])
 
@@ -67,7 +69,7 @@ export function useBulkActionMode(
     isBulkMode,
     isAllSelected,
     selectedCount,
-    enterShortlistMode,
+    enterMode,
     toggleSelection,
     selectAll,
     clearSelection,

@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Users } from 'lucide-react'
+import { Search, Users, XCircle } from 'lucide-react'
 import { useJobApplications } from '#/hooks/use-job-applications'
 import { useJobStages } from '#/hooks/use-job-stages'
 import { useBulkActionMode } from '#/hooks/use-bulk-action-mode'
 import { useBulkShortlist } from '#/hooks/use-bulk-shortlist'
+import { useBulkReject } from '#/hooks/use-bulk-reject'
 import { useShortlistActions } from '#/hooks/use-shortlist-actions'
+import { useReachoutTemplates } from '#/hooks/use-reachout-templates'
+import { useCreditBalance, useServiceRates } from '#/hooks/use-billing'
 import { nextStageForApplication } from '#/lib/candidate-stage-navigation'
+import {
+  hasConfiguredTemplate,
+  templateKindForNextStage,
+} from '#/lib/email-template-engine'
 import { parsedSummary } from '#/lib/parsed-candidate'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
 import { BulkActionConfirmBar } from '#/components/bulk/bulk-action-confirm-bar'
+import { BulkShortlistDialog } from '#/components/bulk/bulk-shortlist-dialog'
+import { BulkRejectDialog } from '#/components/bulk/bulk-reject-dialog'
 import { StageTabs } from './stage-tabs'
 import { CandidateCard } from './candidate-card'
 import { ShortlistConfirmationDialog } from './shortlist-confirmation-dialog'
@@ -34,9 +35,8 @@ type CandidatesListProps = {
 
 /**
  * The candidate pipeline board for a selected Job (ticket #6 read path + #8
- * card actions + #10 bulk shortlist + #20 Reachout send on single Shortlist).
- * Ports the source's `CandidatesList`: stage tabs, search, and per-stage list.
- * Bulk shortlist still advances stage only (Reachout deferred to #21).
+ * card actions + #10 / #21 bulk Shortlist Reachout + bulk reject + #20 single
+ * Shortlist Reachout). Ports the source's `CandidatesList`.
  */
 export function CandidatesList({
   job,
@@ -57,10 +57,22 @@ export function CandidatesList({
     companyId,
     canSendReachout,
   })
+  const templatesQuery = useReachoutTemplates(companyId)
+  const { balance: creditBalance, isLoading: creditsLoading } =
+    useCreditBalance(companyId)
+  const { data: serviceRates, isLoading: ratesLoading } =
+    useServiceRates(companyId)
+  const interviewCost = serviceRates?.screening_interview_cost ?? 40
+
   const [search, setSearch] = useState('')
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [isBulkShortlistOpen, setIsBulkShortlistOpen] = useState(false)
+  const [isBulkRejectOpen, setIsBulkRejectOpen] = useState(false)
+  const [isBulkTemplateSetupOpen, setIsBulkTemplateSetupOpen] = useState(false)
+  const [bulkSubject, setBulkSubject] = useState('')
+  const [bulkBody, setBulkBody] = useState('')
   const [bulkError, setBulkError] = useState<string | null>(null)
   const bulkShortlist = useBulkShortlist()
+  const bulkReject = useBulkReject()
 
   const effectiveStageId =
     activeStageId && stages.some((s) => s.id === activeStageId)
@@ -114,6 +126,8 @@ export function CandidatesList({
     stages.find((s) => s.id === effectiveStageId)?.hiring_stage.name ||
     'Current Stage'
 
+  const bulkTemplateType = templateKindForNextStage(nextStage?.name)
+
   const activeCount = applications.filter((a) => a.status === 'active').length
   const rejectedCount = applications.filter(
     (a) => a.status === 'rejected',
@@ -124,8 +138,43 @@ export function CandidatesList({
     else bulkState.selectAll(visibleIds)
   }
 
+  const openBulkShortlistDialog = async () => {
+    let data = templatesQuery.data
+    if (!data) {
+      const refreshed = await templatesQuery.refetch()
+      data = refreshed.data
+    }
+    const configured =
+      bulkTemplateType === 'interview'
+        ? Boolean(data?.hasInterviewTemplate)
+        : Boolean(data?.hasReachoutTemplate)
+    const template =
+      bulkTemplateType === 'interview' ? data?.interview : data?.reachout
+
+    if (!configured || !template || !hasConfiguredTemplate(template)) {
+      setIsBulkTemplateSetupOpen(true)
+      return
+    }
+
+    setBulkSubject(template.subject)
+    setBulkBody(template.body)
+    setIsBulkShortlistOpen(true)
+  }
+
   const handleBulkConfirmClick = () => {
     setBulkError(null)
+
+    if (bulkState.mode === 'selecting-reject') {
+      setIsBulkRejectOpen(true)
+      return
+    }
+
+    if (!canSendReachout) {
+      setBulkError(
+        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
+      )
+      return
+    }
     if (bulkState.selectedCount > 10) {
       setBulkError(
         `You can only shortlist up to 10 candidates at a time. Please deselect ${bulkState.selectedCount - 10} candidate(s).`,
@@ -136,32 +185,119 @@ export function CandidatesList({
       setBulkError('No further stage in this pipeline')
       return
     }
-    setIsConfirmOpen(true)
+    if (
+      bulkTemplateType === 'interview' &&
+      !creditsLoading &&
+      !ratesLoading
+    ) {
+      const totalCost = interviewCost * bulkState.selectedCount
+      if (creditBalance < totalCost) {
+        setBulkError(
+          `Insufficient credits. Bulk interview shortlist requires ${totalCost} credits (${interviewCost} per candidate). You have ${creditBalance} credits.`,
+        )
+        return
+      }
+    }
+
+    void openBulkShortlistDialog()
+  }
+
+  const handleBulkTemplateSaved = async () => {
+    setIsBulkTemplateSetupOpen(false)
+    const refreshed = await templatesQuery.refetch()
+    const data = refreshed.data
+    const template =
+      bulkTemplateType === 'interview' ? data?.interview : data?.reachout
+    if (!template || !hasConfiguredTemplate(template)) return
+    setBulkSubject(template.subject)
+    setBulkBody(template.body)
+    setIsBulkShortlistOpen(true)
   }
 
   const handleBulkShortlistConfirm = () => {
     if (!nextStage) return
+    if (!canSendReachout) {
+      setBulkError(
+        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
+      )
+      setIsBulkShortlistOpen(false)
+      return
+    }
+    if (
+      bulkTemplateType === 'interview' &&
+      !bulkBody.includes('{{interview_link}}')
+    ) {
+      setBulkError(
+        'Interview template must include {{interview_link}} variable. Please add it back to the message.',
+      )
+      return
+    }
+
     setBulkError(null)
     bulkShortlist.mutate(
       {
         jobId: job.id,
         applicationIds: Array.from(bulkState.selectedIds),
         targetStageId: nextStage.id,
+        templateType: bulkTemplateType,
+        customMessage: {
+          subject: bulkSubject,
+          body: bulkBody,
+        },
+        origin:
+          typeof window !== 'undefined' ? window.location.origin : undefined,
       },
       {
         onSuccess: (result) => {
-          setIsConfirmOpen(false)
+          setIsBulkShortlistOpen(false)
           if (result.failed.length > 0 && result.succeeded.length === 0) {
             setBulkError(
               result.failed[0]?.error ?? 'Failed to shortlist candidates',
             )
           } else {
             bulkState.exitMode()
+            if (result.failed.length > 0) {
+              setBulkError(
+                `Shortlisted ${result.succeeded.length}, ${result.failed.length} failed: ${result.failed[0]?.error ?? 'unknown error'}`,
+              )
+            }
           }
         },
         onError: (err) => {
           setBulkError(
             err instanceof Error ? err.message : 'Bulk shortlist failed',
+          )
+        },
+      },
+    )
+  }
+
+  const handleBulkRejectConfirm = () => {
+    setBulkError(null)
+    bulkReject.mutate(
+      {
+        jobId: job.id,
+        applicationIds: Array.from(bulkState.selectedIds),
+      },
+      {
+        onSuccess: (result) => {
+          setIsBulkRejectOpen(false)
+          if (result.failed.length > 0 && result.succeeded.length === 0) {
+            setBulkError(
+              result.failed[0]?.error ?? 'Failed to reject candidates',
+            )
+          } else {
+            bulkState.exitMode()
+            if (result.failed.length > 0) {
+              setBulkError(
+                `Rejected ${result.succeeded.length}, ${result.failed.length} failed: ${result.failed[0]?.error ?? 'unknown error'}`,
+              )
+            }
+          }
+        },
+        onError: (err) => {
+          setBulkError(
+            err instanceof Error ? err.message : 'Bulk reject failed',
           )
         },
       },
@@ -175,6 +311,8 @@ export function CandidatesList({
       'Candidate'
     : 'Candidate'
 
+  const bulkPending = bulkShortlist.isPending || bulkReject.isPending
+
   return (
     <div
       data-testid="candidates-list"
@@ -186,6 +324,7 @@ export function CandidatesList({
             ? 'setup'
             : ''
       }
+      data-can-send-reachout={canSendReachout ? 'true' : 'false'}
       className="flex flex-1 flex-col overflow-hidden"
     >
       <StageTabs
@@ -207,30 +346,51 @@ export function CandidatesList({
         <div className="flex flex-wrap items-center gap-2">
           {bulkState.isBulkMode ? (
             <BulkActionConfirmBar
+              mode={bulkState.mode}
               selectedCount={bulkState.selectedCount}
               isAllSelected={bulkState.isAllSelected}
               onCancel={bulkState.exitMode}
               onToggleSelectAll={handleToggleSelectAll}
               onConfirm={handleBulkConfirmClick}
-              confirmDisabled={!nextStage || bulkShortlist.isPending}
+              confirmDisabled={
+                bulkPending ||
+                (bulkState.mode === 'selecting-shortlist' && !nextStage)
+              }
             />
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={bulkState.enterShortlistMode}
-              disabled={!nextStage || visible.length === 0}
-              data-testid="bulk-shortlist-enter"
-              title={
-                nextStage
-                  ? 'Select candidates to move to the next stage'
-                  : 'Not available on last stage'
-              }
-            >
-              <Users className="size-3.5" />
-              Bulk shortlist
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => bulkState.enterMode('shortlist')}
+                disabled={!nextStage || visible.length === 0 || !canSendReachout}
+                data-testid="bulk-shortlist-enter"
+                data-can-send-reachout={canSendReachout ? 'true' : 'false'}
+                title={
+                  !canSendReachout
+                    ? 'You do not have permission to send Reachouts'
+                    : nextStage
+                      ? 'Select candidates to shortlist to the next stage'
+                      : 'Not available on last stage'
+                }
+              >
+                <Users className="size-3.5" />
+                Bulk shortlist
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => bulkState.enterMode('reject')}
+                disabled={visible.length === 0}
+                data-testid="bulk-reject-enter"
+                title="Select candidates to reject"
+              >
+                <XCircle className="size-3.5" />
+                Bulk reject
+              </Button>
+            </>
           )}
           <div className="relative w-full max-w-[220px]">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -296,16 +456,33 @@ export function CandidatesList({
       </div>
 
       <ReachoutTemplateSetupDialog
-        open={shortlist.isTemplateModalOpen}
-        onOpenChange={shortlist.setIsTemplateModalOpen}
-        kind={shortlist.templateType}
+        open={shortlist.isTemplateModalOpen || isBulkTemplateSetupOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            shortlist.setIsTemplateModalOpen(false)
+            setIsBulkTemplateSetupOpen(false)
+          }
+        }}
+        kind={
+          isBulkTemplateSetupOpen
+            ? bulkTemplateType
+            : shortlist.templateType
+        }
         template={
-          shortlist.templateType === 'interview'
+          (isBulkTemplateSetupOpen
+            ? bulkTemplateType
+            : shortlist.templateType) === 'interview'
             ? shortlist.interviewTemplate
             : shortlist.finalTemplate
         }
         onSave={shortlist.saveTemplate}
-        onSaved={shortlist.handleTemplateSaved}
+        onSaved={() => {
+          if (isBulkTemplateSetupOpen) {
+            void handleBulkTemplateSaved()
+          } else {
+            void shortlist.handleTemplateSaved()
+          }
+        }}
       />
 
       <ShortlistConfirmationDialog
@@ -323,44 +500,28 @@ export function CandidatesList({
         requireInterviewLink={shortlist.templateType === 'interview'}
       />
 
-      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <DialogContent data-testid="bulk-shortlist-dialog">
-          <DialogHeader>
-            <DialogTitle>Bulk shortlist</DialogTitle>
-            <DialogDescription>
-              Move {bulkState.selectedCount} candidate
-              {bulkState.selectedCount === 1 ? '' : 's'} to the next hiring
-              stage. Sending a Reachout ports with a later ticket; this advances
-              the pipeline stage now.
-            </DialogDescription>
-          </DialogHeader>
-          {nextStage ? (
-            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-primary">
-              <p className="text-center text-sm font-medium">
-                {currentStageLabel} → {nextStage.name}
-              </p>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsConfirmOpen(false)}
-              disabled={bulkShortlist.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleBulkShortlistConfirm}
-              disabled={!nextStage || bulkShortlist.isPending}
-              data-testid="bulk-shortlist-confirm"
-            >
-              {bulkShortlist.isPending ? 'Shortlisting…' : 'Confirm Shortlist'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BulkShortlistDialog
+        open={isBulkShortlistOpen}
+        onOpenChange={setIsBulkShortlistOpen}
+        candidateCount={bulkState.selectedCount}
+        currentStage={currentStageLabel}
+        nextStage={nextStage?.name}
+        messageSubject={bulkSubject}
+        messageBody={bulkBody}
+        onSubjectChange={setBulkSubject}
+        onBodyChange={setBulkBody}
+        onConfirm={handleBulkShortlistConfirm}
+        isLoading={bulkShortlist.isPending}
+        requireInterviewLink={bulkTemplateType === 'interview'}
+      />
+
+      <BulkRejectDialog
+        open={isBulkRejectOpen}
+        onOpenChange={setIsBulkRejectOpen}
+        candidateCount={bulkState.selectedCount}
+        onConfirm={handleBulkRejectConfirm}
+        isLoading={bulkReject.isPending}
+      />
     </div>
   )
 }

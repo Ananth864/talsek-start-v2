@@ -40,14 +40,10 @@ applicationId, skipExtraction: true })` (ADR-0014 §7).
 
 ### 4. Bulk shortlist advances stage only — Reachout stays #16
 
-Source `bulk-shortlist-candidates` sends Reachout (Resend) + interview
-session side effects, then updates `current_stage_id`. Issue #10 AC asks to
-“move selected candidates forward”; ADR-0013 already deferred Reachout to
-#10/#16 and shipped card Shortlist as stage-only. This ticket keeps that
-parity: `bulkShortlistJobApplications` validates same-stage selection
-(max 10), verifies the target Job Stage, and updates `current_stage_id` for
-each id. Template editor, Resend, and `sent_reachout_emails` /
-`interview_sessions` remain #16.
+**Superseded by ADR-0024 / ticket #21.** Issue #10 shipped stage-only bulk
+shortlist; #21 reuses `sendReachoutAndAdvance` for Reachout send + stage
+advance (and adds bulk reject). Historical note: #10 validated same-stage
+selection (max 10) and updated `current_stage_id` only.
 
 ### 5. Credit gate at process time; stub skips consume
 

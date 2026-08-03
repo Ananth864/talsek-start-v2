@@ -48,5 +48,5 @@ remains a client UX gate (source); charge still happens at interview start.
 ## Consequences
 
 - Card Shortlist opens an editable confirm dialog (or template setup first).
-- Bulk shortlist remains stage-only until #21 reuses `sendReachoutAndAdvance`.
+- Bulk Shortlist reuses `sendReachoutAndAdvance` in #21 (ADR-0024).
 - `moveJobApplicationStage` remains for non-Reachout stage moves.

@@ -1,7 +1,8 @@
 /**
- * Single Shortlist Reachout send — ports source `bulk-shortlist-candidates`
- * for one Job Application: personalize, optional Interview Session, Resend
- * (EMAIL_STUB), `sent_reachout_emails`, then advance `current_stage_id`.
+ * Shortlist Reachout send path — ports source `bulk-shortlist-candidates` for
+ * one Job Application (also looped by bulk Shortlist #21): personalize,
+ * optional Interview Session, Resend (EMAIL_STUB), `sent_reachout_emails`,
+ * then advance `current_stage_id`.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {

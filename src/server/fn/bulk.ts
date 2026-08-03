@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
-import { getAdminClient } from '../lib/supabase'
+import { getAdminClient, getRequestOrigin } from '../lib/supabase'
 import {
   InsufficientCreditsError,
   processJobApplicationPipeline,
@@ -11,15 +11,22 @@ import {
   shouldUseAiPipelineStub,
 } from '../lib/ai/pipeline-stub'
 import { runResumeExtraction } from '../lib/ai/run-resume-extraction'
+import { isEmailStub } from '../lib/email'
+import { sendReachoutAndAdvance } from '../lib/reachout-send'
 import type { ResumeExtractionJson } from '#/integrations/supabase/types'
 
 /**
- * Bulk resume upload + bulk shortlist (ticket #10). Client uploads PDFs to
- * Storage; server functions receive paths only (ADR-0003 / ADR-0016). Bulk
- * shortlist advances Job Stages only — Reachout send remains #16.
+ * Bulk resume upload + bulk Shortlist Reachout + bulk reject (#10 / #21).
+ * Client uploads PDFs to Storage; server functions receive paths only
+ * (ADR-0003 / ADR-0016). Bulk Shortlist reuses `sendReachoutAndAdvance`
+ * (ADR-0023 / ADR-0024).
  */
 
 const MAX_BULK_SHORTLIST = 10
+const MAX_BULK_REJECT = 100
+const BULK_REACHOUT_DELAY_MS = 500
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const jobIdSchema = z.object({
   jobId: z.string().uuid(),
@@ -395,22 +402,50 @@ const bulkShortlistSchema = z.object({
   jobId: z.string().uuid(),
   applicationIds: z.array(z.string().uuid()).min(1).max(MAX_BULK_SHORTLIST),
   targetStageId: z.string().uuid(),
+  templateType: z.enum(['interview', 'final']),
+  customMessage: z.object({
+    subject: z.string().trim().min(1).max(500),
+    body: z.string().trim().min(1).max(10000),
+  }),
+  origin: z.string().url().optional(),
 })
 
 export type BulkShortlistJobApplicationsInput = z.infer<
   typeof bulkShortlistSchema
 >
 
+const bulkRejectSchema = z.object({
+  jobId: z.string().uuid(),
+  applicationIds: z.array(z.string().uuid()).min(1).max(MAX_BULK_REJECT),
+})
+
+export type BulkRejectJobApplicationsInput = z.infer<typeof bulkRejectSchema>
+
 /**
- * Move up to 10 selected Job Applications to the same target Job Stage.
- * Requires all selected apps to share one current stage (source parity).
- * Reachout send is deferred to #16 (ADR-0016).
+ * Bulk Shortlist up to 10 Job Applications: send a Reachout to each (via
+ * `sendReachoutAndAdvance`), then advance `current_stage_id`. Same-stage
+ * selection required (source `bulk-shortlist-candidates` parity). Authoritative
+ * `canSendReachout` check (ADR-0004 / ADR-0024).
  */
 export const bulkShortlistJobApplications = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(bulkShortlistSchema)
   .handler(async ({ data, context }) => {
     const client = context.supabase
+
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('id, email, permissions')
+      .eq('id', context.session.user.id)
+      .maybeSingle()
+    if (profileError || !profile) {
+      throw new Error('Failed to load your member profile.')
+    }
+    if (!profile.permissions.canSendReachout) {
+      throw new Error(
+        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
+      )
+    }
 
     const { data: targetStage, error: stageError } = await client
       .from('job_stages')
@@ -463,6 +498,8 @@ export const bulkShortlistJobApplications = createServerFn({ method: 'POST' })
       throw new Error('Target stage must be further forward in the pipeline')
     }
 
+    const origin = data.origin ?? getRequestOrigin()
+    const userEmail = profile.email || context.session.user.email
     const succeeded: string[] = []
     const failed: Array<{
       applicationId: string
@@ -470,7 +507,8 @@ export const bulkShortlistJobApplications = createServerFn({ method: 'POST' })
       error: string
     }> = []
 
-    for (const app of applications) {
+    for (let i = 0; i < applications.length; i++) {
+      const app = applications[i]
       if (app.status === 'rejected') {
         failed.push({
           applicationId: app.id,
@@ -479,20 +517,86 @@ export const bulkShortlistJobApplications = createServerFn({ method: 'POST' })
         })
         continue
       }
-      const { error } = await client
-        .from('job_applications')
-        .update({ current_stage_id: data.targetStageId })
-        .eq('id', app.id)
-        .eq('job_id', data.jobId)
 
-      if (error) {
+      try {
+        await sendReachoutAndAdvance({
+          client,
+          userId: context.session.user.id,
+          userEmail,
+          applicationId: app.id,
+          jobId: data.jobId,
+          targetStageId: data.targetStageId,
+          templateType: data.templateType,
+          customMessage: data.customMessage,
+          origin,
+        })
+        succeeded.push(app.id)
+      } catch (error) {
         failed.push({
           applicationId: app.id,
           candidateName: app.candidate_name || 'Candidate',
-          error: error.message,
+          error:
+            error instanceof Error ? error.message : 'Failed to shortlist',
         })
+      }
+
+      // Source rate-limits Resend (~500ms). Skip under EMAIL_STUB for E2E.
+      if (!isEmailStub() && i < applications.length - 1) {
+        await delay(BULK_REACHOUT_DELAY_MS)
+      }
+    }
+
+    return {
+      succeeded,
+      failed,
+      total: data.applicationIds.length,
+    }
+  })
+
+/**
+ * Reject selected Job Applications in one confirmed action (source
+ * `BulkRejectModal` batch UPDATE). No `canSendReachout` gate — reject is a
+ * separate capability from Shortlist.
+ */
+export const bulkRejectJobApplications = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(bulkRejectSchema)
+  .handler(async ({ data, context }) => {
+    const client = context.supabase
+
+    const { data: applications, error: fetchError } = await client
+      .from('job_applications')
+      .select('id, candidate_name, status')
+      .eq('job_id', data.jobId)
+      .in('id', data.applicationIds)
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch applications: ${fetchError.message}`)
+    }
+    if (applications.length !== data.applicationIds.length) {
+      throw new Error('One or more selected candidates were not found')
+    }
+
+    const succeeded: string[] = []
+    const failed: Array<{ id: string; error: string }> = []
+
+    // Source processes in batches of 10 for UX progress; keep the same chunking.
+    const batchSize = 10
+    for (let i = 0; i < applications.length; i += batchSize) {
+      const batch = applications.slice(i, i + batchSize)
+      const batchIds = batch.map((a) => a.id)
+      const { error } = await client
+        .from('job_applications')
+        .update({ status: 'rejected' })
+        .eq('job_id', data.jobId)
+        .in('id', batchIds)
+
+      if (error) {
+        for (const id of batchIds) {
+          failed.push({ id, error: error.message })
+        }
       } else {
-        succeeded.push(app.id)
+        succeeded.push(...batchIds)
       }
     }
 
