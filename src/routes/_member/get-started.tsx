@@ -30,16 +30,18 @@ function GetStartedPage() {
 
   return (
     <div
-      className="flex flex-1 flex-col p-4 md:p-8"
+      className="flex min-h-svh flex-col bg-background text-foreground"
       data-testid="get-started-page"
     >
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          {showHub ? 'Dashboard Hub' : 'Welcome to Talsek'}
-        </h1>
+      <header className="border-b border-border bg-card">
+        <div className="px-6 py-4">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {showHub ? 'Dashboard Hub' : 'Welcome to Talsek'}
+          </h1>
+        </div>
       </header>
 
-      <main className="flex flex-col items-center">
+      <main className="flex flex-1 flex-col items-center p-4 md:p-8">
         {!hydrated ? (
           <div
             className="w-full max-w-4xl animate-pulse space-y-4"
@@ -54,7 +56,7 @@ function GetStartedPage() {
           <ActionHub />
         ) : (
           <div className="w-full space-y-8">
-            <div className="mb-2 space-y-2 text-center">
+            <div className="mb-8 space-y-2 text-center">
               <h2 className="text-2xl font-bold tracking-tight">
                 Let&apos;s get you set up
               </h2>

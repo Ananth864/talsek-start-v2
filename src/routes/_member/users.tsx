@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Loader2, Plus, RotateCcw, Search, UserCog, Users } from 'lucide-react'
+import { Loader2, Plus, RotateCcw, Search, UserCog } from 'lucide-react'
 import { inviteMember } from '#/server/fn/team'
 import {
   useInvalidateTeam,
@@ -10,7 +10,6 @@ import { InviteMemberModal } from '#/components/team/invite-member-modal'
 import type { InviteMemberValues } from '#/components/team/invite-member-modal'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { Badge } from '#/components/ui/badge'
 import {
   Card,
   CardContent,
@@ -27,6 +26,20 @@ export const Route = createFileRoute('/_member/users')({
   },
   component: TeamPage,
 })
+
+const roleBadgeVariant: Record<'member' | 'admin', string> = {
+  admin:
+    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
+  member:
+    'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
+}
+
+const statusBadgeVariant = {
+  pending:
+    'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  active:
+    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+}
 
 function formatName(firstName: string | null, lastName: string | null) {
   const segments = [firstName, lastName].filter(Boolean)
@@ -100,184 +113,222 @@ function TeamPage() {
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage workspace access, roles, and permissions for your team.
-          </p>
+    <div
+      className="flex min-h-svh flex-col bg-background text-foreground"
+      data-testid="team-page"
+    >
+      <header className="border-b border-border bg-card">
+        <div className="px-6 py-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-xl font-semibold">Team</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage workspace access, roles, and permissions for your team.
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <Button
+                className="gap-2"
+                onClick={() => setInviteOpen(true)}
+                data-testid="invite-member-button"
+              >
+                <Plus className="h-4 w-4" />
+                Invite Member
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button
-          size="sm"
-          onClick={() => setInviteOpen(true)}
-          data-testid="invite-member-button"
-        >
-          <Plus className="size-4" />
-          Invite Member
-        </Button>
       </header>
 
-      <main className="flex-1 space-y-4 p-4">
-        {banner ? (
-          <div
-            className={cn(
-              'rounded-md border px-3 py-2 text-sm',
-              banner.kind === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                : 'border-destructive/20 bg-destructive/10 text-destructive',
-            )}
-            data-testid="team-banner"
-          >
-            {banner.message}
-          </div>
-        ) : null}
-
-        <Card>
-          <CardHeader className="flex flex-col gap-4 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="sr-only">Members</CardTitle>
-            <div className="flex w-full max-w-md items-center gap-2 rounded-md border bg-muted/40 px-3 py-1.5">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name, email, role, or status"
-                autoComplete="off"
-                name="members-search"
-                data-testid="team-search"
-                className="h-8 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void refetch()}
-              disabled={isFetching}
-              data-testid="team-refresh"
+      <main className="min-w-0 flex-1 px-6 py-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+          {banner ? (
+            <div
+              className={cn(
+                'rounded-md border px-3 py-2 text-sm',
+                banner.kind === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-destructive/20 bg-destructive/10 text-destructive',
+              )}
+              data-testid="team-banner"
             >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-auto">
-              <table className="w-full min-w-[720px] text-sm" data-testid="team-table">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Loading team members…</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : error ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <span>
-                            {error instanceof Error
-                              ? error.message
-                              : 'Failed to load members'}
-                          </span>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void refetch()}
+              {banner.message}
+            </div>
+          ) : null}
+
+          <Card className="bg-card">
+            <CardHeader className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="sr-only">Members</CardTitle>
+              <div className="flex w-full max-w-md items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-1.5">
+                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search by name, email, role, or status"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  name="members-search"
+                  data-testid="team-search"
+                  className="h-8 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void refetch()}
+                  disabled={isFetching}
+                  data-testid="team-refresh"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-auto">
+                <div className="min-w-[780px]">
+                  <table
+                    className="w-full text-sm"
+                    data-testid="team-table"
+                  >
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="px-4 py-3 font-medium">Name</th>
+                        <th className="px-4 py-3 font-medium">Email</th>
+                        <th className="px-4 py-3 font-medium">Role</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 text-right font-medium">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoading ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="h-24 text-center text-muted-foreground"
                           >
-                            Try again
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : filteredMembers.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        {search ? (
-                          <span>No members match your search.</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            No team members yet. Invite your first teammate.
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredMembers.map((member) => {
-                      const pending = member.must_change_password
-                      return (
-                        <tr
-                          key={member.id}
-                          className="border-b last:border-0"
-                          data-testid={`team-member-row-${member.id}`}
-                        >
-                          <td className="px-4 py-3 font-medium">
-                            {formatName(member.first_name, member.last_name)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {member.email}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline">
-                              {member.role === 'admin' ? 'Admin' : 'Member'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge
-                              variant="outline"
-                              data-testid={`member-status-${member.id}`}
-                            >
-                              {pending
-                                ? 'Pending password setup'
-                                : 'Active'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-2"
-                              onClick={() =>
-                                void navigate({
-                                  to: '/users/$id',
-                                  params: { id: member.id },
-                                })
-                              }
-                              data-testid={`manage-member-${member.id}`}
-                            >
-                              <UserCog className="h-4 w-4" />
-                              Manage
-                            </Button>
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Loading team members…</span>
+                            </div>
                           </td>
                         </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                      ) : error ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="h-24 text-center text-muted-foreground"
+                          >
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <span>
+                                {error instanceof Error
+                                  ? error.message
+                                  : 'Failed to load team members. Please try again.'}
+                              </span>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => void refetch()}
+                                disabled={isFetching}
+                              >
+                                Try again
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredMembers.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="h-24 text-center text-muted-foreground"
+                          >
+                            {search ? (
+                              <span>No members match your search.</span>
+                            ) : (
+                              <span>
+                                No team members yet. Invite your first teammate
+                                to get started.
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredMembers.map((member) => {
+                          const pending = member.must_change_password
+                          const role =
+                            member.role === 'admin' ? 'admin' : 'member'
+                          return (
+                            <tr
+                              key={member.id}
+                              className="border-b last:border-0"
+                              data-testid={`team-member-row-${member.id}`}
+                            >
+                              <td className="px-4 py-3 font-medium">
+                                {formatName(
+                                  member.first_name,
+                                  member.last_name,
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {member.email}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={cn(
+                                    'rounded-md border px-2 py-0.5 text-xs font-medium',
+                                    roleBadgeVariant[role],
+                                  )}
+                                >
+                                  {role === 'admin' ? 'Admin' : 'Member'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={cn(
+                                    'rounded-md border px-2 py-0.5 text-xs font-medium',
+                                    pending
+                                      ? statusBadgeVariant.pending
+                                      : statusBadgeVariant.active,
+                                  )}
+                                  data-testid={`member-status-${member.id}`}
+                                >
+                                  {pending
+                                    ? 'Pending password setup'
+                                    : 'Active'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() =>
+                                    void navigate({
+                                      to: '/users/$id',
+                                      params: { id: member.id },
+                                    })
+                                  }
+                                  data-testid={`manage-member-${member.id}`}
+                                >
+                                  <UserCog className="h-4 w-4" />
+                                  Manage
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
       <InviteMemberModal

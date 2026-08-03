@@ -101,7 +101,7 @@ export function UsagePanel({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Credits Used (all time)
+                  Credits Used (14 days)
                 </p>
                 {isLoading ? (
                   <Loader2 className="mt-2 h-5 w-5 animate-spin text-muted-foreground" />
@@ -250,10 +250,8 @@ export function UsagePanel({
 
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">Usage by Service</CardTitle>
-            <CardDescription>
-              Credits by service type (Resume Screening vs Screening Interview)
-            </CardDescription>
+            <CardTitle className="text-lg">Usage by Category</CardTitle>
+            <CardDescription>Credits by service type</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (

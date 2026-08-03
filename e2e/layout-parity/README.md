@@ -20,5 +20,6 @@ Desktop viewport is fixed at 1280×800. No screenshots.
 | `dashboard-jobs.spec.ts` | Dashboard / Jobs board (#37) |
 | `candidate-board.spec.ts` | Candidate board + adaptive card (#38) |
 | `candidates-setup.spec.ts` | Candidates page, Bulk Upload, Templates, Forms (#39) |
+| `team-billing-get-started.spec.ts` | Team/Users, Billing, Get Started (#40) |
 
 Manual checklists (`*.checklist.md`) accompany each surface.
