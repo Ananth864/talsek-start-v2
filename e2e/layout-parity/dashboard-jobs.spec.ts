@@ -8,7 +8,8 @@ import {
  * Layout-parity: Dashboard / Jobs board structure + interaction (#37 / ADR-0030).
  * Structure/interaction only — no screenshots, no paint asserts.
  * Source reference: ../talsek Dashboard + JobsList + JobCreationDialog + JobDetails.
- * Job wizard stays 2-step (ADR-0029); asserts interaction shape, not 4-step restore.
+ * Job wizard is the source 4-step flow (ADR-0029 amended): screening → details →
+ * requirements → form setup.
  */
 test.use({ viewport: LAYOUT_PARITY_VIEWPORT })
 
@@ -147,7 +148,7 @@ test.describe('Dashboard / jobs layout parity', () => {
     await expect(page.getByTestId('job-detail')).toHaveCount(0)
   })
 
-  test('create-job opens fullscreen wizard with source chrome', async ({
+  test('create-job opens fullscreen 4-step wizard with source chrome', async ({
     page,
   }) => {
     await signInAsMember(page)
@@ -157,14 +158,14 @@ test.describe('Dashboard / jobs layout parity', () => {
     await expect(dialog).toBeVisible()
 
     await expect(dialog.getByTestId('job-creation-step')).toContainText(
-      /Step 1 of 2/i,
+      /Step 1 of 4/i,
     )
     await expect(dialog.getByTestId('job-creation-progress')).toBeVisible()
     await expect(
       dialog.getByTestId('job-service-type-selection'),
     ).toBeVisible()
     await expect(
-      dialog.getByRole('heading', { name: /Job Details/i }),
+      dialog.getByRole('heading', { name: /Select Screening Type/i }),
     ).toBeVisible()
     await expect(
       dialog.getByRole('heading', {
@@ -175,7 +176,19 @@ test.describe('Dashboard / jobs layout parity', () => {
       dialog.getByRole('button', { name: /^Cancel$/i }),
     ).toBeVisible()
     await expect(dialog.getByTestId('job-creation-next')).toHaveText(/^Next$/i)
+
+    // Step 1 is screening only — JD lives on step 2.
+    await expect(dialog.getByTestId('job-description-input')).toHaveCount(0)
+
+    await dialog.getByTestId('job-creation-next').click()
+    await expect(dialog.getByTestId('job-creation-step')).toContainText(
+      /Step 2 of 4/i,
+    )
+    await expect(
+      dialog.getByRole('heading', { name: /Job Details/i }),
+    ).toBeVisible()
     await expect(dialog.getByTestId('job-description-input')).toBeVisible()
+    await expect(dialog.getByTestId('job-creation-back')).toBeVisible()
   })
 
   test('job-details pencil opens Edit Requirements entry point', async ({

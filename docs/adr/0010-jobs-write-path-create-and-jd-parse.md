@@ -105,6 +105,10 @@ superjson as the server-function serializer (still open).
 
 ### 7. The dialog is a focused 2-step port; the form-config step is deferred
 
+> **Amended (ADR-0029, layout-parity Aug 2026):** create UX is restored to the
+> source **4-step** wizard (screening → details → requirements → form setup).
+> The paragraph below is historical context for the #5 collapse.
+
 The source's `JobCreationDialog` is a 4-step wizard (service type → details →
 review → application-form config). This port collapses it to the two steps the
 #5 acceptance criteria exercise — **details** and **review parsed requirements**

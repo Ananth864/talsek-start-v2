@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  ArrowLeft,
   ArrowRight,
   Check,
   FileText,
@@ -22,6 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/com
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
+import { Switch } from '#/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -31,14 +33,18 @@ import {
 } from '#/components/ui/select'
 import { cn } from '#/lib/utils'
 import { JobCreationSuccessDialog } from '#/components/jobs/job-creation-success-dialog'
-import { JobFormConfigDialog } from '#/components/forms/job-form-config-dialog'
+import { FormQuestionBuilder } from '#/components/forms/form-question-builder'
+import { FormPreview } from '#/components/forms/form-preview'
 import { useCreateJob } from '#/hooks/use-create-job'
 import { useParseJobDescription } from '#/hooks/use-parse-job-description'
+import { useFormTemplate } from '#/hooks/use-form-template'
+import { useUpsertJobFormConfig } from '#/hooks/use-job-form-config'
 import {
   JOBS_QUERY_KEY_PREFIX,
   SALARY_CURRENCY_PREFIX,
   getJobApplyFormLink,
 } from '#/lib/jobs-shared'
+import { mergeMandatoryWithAdditional } from '#/lib/form-questions-shared'
 import {
   DEFAULT_LOGISTICS,
   EXPECTED_JOINING_DATE_VALUES,
@@ -62,10 +68,11 @@ import type {
   ShiftTimingsType,
   TravelRequired,
 } from '#/lib/job-creation-shared'
+import type { FormQuestion, ParsedJobDataJson } from '#/integrations/supabase/types'
 import type { CreateJobInput, JobWithCompanyRow } from '#/server/fn/jobs'
-import type { ParsedJobDataJson } from '#/integrations/supabase/types'
 
 type SalaryCurrency = keyof typeof SALARY_CURRENCY_PREFIX
+type WizardStep = 1 | 2 | 3 | 4
 
 type JobCreationDialogProps = {
   open: boolean
@@ -82,15 +89,17 @@ const EMPTY_PARSED: ParsedJobDataJson = {
   role_readiness_questions: [],
 }
 
+const STEP_TITLES: Record<WizardStep, string> = {
+  1: 'Select Screening Type',
+  2: 'Job Details',
+  3: 'Review Requirements',
+  4: 'Application Form Setup',
+}
+
 /**
- * Create-Job dialog (focused port of the source's `JobCreationDialog`).
- *
- * Keeps the 2-step flow from #5 (details → review) and restores the logistics
- * fields the 4-step collapse dropped (#28): joining date, location mode /
- * details / hybrid arrangement, shift, and travel. Those values populate
- * `screening_interview_information` (interview-question generation) and a
- * logistics context block on the JD parse input. Post-create success + Form
- * Config are opt-in surfaces, not forced wizard steps.
+ * Create-Job dialog — source-faithful 4-step wizard (amends ADR-0029):
+ * screening type → job details (+ logistics) → review requirements → form config.
+ * AI parse fires on 2→3. Create confirms, then optional form upsert + success dialog.
  */
 export function JobCreationDialog({
   open,
@@ -100,7 +109,7 @@ export function JobCreationDialog({
   canManageForms = false,
 }: JobCreationDialogProps) {
   const queryClient = useQueryClient()
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, setStep] = useState<WizardStep>(1)
   const [title, setTitle] = useState('')
   const [jobPostingLink, setJobPostingLink] = useState('')
   const [location, setLocation] = useState('')
@@ -115,20 +124,32 @@ export function JobCreationDialog({
     useState<ParsedJobDataJson>(EMPTY_PARSED)
   const [error, setError] = useState<string | null>(null)
 
+  const [formEnabled, setFormEnabled] = useState(true)
+  const [formQuestions, setFormQuestions] = useState<FormQuestion[]>([])
+  const [customQuestionText, setCustomQuestionText] = useState<
+    Record<string, string>
+  >({})
+  const [formSeeded, setFormSeeded] = useState(false)
+
   const [successOpen, setSuccessOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [createdJobId, setCreatedJobId] = useState<string | null>(null)
-  const [createdJobTitle, setCreatedJobTitle] = useState('')
   const [forwardingEmail, setForwardingEmail] = useState('')
   const [formLink, setFormLink] = useState<string | null>(null)
-  const [formConfigOpen, setFormConfigOpen] = useState(false)
 
   const parseMutation = useParseJobDescription()
   const createMutation = useCreateJob()
+  const upsertFormConfig = useUpsertJobFormConfig(companyId)
+  const { data: formTemplate } = useFormTemplate(open ? companyId : null)
 
   const patchLogistics = (patch: Partial<JobLogisticsFields>) => {
     setLogistics((prev) => ({ ...prev, ...patch }))
   }
+
+  useEffect(() => {
+    if (formSeeded || !formTemplate?.additionalQuestions) return
+    setFormQuestions(formTemplate.additionalQuestions)
+    setFormSeeded(true)
+  }, [formTemplate, formSeeded])
 
   const reset = () => {
     setStep(1)
@@ -144,11 +165,14 @@ export function JobCreationDialog({
     setNonNegotiables([])
     setParsedJobData(EMPTY_PARSED)
     setError(null)
+    setFormEnabled(true)
+    setFormQuestions([])
+    setCustomQuestionText({})
+    setFormSeeded(false)
   }
 
   const closeCreate = () => {
     onOpenChange(false)
-    // Defer reset so the close animation isn't interrupted mid-flight.
     setTimeout(reset, 200)
   }
 
@@ -212,13 +236,42 @@ export function JobCreationDialog({
       setNonNegotiables(
         result.non_negotiables.length ? result.non_negotiables : [''],
       )
-      setStep(2)
+      setStep(3)
     } catch {
-      // Source parity: still advance to manual entry on parse failure.
       setPreferred([''])
       setNonNegotiables([''])
-      setStep(2)
+      setStep(3)
     }
+  }
+
+  const handleNext = () => {
+    setError(null)
+    if (step === 1) {
+      setStep(2)
+      return
+    }
+    if (step === 2) {
+      void handleParseAndAdvance()
+      return
+    }
+    if (step === 3) {
+      const cleanPreferred = preferred.map((s) => s.trim()).filter(Boolean)
+      const cleanNonNeg = nonNegotiables.map((s) => s.trim()).filter(Boolean)
+      if (cleanPreferred.length === 0 || cleanNonNeg.length === 0) {
+        setError(
+          'Add at least one preferred and one non-negotiable requirement.',
+        )
+        return
+      }
+      setStep(4)
+    }
+  }
+
+  const handleBack = () => {
+    setError(null)
+    if (step === 2) setStep(1)
+    else if (step === 3) setStep(2)
+    else if (step === 4) setStep(3)
   }
 
   const requestCreate = () => {
@@ -228,6 +281,24 @@ export function JobCreationDialog({
     if (cleanPreferred.length === 0 || cleanNonNeg.length === 0) {
       setError('Add at least one preferred and one non-negotiable requirement.')
       return
+    }
+    if (formEnabled && canManageForms) {
+      if (formQuestions.length === 0) {
+        setError(
+          'Select at least one form question, or turn off the application form.',
+        )
+        return
+      }
+      const missingCustom = formQuestions.some(
+        (q) =>
+          q.isCustom &&
+          (customQuestionText[q.id] ?? '').trim() === '' &&
+          q.label.trim() === '',
+      )
+      if (missingCustom) {
+        setError('Every custom question needs a label.')
+        return
+      }
     }
     setConfirmOpen(true)
   }
@@ -260,11 +331,29 @@ export function JobCreationDialog({
 
     try {
       const result = await createMutation.mutateAsync(payload)
-      setConfirmOpen(false)
-      setCreatedJobId(result.id)
-      setCreatedJobTitle(title.trim())
-      setForwardingEmail(result.forwardingEmail)
       setFormLink(null)
+      if (formEnabled && canManageForms && formQuestions.length > 0) {
+        const labels: Record<string, string> = { ...customQuestionText }
+        for (const q of formQuestions) {
+          if (q.isCustom && (labels[q.id] ?? '').trim() === '') {
+            labels[q.id] = q.label
+          }
+        }
+        const upserted = await upsertFormConfig({
+          jobId: result.id,
+          isEnabled: true,
+          questions: formQuestions,
+          customQuestionText: labels,
+        })
+        const token = upserted.config.form_url_token
+        if (token) {
+          setFormLink(`${window.location.origin}/apply/${token}`)
+        } else {
+          await refreshFormLink(result.id)
+        }
+      }
+      setConfirmOpen(false)
+      setForwardingEmail(result.forwardingEmail)
       closeCreate()
       setSuccessOpen(true)
     } catch (err) {
@@ -279,6 +368,7 @@ export function JobCreationDialog({
 
   const parsing = parseMutation.isPending
   const creating = createMutation.isPending
+  const previewQuestions = mergeMandatoryWithAdditional(formQuestions)
 
   return (
     <>
@@ -296,13 +386,13 @@ export function JobCreationDialog({
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-4">
                 <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
-                  {step === 1 ? 'Job Details' : 'Review Requirements'}
+                  {STEP_TITLES[step]}
                 </DialogTitle>
                 <div
                   className="text-sm font-medium text-muted-foreground"
                   data-testid="job-creation-step"
                 >
-                  Step {step} of 2
+                  Step {step} of 4
                 </div>
               </div>
               <div
@@ -310,7 +400,7 @@ export function JobCreationDialog({
                 data-testid="job-creation-progress"
                 aria-hidden
               >
-                {[1, 2].map((n) => (
+                {([1, 2, 3, 4] as const).map((n) => (
                   <div
                     key={n}
                     className={cn(
@@ -324,14 +414,23 @@ export function JobCreationDialog({
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6">
+            <div
+              className={cn(
+                'flex-1 p-6',
+                step === 4
+                  ? 'flex min-h-0 flex-col overflow-hidden'
+                  : 'overflow-y-auto',
+              )}
+            >
               {step === 1 ? (
-                <div className="flex flex-col gap-8">
-                  <ServiceTypeSelection
-                    selectedType={serviceType}
-                    onSelect={setServiceType}
-                  />
+                <ServiceTypeSelection
+                  selectedType={serviceType}
+                  onSelect={setServiceType}
+                />
+              ) : null}
 
+              {step === 2 ? (
+                <div className="flex flex-col gap-8">
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                     <div className="order-1 flex flex-col gap-4 lg:col-span-5">
                       <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
@@ -431,14 +530,10 @@ export function JobCreationDialog({
                       </div>
                     </div>
                   </div>
-
-                  {error ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {error}
-                    </p>
-                  ) : null}
                 </div>
-              ) : (
+              ) : null}
+
+              {step === 3 ? (
                 <div className="grid h-full grid-cols-1 gap-6 md:grid-cols-2">
                   <RequirementListEditor
                     label="Preferred Requirements"
@@ -454,16 +549,62 @@ export function JobCreationDialog({
                     items={nonNegotiables}
                     onChange={setNonNegotiables}
                   />
-                  {error ? (
-                    <p
-                      className="text-sm text-destructive md:col-span-2"
-                      role="alert"
-                    >
-                      {error}
-                    </p>
-                  ) : null}
                 </div>
-              )}
+              ) : null}
+
+              {step === 4 ? (
+                <div
+                  className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
+                  data-testid="job-creation-form-setup"
+                >
+                  {!canManageForms ? (
+                    <p className="rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                      You don&apos;t have permission to customize forms. The job
+                      will be created without an application form — an admin can
+                      configure it later.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                        <div>
+                          <Label htmlFor="jc-form-enabled">
+                            Enable application form
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Applicants can open the apply link when enabled.
+                          </p>
+                        </div>
+                        <Switch
+                          id="jc-form-enabled"
+                          checked={formEnabled}
+                          onCheckedChange={setFormEnabled}
+                          data-testid="job-creation-form-enabled"
+                        />
+                      </div>
+                      {formEnabled ? (
+                        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
+                          <FormQuestionBuilder
+                            selectedQuestions={formQuestions}
+                            onQuestionsChange={setFormQuestions}
+                          />
+                          <FormPreview questions={previewQuestions} />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Application form disabled for this Job. You can enable
+                          it later from Job details.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : null}
+
+              {error ? (
+                <p className="mt-4 text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              ) : null}
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t bg-background px-6 py-4">
@@ -476,24 +617,23 @@ export function JobCreationDialog({
                 >
                   Cancel
                 </Button>
-                {step === 2 ? (
+                {step > 1 ? (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      setError(null)
-                      setStep(1)
-                    }}
-                    disabled={creating}
+                    onClick={handleBack}
+                    disabled={parsing || creating}
+                    data-testid="job-creation-back"
                   >
+                    <ArrowLeft className="size-4" />
                     Back
                   </Button>
                 ) : null}
               </div>
-              {step === 1 ? (
+              {step < 4 ? (
                 <Button
                   type="button"
-                  onClick={handleParseAndAdvance}
+                  onClick={handleNext}
                   disabled={parsing}
                   data-testid="job-creation-next"
                 >
@@ -585,29 +725,7 @@ export function JobCreationDialog({
         forwardingEmail={forwardingEmail}
         formLink={formLink}
         canManageForms={canManageForms}
-        onConfigureForm={
-          createdJobId
-            ? () => {
-                setFormConfigOpen(true)
-              }
-            : undefined
-        }
       />
-
-      {createdJobId ? (
-        <JobFormConfigDialog
-          open={formConfigOpen}
-          onOpenChange={(next) => {
-            setFormConfigOpen(next)
-            if (!next) {
-              void refreshFormLink(createdJobId)
-            }
-          }}
-          companyId={companyId}
-          jobId={createdJobId}
-          jobTitle={createdJobTitle}
-        />
-      ) : null}
     </>
   )
 }
@@ -765,24 +883,20 @@ function LogisticsFields({
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="jc-locmode">Location type</Label>
+          <Label htmlFor="jc-location-mode">Location type</Label>
           <Select
             value={logistics.locationMode}
             onValueChange={(v) =>
-              onChange({
-                locationMode: v as LocationMode,
-                locationDetails: '',
-                workArrangement: '',
-              })
+              onChange({ locationMode: v as LocationMode })
             }
           >
-            <SelectTrigger id="jc-locmode" data-testid="jc-locmode">
+            <SelectTrigger id="jc-location-mode" data-testid="jc-location-mode">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {LOCATION_MODE_VALUES.map((v) => (
                 <SelectItem key={v} value={v}>
-                  {v === 'Work From office' ? 'Work from office' : v}
+                  {v}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -790,66 +904,47 @@ function LogisticsFields({
         </div>
       </div>
 
-      {logistics.locationMode !== 'Remote (Anywhere)' ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="jc-location-details">
-              {logistics.locationMode === 'Remote (In Country)'
-                ? 'Country'
-                : 'Office location'}
-            </Label>
-            <Input
-              id="jc-location-details"
-              data-testid="jc-location-details"
-              value={logistics.locationDetails}
-              onChange={(e) => onChange({ locationDetails: e.target.value })}
-              placeholder={
-                logistics.locationMode === 'Remote (In Country)'
-                  ? 'Country'
-                  : 'Office location'
-              }
-            />
-          </div>
-          {logistics.locationMode === 'Hybrid' ? (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="jc-hybrid">Hybrid arrangement</Label>
-              <Select
-                value={logistics.workArrangement || undefined}
-                onValueChange={(v) => onChange({ workArrangement: v })}
-              >
-                <SelectTrigger id="jc-hybrid" data-testid="jc-hybrid">
-                  <SelectValue placeholder="Select arrangement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HYBRID_WORK_ARRANGEMENT_VALUES.map((v) => (
-                    <SelectItem key={v} value={v}>
-                      {HYBRID_WORK_ARRANGEMENT_LABELS[v]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
+      {logistics.locationMode === 'Hybrid' ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="jc-hybrid">Hybrid arrangement</Label>
+          <Select
+            value={logistics.workArrangement || undefined}
+            onValueChange={(v) => onChange({ workArrangement: v })}
+          >
+            <SelectTrigger id="jc-hybrid" data-testid="jc-hybrid">
+              <SelectValue placeholder="Select arrangement" />
+            </SelectTrigger>
+            <SelectContent>
+              {HYBRID_WORK_ARRANGEMENT_VALUES.map((v) => (
+                <SelectItem key={v} value={v}>
+                  {HYBRID_WORK_ARRANGEMENT_LABELS[v]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : logistics.locationMode === 'Remote (In Country)' ||
+        logistics.locationMode === 'Work From office' ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="jc-location-details">Location details</Label>
+          <Input
+            id="jc-location-details"
+            value={logistics.locationDetails}
+            onChange={(e) => onChange({ locationDetails: e.target.value })}
+            placeholder="City / region"
+            data-testid="jc-location-details"
+          />
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 border-t border-dashed pt-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <Label htmlFor="jc-shift">Shift</Label>
           <Select
             value={logistics.shiftTimingsType}
-            onValueChange={(v) => {
-              const shiftTimingsType = v as ShiftTimingsType
-              onChange(
-                shiftTimingsType === 'Custom'
-                  ? { shiftTimingsType }
-                  : {
-                      shiftTimingsType,
-                      shiftStartTime: '',
-                      shiftEndTime: '',
-                    },
-              )
-            }}
+            onValueChange={(v) =>
+              onChange({ shiftTimingsType: v as ShiftTimingsType })
+            }
           >
             <SelectTrigger id="jc-shift" data-testid="jc-shift">
               <SelectValue />
@@ -857,24 +952,19 @@ function LogisticsFields({
             <SelectContent>
               {SHIFT_TIMINGS_TYPE_VALUES.map((v) => (
                 <SelectItem key={v} value={v}>
-                  {v === 'Standard (9 AM - 5 PM)' ? 'Standard' : v}
+                  {v}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="jc-travel">Travel</Label>
+          <Label htmlFor="jc-travel">Travel required</Label>
           <Select
             value={logistics.travelRequired}
-            onValueChange={(v) => {
-              const travelRequired = v as TravelRequired
-              onChange(
-                travelRequired === 'Yes'
-                  ? { travelRequired }
-                  : { travelRequired, travelPercentage: '' },
-              )
-            }}
+            onValueChange={(v) =>
+              onChange({ travelRequired: v as TravelRequired })
+            }
           >
             <SelectTrigger id="jc-travel" data-testid="jc-travel">
               <SelectValue />
