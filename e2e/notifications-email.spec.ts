@@ -123,6 +123,7 @@ test.describe('notifications & email', () => {
         .eq('id', profile.id)
 
       await signIn(page)
+      await page.getByTestId('account-menu-trigger').click()
       await page.getByTestId('notifications-nav').click()
       await expect(page.getByTestId('notification-preferences')).toBeVisible()
 

@@ -1,13 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { Loader2, Plus, RotateCcw, Search, UserCog, Users } from 'lucide-react'
-import { getAuthState } from '#/server/fn/auth'
-import { fetchMemberProfile } from '#/server/fn/jobs'
 import { inviteMember } from '#/server/fn/team'
 import {
   useInvalidateTeam,
@@ -26,22 +19,10 @@ import {
 } from '#/components/ui/card'
 import { cn } from '#/lib/utils'
 
-export const Route = createFileRoute('/users')({
-  beforeLoad: async () => {
-    const { user } = await getAuthState()
-    if (!user) {
-      throw redirect({
-        to: '/signin',
-        search: { redirect: '/users' },
-      })
-    }
-    const profile = await fetchMemberProfile()
-    if (!profile || profile.role !== 'admin') {
+export const Route = createFileRoute('/_member/users')({
+  beforeLoad: ({ context }) => {
+    if (!context.isAdmin) {
       throw redirect({ to: '/dashboard' })
-    }
-    return {
-      companyId: profile.company_id ?? null,
-      isAdmin: true as const,
     }
   },
   component: TeamPage,
@@ -119,7 +100,7 @@ function TeamPage() {
   )
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-6xl flex-col">
+    <div className="mx-auto flex w-full max-w-6xl flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
@@ -127,19 +108,14 @@ function TeamPage() {
             Manage workspace access, roles, and permissions for your team.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/dashboard">Dashboard</Link>
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setInviteOpen(true)}
-            data-testid="invite-member-button"
-          >
-            <Plus className="size-4" />
-            Invite Member
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={() => setInviteOpen(true)}
+          data-testid="invite-member-button"
+        >
+          <Plus className="size-4" />
+          Invite Member
+        </Button>
       </header>
 
       <main className="flex-1 space-y-4 p-4">

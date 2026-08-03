@@ -1,12 +1,6 @@
 import { useState } from 'react'
-import {
-  createFileRoute,
-  Link,
-  redirect,
-} from '@tanstack/react-router'
-import { AlertCircle, ArrowLeft, Loader2, Mail, Video } from 'lucide-react'
-import { getAuthState } from '#/server/fn/auth'
-import { fetchMemberProfile } from '#/server/fn/jobs'
+import { createFileRoute } from '@tanstack/react-router'
+import { AlertCircle, Loader2, Mail, Video } from 'lucide-react'
 import {
   useReachoutTemplates,
   useSaveReachoutTemplate,
@@ -17,24 +11,9 @@ import {
   DEFAULT_PROFESSIONAL_TEMPLATE,
   DEFAULT_REPLY_TO_EMAIL,
 } from '#/lib/reachout-template-shared'
-import { Button } from '#/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 
-export const Route = createFileRoute('/reachout-templates')({
-  beforeLoad: async () => {
-    const { user } = await getAuthState()
-    if (!user) {
-      throw redirect({
-        to: '/signin',
-        search: { redirect: '/reachout-templates' },
-      })
-    }
-    const profile = await fetchMemberProfile()
-    return {
-      companyId: profile?.company_id ?? null,
-      canManageTemplates: Boolean(profile?.permissions.canManageTemplates),
-    }
-  },
+export const Route = createFileRoute('/_member/reachout-templates')({
   component: ReachoutTemplatesPage,
 })
 
@@ -61,15 +40,9 @@ function ReachoutTemplatesPage() {
   const canEdit = canManageTemplates || Boolean(data?.canManageTemplates)
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-4xl flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+    <div className="mx-auto flex w-full max-w-4xl flex-col">
+      <header className="border-b p-4">
         <div className="space-y-1">
-          <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link to="/dashboard">
-              <ArrowLeft className="size-4" />
-              Jobs
-            </Link>
-          </Button>
           <h1 className="text-2xl font-semibold tracking-tight">
             Reachout Templates
           </h1>
@@ -77,11 +50,6 @@ function ReachoutTemplatesPage() {
             Manage interview shortlist and final reachout messages.
           </p>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/form-settings" data-testid="form-settings-nav">
-            Forms
-          </Link>
-        </Button>
       </header>
 
       <main className="flex-1 space-y-4 p-4">

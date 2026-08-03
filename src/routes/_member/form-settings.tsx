@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  createFileRoute,
-  Link,
-  redirect,
-} from '@tanstack/react-router'
-import { AlertCircle, ArrowLeft, Loader2, Lock } from 'lucide-react'
-import { getAuthState } from '#/server/fn/auth'
-import { fetchMemberProfile } from '#/server/fn/jobs'
+import { createFileRoute } from '@tanstack/react-router'
+import { AlertCircle, Loader2, Lock } from 'lucide-react'
 import {
   useFormTemplate,
   useUpdateFormTemplate,
@@ -20,23 +14,8 @@ import {
 } from '#/lib/form-questions-shared'
 import type {FormQuestionInput} from '#/lib/form-questions-shared';
 import type { FormQuestion } from '#/integrations/supabase/types'
-import { Button } from '#/components/ui/button'
 
-export const Route = createFileRoute('/form-settings')({
-  beforeLoad: async () => {
-    const { user } = await getAuthState()
-    if (!user) {
-      throw redirect({
-        to: '/signin',
-        search: { redirect: '/form-settings' },
-      })
-    }
-    const profile = await fetchMemberProfile()
-    return {
-      companyId: profile?.company_id ?? null,
-      canManageForms: Boolean(profile?.permissions.canManageForms),
-    }
-  },
+export const Route = createFileRoute('/_member/form-settings')({
   component: FormSettingsPage,
 })
 
@@ -110,7 +89,7 @@ function FormSettingsPage() {
 
   return (
     <form
-      className="mx-auto flex min-h-svh max-w-5xl flex-col"
+      className="mx-auto flex w-full max-w-5xl flex-col"
       onSubmit={(e) => {
         e.preventDefault()
         void form.handleSubmit()
@@ -118,12 +97,6 @@ function FormSettingsPage() {
     >
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div className="space-y-1">
-          <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link to="/dashboard">
-              <ArrowLeft className="size-4" />
-              Jobs
-            </Link>
-          </Button>
           <h1 className="text-2xl font-semibold tracking-tight">
             Customize Form
           </h1>
@@ -132,25 +105,15 @@ function FormSettingsPage() {
             these into their own Form Config.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              to="/reachout-templates"
-              data-testid="reachout-templates-nav"
-            >
-              Templates
-            </Link>
-          </Button>
-          <form.AppForm>
-            <form.SubmitButton
-              idleLabel="Save form"
-              label="Saving…"
-              disabled={!canEdit || isLoading}
-              data-testid="form-settings-save"
-              className="gap-2"
-            />
-          </form.AppForm>
-        </div>
+        <form.AppForm>
+          <form.SubmitButton
+            idleLabel="Save form"
+            label="Saving…"
+            disabled={!canEdit || isLoading}
+            data-testid="form-settings-save"
+            className="gap-2"
+          />
+        </form.AppForm>
       </header>
 
       <div className="flex flex-1 flex-col">

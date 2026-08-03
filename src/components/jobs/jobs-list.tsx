@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit3, Search } from 'lucide-react'
+import { Edit3, Plus, Search } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
@@ -21,6 +21,8 @@ type JobsListProps = {
   companyId?: string | null
   canCreateJob?: boolean
   canManageForms?: boolean
+  /** Opens the Job creation dialog (lives on the Dashboard page). */
+  onCreateJob?: () => void
 }
 
 /**
@@ -39,6 +41,7 @@ export function JobsList({
   companyId = null,
   canCreateJob = false,
   canManageForms = false,
+  onCreateJob,
 }: JobsListProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsJobId, setDetailsJobId] = useState<string | null>(null)
@@ -55,7 +58,7 @@ export function JobsList({
   return (
     <>
       <div className="flex w-full flex-col border-r md:min-w-[260px] md:max-w-[340px] md:shrink-0">
-        <div className="border-b p-4">
+        <div className="space-y-3 border-b p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -67,6 +70,23 @@ export function JobsList({
               aria-label="Search jobs"
             />
           </div>
+          {onCreateJob ? (
+            <Button
+              type="button"
+              className="w-full"
+              disabled={!canCreateJob}
+              onClick={onCreateJob}
+              data-testid="create-job-button"
+              title={
+                canCreateJob
+                  ? 'Create job'
+                  : 'Permission required to create jobs'
+              }
+            >
+              <Plus className="size-4" />
+              {canCreateJob ? 'Create job' : 'Permission required'}
+            </Button>
+          ) : null}
         </div>
 
         <div

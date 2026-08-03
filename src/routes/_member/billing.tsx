@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   createFileRoute,
-  Link,
-  redirect,
   useNavigate,
 } from '@tanstack/react-router'
 import {
@@ -15,8 +13,6 @@ import {
   Video,
   Zap,
 } from 'lucide-react'
-import { getAuthState } from '#/server/fn/auth'
-import { fetchMemberProfile } from '#/server/fn/jobs'
 import {
   cancelSubscription,
   changePlan,
@@ -59,26 +55,15 @@ import {
 } from '#/components/ui/dialog'
 import { cn } from '#/lib/utils'
 
-export const Route = createFileRoute('/billing')({
+export const Route = createFileRoute('/_member/billing')({
   validateSearch: (
     search: Record<string, unknown>,
   ): { status?: string; stub?: string } => ({
     status: typeof search.status === 'string' ? search.status : undefined,
     stub: typeof search.stub === 'string' ? search.stub : undefined,
   }),
-  beforeLoad: async () => {
-    const { user } = await getAuthState()
-    if (!user) {
-      throw redirect({
-        to: '/signin',
-        search: { redirect: '/billing' },
-      })
-    }
-    const profile = await fetchMemberProfile()
-    return {
-      companyId: profile?.company_id ?? null,
-    }
-  },
+  // Sidebar entry is admin-only; route stays open for deep links (source
+  // parity — Billing had no route guard).
   component: BillingPage,
 })
 
@@ -393,14 +378,9 @@ function BillingPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-6xl flex-col">
-      <header className="flex items-center justify-between border-b p-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/dashboard">← Jobs</Link>
-          </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
-        </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col">
+      <header className="border-b p-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
       </header>
 
       <main className="flex-1 p-6">

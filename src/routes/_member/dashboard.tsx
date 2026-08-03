@@ -1,33 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, queryOptions } from '@tanstack/react-query'
-import { Bell, Plus, Upload } from 'lucide-react'
-import { fetchJobs, fetchMemberProfile } from '#/server/fn/jobs'
-import { getAuthState, signOut } from '#/server/fn/auth'
+import { fetchJobs } from '#/server/fn/jobs'
 import { jobsQueryKey } from '#/lib/jobs-shared'
 import { jobApplicationsQueryOptions } from '#/hooks/use-job-applications'
 import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
 import { useJobApplicationsSubscription } from '#/hooks/use-job-applications-subscription'
-import { Button } from '#/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
 import { JobsList } from '#/components/jobs/jobs-list'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 import { CandidatesList } from '#/components/candidates/candidates-list'
 import { CreditsExhaustedBanner } from '#/components/billing/credits-exhausted-banner'
-import { NotificationPreferencesPanel } from '#/components/notification-preferences'
-import { DashboardCompanyGuard } from '#/components/auth/dashboard-company-guard'
 
-export const Route = createFileRoute('/dashboard')({
+export const Route = createFileRoute('/_member/dashboard')({
   validateSearch: (search: Record<string, unknown>): {
     jobId?: string
     jobSearch?: string
@@ -38,36 +22,10 @@ export const Route = createFileRoute('/dashboard')({
       typeof search.jobSearch === 'string' ? search.jobSearch : undefined,
     stageId: typeof search.stageId === 'string' ? search.stageId : undefined,
   }),
-  beforeLoad: async () => {
-    const { user } = await getAuthState()
-    if (!user) {
-      throw redirect({
-        to: '/signin',
-        search: { redirect: '/dashboard' },
-      })
-    }
-    // Load the Member's company context once here so it flows into the loader
-    // (for the query key) and the component (for cache reads). Identity is
-    // verified by the guard above; RLS owns company scoping on every read.
-    // The permissions capability flags are surfaced to the component for UX
-    // gating (e.g. showing the Create-Job button); the authoritative
-    // `canCreateJob` check lives in the createJob server fn (ADR-0004).
-    const profile = await fetchMemberProfile()
-    const firstName = profile?.first_name.trim() ?? ''
-    const lastName = profile?.last_name.trim() ?? ''
-    const userName = `${firstName} ${lastName}`.trim() || null
-    return {
-      userId: profile?.id ?? null,
-      companyId: profile?.company_id ?? null,
-      canCreateJob: Boolean(profile?.permissions.canCreateJob),
-      canSendReachout: Boolean(profile?.permissions.canSendReachout),
-      canManageTemplates: Boolean(profile?.permissions.canManageTemplates),
-      canManageForms: Boolean(profile?.permissions.canManageForms),
-      companyName: profile?.companies?.name ?? '',
-      userEmail: profile?.email ?? user.email ?? null,
-      userName,
-    }
-  },
+  // Auth/profile/company context comes from `/_member`. Permissions for UX
+  // gating (Create Job) live on that parent; the authoritative `canCreateJob`
+  // check remains in the createJob server fn (ADR-0004).
+  //
   // Read the selected Job id from the search params into the loader so the
   // candidate board can be prefetched + dehydrated for SSR first paint when a
   // Job is held in the URL (ADR-0007). Selections made client-side (clicking a
@@ -107,43 +65,31 @@ const jobsQueryOptions = (companyId: string | null) =>
 
 function DashboardPage() {
   const {
-    userId,
     companyId,
     canCreateJob,
     canSendReachout,
     canManageForms,
     companyName,
-    userEmail,
-    userName,
   } = Route.useRouteContext()
 
   return (
-    <DashboardCompanyGuard
-      needsCompanySetup={!companyId}
-      userEmail={userEmail}
-      userName={userName}
-    >
-      <DashboardContent
-        userId={userId}
-        companyId={companyId}
-        canCreateJob={canCreateJob}
-        canSendReachout={canSendReachout}
-        canManageForms={canManageForms}
-        companyName={companyName}
-      />
-    </DashboardCompanyGuard>
+    <DashboardContent
+      companyId={companyId}
+      canCreateJob={canCreateJob}
+      canSendReachout={canSendReachout}
+      canManageForms={canManageForms}
+      companyName={companyName}
+    />
   )
 }
 
 function DashboardContent({
-  userId,
   companyId,
   canCreateJob,
   canSendReachout,
   canManageForms,
   companyName,
 }: {
-  userId: string | null
   companyId: string | null
   canCreateJob: boolean
   canSendReachout: boolean
@@ -153,7 +99,6 @@ function DashboardContent({
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [createOpen, setCreateOpen] = useState(false)
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   const { data: jobs = [], isLoading, error } = useQuery(
     jobsQueryOptions(companyId),
@@ -249,70 +194,9 @@ function DashboardContent({
   }
 
   return (
-    <div className="mx-auto flex h-svh max-w-6xl flex-col">
-      <header className="flex items-center justify-between border-b p-4">
+    <div className="flex h-svh flex-col">
+      <header className="flex items-center justify-between border-b px-4 py-3">
         <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/users" data-testid="team-nav">
-              Team
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              to="/reachout-templates"
-              data-testid="reachout-templates-nav"
-            >
-              Templates
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/form-settings" data-testid="form-settings-nav">
-              Forms
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/billing" data-testid="billing-nav">
-              Billing
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            data-testid="notifications-nav"
-            onClick={() => setNotificationsOpen(true)}
-          >
-            <Bell className="size-4" />
-            Notifications
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/bulk-upload" data-testid="bulk-upload-nav">
-              <Upload className="size-4" />
-              Bulk upload
-            </Link>
-          </Button>
-          {canCreateJob ? (
-            <Button
-              size="sm"
-              onClick={() => setCreateOpen(true)}
-              data-testid="create-job-button"
-            >
-              <Plus className="size-4" />
-              Create job
-            </Button>
-          ) : null}
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault()
-              await signOut()
-              window.location.href = '/signin'
-            }}
-          >
-            <Button type="submit" variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </form>
-        </div>
       </header>
 
       <main className="flex flex-1 flex-col overflow-hidden md:flex-row">
@@ -327,6 +211,7 @@ function DashboardContent({
           companyId={companyId}
           canCreateJob={canCreateJob}
           canManageForms={canManageForms}
+          onCreateJob={() => setCreateOpen(true)}
         />
         {selectedJob ? (
           <div className="flex flex-1 flex-col overflow-hidden">
@@ -355,15 +240,6 @@ function DashboardContent({
           companyName={companyName}
         />
       ) : null}
-
-      <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-        <DialogContent data-testid="notifications-dialog">
-          <DialogHeader>
-            <DialogTitle>Notification preferences</DialogTitle>
-          </DialogHeader>
-          <NotificationPreferencesPanel userId={userId} />
-        </DialogContent>
-      </Dialog>
 
       <CreditsExhaustedBanner companyId={companyId} />
     </div>

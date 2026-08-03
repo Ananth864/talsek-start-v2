@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Trash2, UploadCloud } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
 import { fetchJobs } from '#/server/fn/jobs'
 import {
   prepareBulkResumeUpload,
@@ -326,16 +325,11 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
 
   return (
     <div className="space-y-6 p-6" data-testid="bulk-upload-page">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bulk upload</h1>
-          <p className="text-sm text-muted-foreground">
-            Upload resumes to Storage, then run the AI pipeline for each file.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/dashboard">Back to jobs</Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Bulk upload</h1>
+        <p className="text-sm text-muted-foreground">
+          Upload resumes to Storage, then run the AI pipeline for each file.
+        </p>
       </div>
 
       {banner ? (

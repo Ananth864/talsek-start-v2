@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from '@tanstack/react-router'
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Loader2, RefreshCcw } from 'lucide-react'
-import { getAuthState } from '#/server/fn/auth'
-import { fetchMemberProfile } from '#/server/fn/jobs'
 import {
   resendInvite,
   updateMemberPermissions,
@@ -35,21 +28,10 @@ import {
 } from '#/components/ui/card'
 import { cn } from '#/lib/utils'
 
-export const Route = createFileRoute('/users_/$id')({
-  beforeLoad: async () => {
-    const { user } = await getAuthState()
-    if (!user) {
-      throw redirect({
-        to: '/signin',
-        search: { redirect: '/users' },
-      })
-    }
-    const profile = await fetchMemberProfile()
-    if (!profile || profile.role !== 'admin') {
+export const Route = createFileRoute('/_member/users_/$id')({
+  beforeLoad: ({ context }) => {
+    if (!context.isAdmin) {
       throw redirect({ to: '/dashboard' })
-    }
-    return {
-      companyId: profile.company_id ?? null,
     }
   },
   component: TeamMemberDetailPage,
