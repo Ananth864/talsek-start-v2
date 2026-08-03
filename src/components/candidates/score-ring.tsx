@@ -54,11 +54,13 @@ export function ScoreRing({
           fill="none"
           strokeWidth={stroke}
           strokeLinecap="round"
+          stroke="currentColor"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           className={scoreBand(safe).stroke}
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-        />      </svg>
+        />
+      </svg>
       <span className="absolute text-xl font-bold text-foreground tabular-nums">
         {safe}%
       </span>

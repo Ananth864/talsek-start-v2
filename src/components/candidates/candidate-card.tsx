@@ -29,6 +29,8 @@ import {
   interviewScoreColor,
   interviewStatusColor,
   jobHasInterviewStage,
+  nonNegotiablesColor,
+  preferredRequirementsColor,
 } from '#/lib/candidate-card-stage'
 import type { CandidateListView } from '#/server/fn/profile-preferences'
 import { useToggleStarred } from '#/hooks/use-toggle-starred'
@@ -137,7 +139,12 @@ function RequirementsSummary({
     >
       <div className="flex items-center gap-2">
         <span className="font-medium">Preferred:</span>
-        <span className="rounded-md border px-1.5 py-0 font-semibold tabular-nums">
+        <span
+          className={cn(
+            'rounded-md border px-1.5 py-0 font-medium tabular-nums',
+            preferredRequirementsColor(preferredMet, preferredTotal),
+          )}
+        >
           {preferredMet}/{preferredTotal}
         </span>
       </div>
@@ -145,13 +152,8 @@ function RequirementsSummary({
         <span className="font-medium">Non-Negotiables:</span>
         <span
           className={cn(
-            'rounded-md border px-1.5 py-0 font-semibold tabular-nums',
-            nonNegotiablesTotal > 0 &&
-              nonNegotiablesMet === nonNegotiablesTotal
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : nonNegotiablesTotal > 0
-                ? 'text-rose-600 dark:text-rose-400'
-                : undefined,
+            'rounded-md border px-1.5 py-0 font-medium tabular-nums',
+            nonNegotiablesColor(nonNegotiablesMet, nonNegotiablesTotal),
           )}
         >
           {nonNegotiablesMet}/{nonNegotiablesTotal}
@@ -298,12 +300,9 @@ export function CandidateCard({
       data-testid="candidate-star-toggle"
     >
       <Star
-        className={cn(
-          'size-3.5',
-          application.starred
-            ? 'fill-amber-400 text-amber-400'
-            : 'text-muted-foreground',
-        )}
+        className="size-3.5"
+        fill={application.starred ? 'currentColor' : 'none'}
+        strokeWidth={application.starred ? 1.5 : 2}
       />
     </Button>
   ) : null
@@ -571,7 +570,7 @@ export function CandidateCard({
         // Reset shadcn v4 Card defaults (py-6 gap-6 rounded-xl) to source denseness.
         'gap-0 rounded-lg border border-l-4 bg-card py-0 transition-shadow',
         scoreBand(score).border,
-        selection?.selected && 'ring-2 ring-primary/40',
+        selection?.selected && 'ring-2 ring-primary bg-primary/5',
         isBulkMode && 'cursor-pointer hover:bg-accent/50',
         !isBulkMode && 'hover:shadow-md',
         isGrid &&

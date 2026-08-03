@@ -43,3 +43,19 @@ export function interviewScoreColor(percent: number | null): string {
   }
   return 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-900/30 dark:text-rose-400'
 }
+
+/** Source `getPreferredRequirementsColor`. */
+export function preferredRequirementsColor(met: number, total: number): string {
+  if (total > 0 && met === total) {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+  }
+  return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-400'
+}
+
+/** Source `getNonNegotiablesColor`. */
+export function nonNegotiablesColor(met: number, total: number): string {
+  if (total > 0 && met === total) {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+  }
+  return 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-900/30 dark:text-rose-400'
+}

@@ -93,15 +93,16 @@ export function matchBadgeVariant(
 }
 
 /**
- * Score-band presentation for a candidate. One place owns the band→colour
- * mapping so the ring and the card's left border stay in lock-step. Returns
- * literal Tailwind classes (no templating) so the JIT keeps them.
+ * Score-band presentation for a candidate card. Matches source
+ * `getScoreColor` / `getCardBorderColor` (green ≥80, yellow ≥40, red otherwise).
+ * `stroke` is a `text-*` class used with SVG `stroke="currentColor"`.
  */
 export function scoreBand(score: number): { stroke: string; border: string } {
-  if (score >= 80) return { stroke: 'stroke-emerald-500', border: 'border-l-emerald-500' }
-  if (score >= 60) return { stroke: 'stroke-sky-500', border: 'border-l-sky-500' }
-  if (score >= 40) return { stroke: 'stroke-amber-500', border: 'border-l-amber-500' }
-  return { stroke: 'stroke-rose-500', border: 'border-l-rose-500' }
+  if (score >= 80)
+    return { stroke: 'text-green-500', border: 'border-l-green-500' }
+  if (score >= 40)
+    return { stroke: 'text-yellow-500', border: 'border-l-yellow-500' }
+  return { stroke: 'text-red-500', border: 'border-l-red-500' }
 }
 
 /**
