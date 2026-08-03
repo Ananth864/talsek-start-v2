@@ -9,10 +9,19 @@ import { scoreBand } from '#/lib/job-applications-shared'
  * the read path uses the persisted `final_score` (the column the board is
  * ordered by) — see ADR-0011.
  */
-export function ScoreRing({ score, className }: { score: number; className?: string }) {
+export function ScoreRing({
+  score,
+  size: sizeVariant = 'list',
+  className,
+}: {
+  score: number
+  /** Grid cards use a larger ring (source `ScoreRing` size="grid"). */
+  size?: 'list' | 'grid'
+  className?: string
+}) {
   const safe = Math.min(100, Math.max(0, Math.round(score)))
-  const size = 44
-  const stroke = 4
+  const size = sizeVariant === 'grid' ? 56 : 44
+  const stroke = sizeVariant === 'grid' ? 5 : 4
   const r = (size - stroke) / 2
   const circumference = 2 * Math.PI * r
   const offset = circumference - (safe / 100) * circumference
@@ -45,7 +54,14 @@ export function ScoreRing({ score, className }: { score: number; className?: str
           className={scoreBand(safe).stroke}
         />
       </svg>
-      <span className="absolute text-[11px] font-semibold tabular-nums">{safe}</span>
+      <span
+        className={cn(
+          'absolute font-semibold tabular-nums',
+          sizeVariant === 'grid' ? 'text-xs' : 'text-[11px]',
+        )}
+      >
+        {safe}
+      </span>
     </div>
   )
 }

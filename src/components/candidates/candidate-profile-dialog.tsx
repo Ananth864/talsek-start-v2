@@ -52,6 +52,13 @@ type CandidateProfileDialogProps = {
   job: JobWithCompanyRow
   open: boolean
   onClose: () => void
+  /** Opens on this tab when the dialog mounts (final-stage analysis buttons). */
+  initialTab?:
+    | 'overview'
+    | 'requirement-analysis'
+    | 'interview'
+    | 'resume'
+    | 'email'
 }
 
 const tabTriggerClass =
@@ -117,6 +124,7 @@ export function CandidateProfileDialog({
   job,
   open,
   onClose,
+  initialTab = 'overview',
 }: CandidateProfileDialogProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -322,8 +330,8 @@ export function CandidateProfileDialog({
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <Tabs
-            key={open ? 'open' : 'closed'}
-            defaultValue="overview"
+            key={open ? `open-${initialTab}` : 'closed'}
+            defaultValue={initialTab}
             className="flex h-full flex-1 flex-col gap-0"
           >
             <div className="flex-shrink-0 border-b bg-card px-6">

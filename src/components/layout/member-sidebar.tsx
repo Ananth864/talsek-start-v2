@@ -6,6 +6,8 @@ import {
   CreditCard,
   FileText,
   LayoutDashboard,
+  LayoutGrid,
+  List,
   LogOut,
   Mail,
   Rocket,
@@ -43,6 +45,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from '#/components/ui/sidebar'
+import { useCandidateListView } from '#/hooks/use-candidate-list-view'
 import { useTheme } from '#/hooks/use-theme'
 import { cn } from '#/lib/utils'
 
@@ -183,11 +186,18 @@ export function MemberSidebar({
 }: MemberSidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { theme, toggleTheme } = useTheme()
+  const {
+    viewMode,
+    isUpdating: isUpdatingView,
+    toggleViewMode,
+  } = useCandidateListView(userId)
   const [accountOpen, setAccountOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   const displayName = companyName.trim() || 'Company'
   const displayEmail = userEmail?.trim() || 'team@company.com'
+  const viewToggleLabel =
+    viewMode === 'grid' ? 'Switch to List View' : 'Switch to Grid View'
 
   const accountInitials = useMemo(() => {
     const source = (displayName || displayEmail).trim()
@@ -306,6 +316,20 @@ export function MemberSidebar({
               >
                 <SunMoon className="mr-2 h-4 w-4" />
                 {themeToggleLabel}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                data-testid="candidate-view-toggle"
+                disabled={isUpdatingView}
+                onClick={() => {
+                  void toggleViewMode().finally(() => setAccountOpen(false))
+                }}
+              >
+                {viewMode === 'grid' ? (
+                  <List className="mr-2 h-4 w-4" />
+                ) : (
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                )}
+                {viewToggleLabel}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

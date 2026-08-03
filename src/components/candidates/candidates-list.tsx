@@ -7,6 +7,7 @@ import { useBulkShortlist } from '#/hooks/use-bulk-shortlist'
 import { useBulkReject } from '#/hooks/use-bulk-reject'
 import { useShortlistActions } from '#/hooks/use-shortlist-actions'
 import { useReachoutTemplates } from '#/hooks/use-reachout-templates'
+import { useCandidateListView } from '#/hooks/use-candidate-list-view'
 import { useCreditBalance, useServiceRates } from '#/hooks/use-billing'
 import { nextStageForApplication } from '#/lib/candidate-stage-navigation'
 import {
@@ -41,6 +42,7 @@ import type { JobWithCompanyRow } from '#/server/fn/jobs'
 type CandidatesListProps = {
   job: JobWithCompanyRow
   companyId: string | null
+  userId: string | null
   canSendReachout: boolean
   activeStageId: string | undefined
   onStageChange: (stageId: string) => void
@@ -49,11 +51,13 @@ type CandidatesListProps = {
 /**
  * The candidate pipeline board for a selected Job (ticket #6 read path + #8
  * card actions + #10 / #21 bulk Shortlist Reachout + bulk reject + #20 single
- * Shortlist Reachout). Ports the source's `CandidatesList`.
+ * Shortlist Reachout + #26 adaptive card / grid-list preference). Ports the
+ * source's `CandidatesList`.
  */
 export function CandidatesList({
   job,
   companyId,
+  userId,
   canSendReachout,
   activeStageId,
   onStageChange,
@@ -63,6 +67,7 @@ export function CandidatesList({
     companyId,
   )
   const { data: stages = [] } = useJobStages(job.id, companyId)
+  const { viewMode } = useCandidateListView(userId)
   const shortlist = useShortlistActions({
     job,
     stages,
@@ -488,13 +493,30 @@ export function CandidatesList({
               : 'No candidates in this stage.'}
           </p>
         ) : (
-          <ul data-testid="candidate-cards" className="flex flex-col gap-2">
+          <ul
+            data-testid="candidate-cards"
+            data-layout={viewMode}
+            className={
+              viewMode === 'grid'
+                ? 'grid gap-4'
+                : 'flex flex-col gap-2'
+            }
+            style={
+              viewMode === 'grid'
+                ? {
+                    gridTemplateColumns:
+                      'repeat(auto-fill, minmax(280px, 1fr))',
+                  }
+                : undefined
+            }
+          >
             {visible.map((app) => (
-              <li key={app.id}>
+              <li key={app.id} className={viewMode === 'grid' ? 'min-h-0' : undefined}>
                 <CandidateCard
                   application={app}
                   job={job}
                   stages={stages}
+                  layout={viewMode}
                   canSendReachout={canSendReachout}
                   isShortlisting={shortlist.shortlistingId === app.id}
                   shortlistError={shortlist.actionErrorFor(app.id)}

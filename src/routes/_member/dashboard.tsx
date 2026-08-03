@@ -6,6 +6,7 @@ import { jobsQueryKey } from '#/lib/jobs-shared'
 import { jobApplicationsQueryOptions } from '#/hooks/use-job-applications'
 import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
 import { useJobApplicationsSubscription } from '#/hooks/use-job-applications-subscription'
+import { candidateListViewQueryOptions } from '#/hooks/use-candidate-list-view'
 import { JobsList } from '#/components/jobs/jobs-list'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 import { CandidatesList } from '#/components/candidates/candidates-list'
@@ -37,10 +38,15 @@ export const Route = createFileRoute('/_member/dashboard')({
     if (!context.companyId) return
     // Prefetch + dehydrate the Jobs list for SSR first paint (ADR-0007). The
     // query key matches the source so realtime/mutation invalidation ports
-    // unchanged.
-    await context.queryClient.ensureQueryData(
-      jobsQueryOptions(context.companyId),
-    )
+    // unchanged. Also seed the candidate board layout preference (#26).
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        jobsQueryOptions(context.companyId),
+      ),
+      context.queryClient.ensureQueryData(
+        candidateListViewQueryOptions(context.userId),
+      ),
+    ])
     // Prefetch the selected Job's candidate board + pipeline stages so the
     // board is present in the first-paint HTML when a Job is in the URL.
     if (deps.jobId) {
@@ -65,6 +71,7 @@ const jobsQueryOptions = (companyId: string | null) =>
 
 function DashboardPage() {
   const {
+    userId,
     companyId,
     canCreateJob,
     canSendReachout,
@@ -74,6 +81,7 @@ function DashboardPage() {
 
   return (
     <DashboardContent
+      userId={userId}
       companyId={companyId}
       canCreateJob={canCreateJob}
       canSendReachout={canSendReachout}
@@ -84,12 +92,14 @@ function DashboardPage() {
 }
 
 function DashboardContent({
+  userId,
   companyId,
   canCreateJob,
   canSendReachout,
   canManageForms,
   companyName,
 }: {
+  userId: string | null
   companyId: string | null
   canCreateJob: boolean
   canSendReachout: boolean
@@ -218,6 +228,7 @@ function DashboardContent({
             <CandidatesList
               job={selectedJob}
               companyId={companyId}
+              userId={userId}
               canSendReachout={canSendReachout}
               activeStageId={selectedStageId}
               onStageChange={handleStageSelect}
