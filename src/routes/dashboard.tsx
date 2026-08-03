@@ -25,6 +25,7 @@ import { JobDetail } from '#/components/jobs/job-detail'
 import { JobCreationDialog } from '#/components/jobs/job-creation-dialog'
 import { CandidatesList } from '#/components/candidates/candidates-list'
 import { NotificationPreferencesPanel } from '#/components/notification-preferences'
+import { DashboardCompanyGuard } from '#/components/auth/dashboard-company-guard'
 
 export const Route = createFileRoute('/dashboard')({
   validateSearch: (search: Record<string, unknown>): {
@@ -52,6 +53,9 @@ export const Route = createFileRoute('/dashboard')({
     // gating (e.g. showing the Create-Job button); the authoritative
     // `canCreateJob` check lives in the createJob server fn (ADR-0004).
     const profile = await fetchMemberProfile()
+    const firstName = profile?.first_name.trim() ?? ''
+    const lastName = profile?.last_name.trim() ?? ''
+    const userName = `${firstName} ${lastName}`.trim() || null
     return {
       userId: profile?.id ?? null,
       companyId: profile?.company_id ?? null,
@@ -59,6 +63,8 @@ export const Route = createFileRoute('/dashboard')({
       canManageTemplates: Boolean(profile?.permissions.canManageTemplates),
       canManageForms: Boolean(profile?.permissions.canManageForms),
       companyName: profile?.companies?.name ?? '',
+      userEmail: profile?.email ?? user.email ?? null,
+      userName,
     }
   },
   // Read the selected Job id from the search params into the loader so the
@@ -67,6 +73,9 @@ export const Route = createFileRoute('/dashboard')({
   // Job) fire the query after the navigation instead.
   loaderDeps: ({ search }) => ({ jobId: search.jobId }),
   loader: async ({ context, deps }) => {
+    // Skip Jobs prefetch until the Member has a Company — the company guard
+    // blocks the board until setup completes (#19 / ADR-0004).
+    if (!context.companyId) return
     // Prefetch + dehydrate the Jobs list for SSR first paint (ADR-0007). The
     // query key matches the source so realtime/mutation invalidation ports
     // unchanged.
@@ -96,8 +105,46 @@ const jobsQueryOptions = (companyId: string | null) =>
   })
 
 function DashboardPage() {
-  const { userId, companyId, canCreateJob, canManageForms, companyName } =
-    Route.useRouteContext()
+  const {
+    userId,
+    companyId,
+    canCreateJob,
+    canManageForms,
+    companyName,
+    userEmail,
+    userName,
+  } = Route.useRouteContext()
+
+  return (
+    <DashboardCompanyGuard
+      needsCompanySetup={!companyId}
+      userEmail={userEmail}
+      userName={userName}
+    >
+      <DashboardContent
+        userId={userId}
+        companyId={companyId}
+        canCreateJob={canCreateJob}
+        canManageForms={canManageForms}
+        companyName={companyName}
+      />
+    </DashboardCompanyGuard>
+  )
+}
+
+function DashboardContent({
+  userId,
+  companyId,
+  canCreateJob,
+  canManageForms,
+  companyName,
+}: {
+  userId: string | null
+  companyId: string | null
+  canCreateJob: boolean
+  canManageForms: boolean
+  companyName: string
+}) {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [createOpen, setCreateOpen] = useState(false)

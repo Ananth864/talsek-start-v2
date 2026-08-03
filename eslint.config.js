@@ -18,6 +18,8 @@ export default [
     ignores: [
       'eslint.config.js',
       'prettier.config.js',
+      // Orchestrator lives outside the app typecheck/lint graph (Bun globals).
+      'scripts/**',
       // Supabase-generated / vendored types — not hand-maintained
       'src/integrations/supabase/database-generated.types.ts',
       'src/routeTree.gen.ts',
