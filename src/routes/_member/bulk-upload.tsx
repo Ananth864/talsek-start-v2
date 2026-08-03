@@ -7,9 +7,5 @@ export const Route = createFileRoute('/_member/bulk-upload')({
 
 function BulkUploadRoute() {
   const { companyId } = Route.useRouteContext()
-  return (
-    <div className="mx-auto w-full max-w-6xl">
-      <BulkUploadPage companyId={companyId} />
-    </div>
-  )
+  return <BulkUploadPage companyId={companyId} />
 }

@@ -24,9 +24,6 @@ export function FormPreview({
 
   return (
     <div className="space-y-4" data-testid="form-preview">
-      <p className="text-sm text-muted-foreground">
-        Live preview of the applicant form (not submitted).
-      </p>
       {questions.map((question) => {
         const label =
           question.isCustom && customQuestionText[question.id]

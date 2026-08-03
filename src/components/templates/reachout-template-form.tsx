@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Copy } from 'lucide-react'
 import { useAppForm } from '#/hooks/form'
 import type { ReachoutTemplate, TemplateKind } from '#/lib/reachout-template-shared'
 import {
@@ -28,7 +29,6 @@ type ReachoutTemplateFormProps = {
   template: ReachoutTemplate
   disabled?: boolean
   onSave: (template: Omit<ReachoutTemplate, 'created_at'>) => Promise<void>
-  onResetLocal: () => void
 }
 
 export function ReachoutTemplateForm({
@@ -36,10 +36,11 @@ export function ReachoutTemplateForm({
   template,
   disabled = false,
   onSave,
-  onResetLocal,
 }: ReachoutTemplateFormProps) {
   const variables =
     kind === 'interview' ? INTERVIEW_TEMPLATE_VARIABLES : TEMPLATE_VARIABLES
+  const bodyFieldId = `reachout-${kind}-body`
+  const formId = `reachout-${kind}-form`
 
   const form = useAppForm({
     defaultValues: {
@@ -75,12 +76,30 @@ export function ReachoutTemplateForm({
 
   const insertVariable = (variable: string) => {
     if (disabled) return
+    const textarea = document.getElementById(
+      bodyFieldId,
+    ) as HTMLTextAreaElement | null
     const current = form.getFieldValue('body')
-    form.setFieldValue('body', `${current}${variable}`)
+    if (!textarea) {
+      form.setFieldValue('body', `${current}${variable}`)
+      return
+    }
+    const { selectionStart, selectionEnd } = textarea
+    const next =
+      current.slice(0, selectionStart) +
+      variable +
+      current.slice(selectionEnd)
+    form.setFieldValue('body', next)
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const caret = selectionStart + variable.length
+      textarea.setSelectionRange(caret, caret)
+    })
   }
 
   return (
     <form
+      id={formId}
       data-testid={`reachout-template-form-${kind}`}
       className="space-y-4"
       onSubmit={(e) => {
@@ -112,7 +131,7 @@ export function ReachoutTemplateForm({
             type="email"
             placeholder="your-email@company.com"
             disabled={disabled}
-            description="Replies will be sent to this address."
+            description="Replies will be sent to this email address. Leave empty to use your account email."
           />
         )}
       </form.AppField>
@@ -129,12 +148,12 @@ export function ReachoutTemplateForm({
         )}
       </form.AppField>
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-4">
         <div className="lg:col-span-3">
           <form.AppField name="body">
             {(field) => (
               <field.TextareaField
-                id={`reachout-${kind}-body`}
+                id={bodyFieldId}
                 label="Message Body"
                 placeholder="Enter your template…"
                 disabled={disabled}
@@ -145,45 +164,29 @@ export function ReachoutTemplateForm({
             )}
           </form.AppField>
         </div>
-        <div className="space-y-2">
-          <Label>Insert variable</Label>
-          <div className="flex flex-col gap-1.5">
+        <div className="lg:col-span-1">
+          <Label className="text-sm font-medium">Available Variables</Label>
+          <div className="mt-2 grid gap-2">
             {variables.map((variable) => (
               <Button
                 key={variable.key}
                 type="button"
                 variant="outline"
                 size="sm"
-                className="justify-start font-mono text-xs"
+                className="justify-start text-xs disabled:cursor-not-allowed disabled:text-muted-foreground"
                 disabled={disabled}
                 onClick={() => insertVariable(variable.key)}
                 title={variable.description}
               >
+                <Copy className="mr-2 h-3 w-3" />
                 {variable.key}
               </Button>
             ))}
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Click a variable to insert it at your cursor position.
+          </p>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          onClick={onResetLocal}
-          data-testid={`reset-template-${kind}`}
-        >
-          Reset to default
-        </Button>
-        <form.AppForm>
-          <form.SubmitButton
-            idleLabel="Save template"
-            label="Saving…"
-            disabled={disabled}
-            data-testid={`save-template-${kind}`}
-          />
-        </form.AppForm>
       </div>
     </form>
   )

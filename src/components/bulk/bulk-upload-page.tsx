@@ -69,8 +69,6 @@ const statusColorMap: Record<BulkFileStatus, string> = {
 const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
-const formatBytes = (bytes: number) => `${(bytes / 1024).toFixed(1)} KB`
-
 const createRowId = () => crypto.randomUUID()
 
 type BulkUploadPageProps = {
@@ -80,6 +78,7 @@ type BulkUploadPageProps = {
 /**
  * Member bulk-upload surface (ticket #10). Client uploads each PDF to Storage
  * via a signed URL, then the server fn receives the path only (ADR-0016).
+ * Layout chrome matches source BulkUpload (ticket #39 / ADR-0030).
  */
 export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
   const queryClient = useQueryClient()
@@ -325,20 +324,13 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
 
   return (
     <div className="space-y-6 p-6" data-testid="bulk-upload-page">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Bulk upload</h1>
-        <p className="text-sm text-muted-foreground">
-          Upload resumes to Storage, then run the AI pipeline for each file.
-        </p>
-      </div>
-
       {banner ? (
         <p className="text-sm text-destructive" role="alert">
           {banner}
         </p>
       ) : null}
 
-      <Card>
+      <Card data-testid="bulk-upload-job-files">
         <CardHeader>
           <CardTitle>Job &amp; Files</CardTitle>
         </CardHeader>
@@ -378,15 +370,18 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
                 Select PDFs (max {MAX_FILES}, &lt; 1 MB each)
               </p>
               <label
+                data-testid="bulk-upload-dropzone"
                 className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-3 ${
                   isProcessing
                     ? 'opacity-60'
-                    : 'hover:border-primary'
+                    : selectedJobId
+                      ? 'animate-throb'
+                      : 'hover:border-primary'
                 }`}
               >
                 <UploadCloud className="h-5 w-5 text-muted-foreground" />
                 <div className="flex flex-col text-sm">
-                  <span>Click to choose PDF files</span>
+                  <span>Click to choose files or drop them here</span>
                   <span className="text-xs text-muted-foreground">
                     PDF only, up to 1 MB each, max {MAX_FILES}
                   </span>
@@ -409,7 +404,7 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-testid="bulk-upload-batch-status">
         <CardHeader className="flex flex-row items-center justify-between py-3">
           <CardTitle>Batch Status</CardTitle>
           <div className="flex items-center gap-2">
@@ -423,6 +418,11 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
             <Button
               onClick={handleUpload}
               disabled={isProcessing || !selectedJobId || !hasQueuedRows}
+              className={
+                !isProcessing && selectedJobId && hasQueuedRows
+                  ? 'animate-throb'
+                  : undefined
+              }
               data-testid="bulk-upload-analyze"
             >
               {isProcessing ? 'Processing…' : 'Analyze'}
@@ -434,8 +434,10 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
             <table className="w-full text-sm" data-testid="bulk-upload-table">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-3 font-medium">File</th>
-                  <th className="py-2 pr-3 font-medium">
+                  <th className="w-1/5 py-2 pr-3 font-medium" scope="col">
+                    File
+                  </th>
+                  <th className="w-1/4 py-2 pr-3 font-medium" scope="col">
                     <div className="flex flex-col">
                       <span>Email</span>
                       <span className="text-[10px] font-normal">
@@ -443,17 +445,20 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
                       </span>
                     </div>
                   </th>
-                  <th className="py-2 pr-3 font-medium">Size</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
-                  <th className="py-2 pr-3 font-medium">Message</th>
-                  <th className="py-2 font-medium" />
+                  <th className="w-[120px] py-2 pr-3 font-medium" scope="col">
+                    Status
+                  </th>
+                  <th className="w-1/3 py-2 pr-3 font-medium" scope="col">
+                    Message
+                  </th>
+                  <th className="w-[60px] py-2 font-medium" scope="col" />
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="py-6 text-center text-muted-foreground"
                     >
                       No files selected. Add up to {MAX_FILES} PDFs to start a
@@ -494,9 +499,6 @@ export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
                             {row.candidateEmail ?? ''}
                           </span>
                         )}
-                      </td>
-                      <td className="py-2 pr-3 text-muted-foreground">
-                        {formatBytes(row.fileSize)}
                       </td>
                       <td className="py-2 pr-3">
                         <Badge
