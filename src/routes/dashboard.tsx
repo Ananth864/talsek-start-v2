@@ -190,6 +190,11 @@ function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
+            <Link to="/users" data-testid="team-nav">
+              Team
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/billing" data-testid="billing-nav">
               Billing
             </Link>

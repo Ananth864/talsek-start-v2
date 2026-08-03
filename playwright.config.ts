@@ -49,6 +49,7 @@ export default defineConfig({
                 ...process.env,
                 AI_PIPELINE_STUB: '1',
                 BILLING_STUB: '1',
+                EMAIL_STUB: '1',
                 // Empty .env.local CRON_SECRET would 401 all cron routes; pin for E2E.
                 CRON_SECRET:
                   process.env.CRON_SECRET && process.env.CRON_SECRET.length > 0

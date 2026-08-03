@@ -42,6 +42,13 @@ export const serverEnv = createEnv({
     BILLING_STUB: z.enum(['1', 'true']).optional(),
     // Guards /api/cron/* (ticket #14). Vercel Cron sends Authorization: Bearer.
     CRON_SECRET: z.string().min(1).optional(),
+    // Resend (ticket #15 invite email; #17 will deepen notifications).
+    // Optional locally: when absent (or EMAIL_STUB set), invite sends no-op.
+    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_INVITE_FROM: z.string().min(1).optional(),
+    RESEND_INVITE_REPLY_TO: z.string().min(1).optional(),
+    RESEND_INVITE_SUBJECT: z.string().min(1).optional(),
+    EMAIL_STUB: z.enum(['1', 'true']).optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},
