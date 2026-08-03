@@ -1,30 +1,47 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { UserCircle } from 'lucide-react'
+import { CandidatesSearchPage } from '#/components/candidates/candidates-search-page'
+import type { CandidatesSearchUrlState } from '#/components/candidates/candidates-search-page'
+
+function parseOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
 
 /**
- * Placeholder for the cross-Job Candidates page (later ticket).
- * Keeps the sidebar entry reachable without blocking #25.
+ * Cross-job Candidates page — search/filter every Job Application in the
+ * Member's company and export the filtered set (ticket #27).
  */
 export const Route = createFileRoute('/_member/candidates')({
-  component: CandidatesPlaceholder,
+  validateSearch: (search: Record<string, unknown>): CandidatesSearchUrlState => ({
+    name: parseOptionalString(search.name),
+    jobId: parseOptionalString(search.jobId),
+    stage: parseOptionalString(search.stage),
+    minScore: parseOptionalString(search.minScore),
+    starred:
+      search.starred === true ||
+      search.starred === '1' ||
+      search.starred === 'true'
+        ? true
+        : undefined,
+    fulfilledNN:
+      search.fulfilledNN === true ||
+      search.fulfilledNN === '1' ||
+      search.fulfilledNN === 'true'
+        ? true
+        : undefined,
+  }),
+  component: CandidatesRoute,
 })
 
-function CandidatesPlaceholder() {
+function CandidatesRoute() {
+  const { companyId, userId, canSendReachout } = Route.useRouteContext()
+  const search = Route.useSearch()
+
   return (
-    <div
-      className="flex flex-1 flex-col items-start gap-2 p-6"
-      data-testid="candidates-placeholder"
-    >
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <UserCircle className="h-5 w-5" />
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Candidates
-        </h1>
-      </div>
-      <p className="max-w-prose text-sm text-muted-foreground">
-        Cross-job Candidates view coming soon. Select a Job on the Dashboard to
-        work the pipeline board for now.
-      </p>
-    </div>
+    <CandidatesSearchPage
+      companyId={companyId}
+      userId={userId}
+      canSendReachout={canSendReachout}
+      search={search}
+    />
   )
 }

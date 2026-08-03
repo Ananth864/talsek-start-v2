@@ -125,6 +125,78 @@ export const fetchJobStages = createServerFn({ method: 'GET' })
     return rows
   })
 
+// ─── Cross-job Candidates search (#27) ────────────────────────────────────
+//
+// Ports the source's `useCandidateSearch` behind a user-scoped server function.
+// Filters compose server-side; RLS owns company scoping (no manual
+// `job.company_id` filter — ADR-0004). `minMatchScore` and fulfilled
+// non-negotiables use the persisted `final_score` /
+// `meets_all_non_negotiables` columns (board-aligned; ADR-0011 §5) rather than
+// the source's client-side `computeDynamicScore` pass.
+
+const candidateSearchFiltersSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    jobId: z.string().min(1).optional(),
+    stageName: z.string().min(1).optional(),
+    minMatchScore: z.number().min(0).max(100).optional(),
+    starredOnly: z.boolean().optional(),
+    fulfilledNonNegotiables: z.boolean().optional(),
+  })
+  .refine(
+    (filters) =>
+      Boolean(filters.name) ||
+      Boolean(filters.jobId) ||
+      Boolean(filters.stageName) ||
+      typeof filters.minMatchScore === 'number' ||
+      filters.starredOnly === true ||
+      filters.fulfilledNonNegotiables === true,
+    { message: 'At least one filter is required' },
+  )
+
+export type CandidateSearchFiltersInput = z.infer<
+  typeof candidateSearchFiltersSchema
+>
+
+/**
+ * Company-wide Job Application search for the Candidates page. Scoped by RLS
+ * via the user-scoped client; no company filter is applied in application
+ * code (ADR-0004).
+ */
+export const fetchCandidateSearch = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(candidateSearchFiltersSchema)
+  .handler(async ({ data, context }) => {
+    let query = jobApplicationsQuery(context.supabase).order('created_at', {
+      ascending: false,
+    })
+
+    if (data.name) {
+      query = query.ilike('candidate_name', `%${data.name}%`)
+    }
+    if (data.jobId) {
+      query = query.eq('job_id', data.jobId)
+    }
+    if (data.starredOnly) {
+      query = query.eq('starred', true)
+    }
+    if (data.stageName) {
+      query = query.eq('current_stage.hiring_stage.name', data.stageName)
+    }
+    if (typeof data.minMatchScore === 'number') {
+      query = query.gte('final_score', data.minMatchScore)
+    }
+    if (data.fulfilledNonNegotiables) {
+      query = query.eq('meets_all_non_negotiables', true)
+    }
+
+    const { data: rows, error } = await query
+    if (error) {
+      throw new Error(`Failed to search candidates: ${error.message}`)
+    }
+    return rows
+  })
+
 // ─── Job Applications write path (#8 / #20) ───────────────────────────────
 //
 // Ports the source's client-side star / reject updates and Shortlist (Reachout

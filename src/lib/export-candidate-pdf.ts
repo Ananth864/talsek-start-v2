@@ -8,7 +8,8 @@ import html2canvas from 'html2canvas-pro'
  * A4 pages, and save via jspdf — all in-browser from already-fetched data (no
  * server function). `html2canvas-pro` replaces the source's `html2canvas`:
  * Tailwind v4 emits `oklch()` colors, which the original cannot parse. The
- * bulk Excel/ZIP export (`ExportDropdown`) ports with the bulk-actions ticket.
+ * bulk Excel/ZIP export lives in `export-candidates.ts` (ticket #27) and
+ * reuses `generateCandidateProfilePdf` below.
  */
 
 /** Strip characters that are unsafe in filenames (source parity). */

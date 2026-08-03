@@ -22,7 +22,10 @@ import type { JobWithCompanyRow } from '#/server/fn/jobs'
 // selects on it), although the items are Job Applications (CONTEXT.md).
 type CandidateProfilePDFRendererProps = {
   candidates: JobApplicationRow[]
+  /** Single-Job context (board / single-PDF dialog). */
   job?: JobWithCompanyRow | null
+  /** Cross-job ZIP export — prefer per-application Job when present. */
+  jobsById?: Map<string, JobWithCompanyRow> | null
 }
 
 function RequirementList({
@@ -86,11 +89,13 @@ function RequirementList({
 export function CandidateProfilePDFRenderer({
   candidates,
   job,
+  jobsById,
 }: CandidateProfilePDFRendererProps) {
   return (
     <div className="bg-white font-sans text-black">
       {candidates.map((app, candidateIndex) => {
-        const model = candidateProfileModel(app, job)
+        const resolvedJob = jobsById?.get(app.job_id) ?? job
+        const model = candidateProfileModel(app, resolvedJob)
         const {
           analysis,
           preferredSummary,
