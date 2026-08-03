@@ -33,6 +33,13 @@ export const serverEnv = createEnv({
     // so local/E2E still reject overruns.
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+    // Dodo Payments (ticket #13 / ADR-0018). Optional locally; required for
+    // live checkout/top-up/invoice when BILLING_STUB is unset.
+    DODO_PAYMENTS_API_KEY: z.string().min(1).optional(),
+    DODO_PAYMENTS_WEBHOOK_SECRET: z.string().min(1).optional(),
+    APP_ENV: z.string().min(1).optional(),
+    // When "1"/"true", billing server fns skip live Dodo calls (Playwright).
+    BILLING_STUB: z.enum(['1', 'true']).optional(),
   },
   clientPrefix: 'NO_CLIENT_',
   client: {},

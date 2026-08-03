@@ -45,7 +45,11 @@ export default defineConfig({
         // without multi-minute hedged provider calls (ADR-0014 §5).
         env:
           target === 'new'
-            ? { ...process.env, AI_PIPELINE_STUB: '1' }
+            ? {
+                ...process.env,
+                AI_PIPELINE_STUB: '1',
+                BILLING_STUB: '1',
+              }
             : undefined,
       },
 })
