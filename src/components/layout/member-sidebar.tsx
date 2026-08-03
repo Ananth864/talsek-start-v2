@@ -299,7 +299,10 @@ export function MemberSidebar({
                 </span>
               </div>
             </div>
-            <SidebarTrigger className="h-8 w-8 shrink-0 rounded-md border border-transparent text-muted-foreground transition hover:bg-sidebar-accent hover:text-sidebar-foreground group-data-[collapsible=icon]:translate-x-[-6px]" />
+            <SidebarTrigger
+              data-testid="sidebar-trigger"
+              className="h-8 w-8 shrink-0 rounded-md border border-transparent text-muted-foreground transition hover:bg-sidebar-accent hover:text-sidebar-foreground group-data-[collapsible=icon]:translate-x-[-6px]"
+            />
           </div>
         </SidebarHeader>
 

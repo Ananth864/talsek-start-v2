@@ -32,7 +32,24 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      testDir: './e2e',
+      testIgnore: ['**/layout-parity/**'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // Source-faithful structure/interaction (ADR-0030). Run alone via:
+      //   bun run e2e:layout-parity
+      name: 'layout-parity',
+      testDir: './e2e/layout-parity',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+    },
+  ],
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {

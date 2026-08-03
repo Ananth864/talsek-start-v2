@@ -83,12 +83,12 @@ export function JobsList({
               data-testid="create-job-button"
               title={
                 canCreateJob
-                  ? 'Create job'
-                  : 'Permission required to create jobs'
+                  ? 'Add New Job'
+                  : 'Permission Required'
               }
             >
               <Plus className="size-4" />
-              {canCreateJob ? 'Create job' : 'Permission required'}
+              {canCreateJob ? 'Add New Job' : 'Permission Required'}
             </Button>
           ) : null}
         </div>

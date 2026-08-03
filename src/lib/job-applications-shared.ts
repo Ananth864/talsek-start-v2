@@ -1,3 +1,4 @@
+import type { AIAnalysisJson } from '#/integrations/supabase/types'
 import type { JobApplicationRow } from '#/server/fn/job-applications'
 
 /**
@@ -101,4 +102,26 @@ export function scoreBand(score: number): { stroke: string; border: string } {
   if (score >= 60) return { stroke: 'stroke-sky-500', border: 'border-l-sky-500' }
   if (score >= 40) return { stroke: 'stroke-amber-500', border: 'border-l-amber-500' }
   return { stroke: 'stroke-rose-500', border: 'border-l-rose-500' }
+}
+
+/**
+ * ADR-0012 §1: `ai_analysis` is typed non-null but pre-pipeline / failed rows
+ * can be null or missing analysis sections. Callers treat the return as partial.
+ */
+export type RuntimeAiAnalysis = {
+  preferred_requirements_analysis?: {
+    details?: AIAnalysisJson['preferred_requirements_analysis']['details']
+  }
+  non_negotiables_analysis?: {
+    details?: AIAnalysisJson['non_negotiables_analysis']['details']
+  }
+  individual_scores?: { overall_fit_score?: number }
+} | null
+
+export function aiAnalysisOf(
+  application: Pick<JobApplicationRow, 'ai_analysis'>,
+): RuntimeAiAnalysis {
+  const value: unknown = application.ai_analysis
+  if (value == null || typeof value !== 'object') return null
+  return value
 }

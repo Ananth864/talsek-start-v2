@@ -1,3 +1,4 @@
+import { aiAnalysisOf } from '#/lib/job-applications-shared'
 import {
   computeDynamicScore,
   mergeRequirementsWithAnalysis,
@@ -65,15 +66,16 @@ export function getFitCategory(
   application: JobApplicationRow,
   job: JobRequirements,
 ): FitCategory {
+  const analysis = aiAnalysisOf(application)
   const preferredMerged = mergeRequirementsWithAnalysis(
     job.preferred_requirements,
     'preferred',
-    application.ai_analysis?.preferred_requirements_analysis?.details,
+    analysis?.preferred_requirements_analysis?.details,
   )
   const nonNegotiableMerged = mergeRequirementsWithAnalysis(
     job.non_negotiables,
     'non_negotiable',
-    application.ai_analysis?.non_negotiables_analysis?.details,
+    analysis?.non_negotiables_analysis?.details,
   )
 
   const preferredSummary = summarizeRequirementAnalysis(preferredMerged)
@@ -145,20 +147,21 @@ export function filterCandidates(
   // Recompute scores from current Job requirements so sort order stays fresh
   // when requirements are edited after screening (source parity).
   const withDynamicScores = filtered.map((app) => {
+    const analysis = aiAnalysisOf(app)
     const preferredMerged = mergeRequirementsWithAnalysis(
       job.preferred_requirements,
       'preferred',
-      app.ai_analysis?.preferred_requirements_analysis?.details,
+      analysis?.preferred_requirements_analysis?.details,
     )
     const nonNegMerged = mergeRequirementsWithAnalysis(
       job.non_negotiables,
       'non_negotiable',
-      app.ai_analysis?.non_negotiables_analysis?.details,
+      analysis?.non_negotiables_analysis?.details,
     )
     const prefSummary = summarizeRequirementAnalysis(preferredMerged)
     const nonNegSummary = summarizeRequirementAnalysis(nonNegMerged)
     const overallFit =
-      app.ai_analysis?.individual_scores?.overall_fit_score ?? 0
+      analysis?.individual_scores?.overall_fit_score ?? 0
     const { finalScore } = computeDynamicScore(
       overallFit,
       prefSummary,
