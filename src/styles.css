@@ -189,8 +189,21 @@
   }
 }
 
+@keyframes marketing-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @layer utilities {
   .animate-throb {
     animation: throb 2s ease-in-out infinite;
+  }
+
+  .animate-marketing-marquee {
+    animation: marketing-marquee 40s linear infinite;
   }
 }

@@ -24,6 +24,7 @@
     "@ai-sdk/groq": "^2",
     "@ai-sdk/openai": "^2",
     "@ai-sdk/xai": "^2",
+    "@calcom/embed-react": "^1.5.3",
     "@radix-ui/react-avatar": "^1.2.6",
     "@radix-ui/react-checkbox": "^1.2.2",
     "@radix-ui/react-dialog": "^1.1.23",
