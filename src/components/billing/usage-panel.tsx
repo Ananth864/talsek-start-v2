@@ -398,7 +398,7 @@ export function UsagePanel({
                             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
                               <Briefcase className="h-4 w-4 text-primary" />
                             </div>
-                            <span className="font-medium">{job.name}</span>
+                            <span className="font-medium">{job.title}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">

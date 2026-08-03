@@ -31,7 +31,7 @@ export type CategoryUsage = {
 
 export type JobUsage = {
   id: string
-  name: string
+  title: string
   resumes: number
   interviews: number
   totalCredits: number
@@ -113,7 +113,7 @@ export function buildJobUsageRows(
       }
       return {
         id: job.id,
-        name: job.title,
+        title: job.title,
         resumes: resumeData.count,
         interviews: interviewData.count,
         totalCredits: resumeData.credits + interviewData.credits,
