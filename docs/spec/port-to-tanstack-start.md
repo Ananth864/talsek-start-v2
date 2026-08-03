@@ -175,7 +175,13 @@ Runtime invariants that already exist (each edge function self-validates its out
 
 ## Out of Scope
 
-- Any visual or interaction redesign. The product must look and feel identical; the port preserves the existing theme and UX precisely.
+- ~~Any visual or interaction redesign. The product must look and feel identical; the port preserves the existing theme and UX precisely.~~
+  **Amended (post-port audit, Aug 2026):** behavioural parity remains mandatory
+  — every capability in the user stories must exist and work. Visual parity is
+  relaxed to *consistency with the ported design system* (the shadcn/Tailwind
+  v4 theme): pages that were visually inconsistent in the source app may be
+  cleaned up rather than reproduced faithfully. Characterisation tests assert
+  behaviour, not pixels.
 - Any change to the database schema, Row-Level Security intent, or the Supabase project itself. The new app points at the same Supabase project as the source; identity, data, and realtime carry over unchanged.
 - Replacing the auth provider, introducing a message queue, or migrating to TanStack AI — all explicitly considered and rejected (ADRs 1, 3, 5).
 - The source app's operation during transition. It keeps running against the shared Supabase project, with its edge functions remaining deployed but unused until cutover; eventual decommissioning is a separate piece of work.

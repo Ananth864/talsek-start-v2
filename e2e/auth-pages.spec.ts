@@ -65,3 +65,11 @@ test('OAuth callback without a code redirects to sign-in', async ({ page }) => {
   await page.goto('/auth/callback')
   await expect(page).toHaveURL(/\/signin/)
 })
+
+test('sign-in page offers Google OAuth', async ({ page }) => {
+  await page.goto('/signin')
+  await page.waitForLoadState('networkidle')
+  await expect(
+    page.getByRole('button', { name: /continue with google/i }),
+  ).toBeVisible()
+})

@@ -23,11 +23,3 @@ test('protected route redirects to sign-in and returns after login', async ({
   await expect(page).toHaveURL(/\/dashboard/)
   await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
 })
-
-test('sign-in page offers Google OAuth', async ({ page }) => {
-  await page.goto('/signin')
-  await page.waitForLoadState('networkidle')
-  await expect(
-    page.getByRole('button', { name: /continue with google/i }),
-  ).toBeVisible()
-})

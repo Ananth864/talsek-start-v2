@@ -46,7 +46,7 @@ startxref
   return new TextEncoder().encode(text)
 }
 
-async function ensureSeededApplication(jobId: string): Promise<string> {
+async function seedPipelineApplication(jobId: string): Promise<string> {
   const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) {
@@ -58,60 +58,6 @@ async function ensureSeededApplication(jobId: string): Promise<string> {
   const admin = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-
-  const { data: existing } = await admin
-    .from('job_applications')
-    .select('id, resume_url, parsed_candidate_data, ai_analysis')
-    .eq('job_id', jobId)
-    .eq('status', 'active')
-    .not('resume_url', 'is', null)
-    .limit(1)
-    .maybeSingle()
-
-  if (existing?.id && existing.resume_url) {
-    // Prior failed seeds may lack concrete JSON shapes the profile needs.
-    if (!existing.parsed_candidate_data || !existing.ai_analysis) {
-      await admin
-        .from('job_applications')
-        .update({
-          candidate_name: 'Before Pipeline Seed',
-          parsed_candidate_data: {
-            name: 'Before Pipeline Seed',
-            email: 'e2e.pipeline@example.com',
-            phone: 'not mentioned',
-            location: 'Remote',
-            current_role: 'Engineer',
-            total_experience_years: 1,
-            work_experience: [],
-            education: [],
-            technical_skills: [],
-            soft_skills: [],
-            certifications: [],
-            summary: 'Seed row awaiting Resume AI pipeline.',
-            potential_concerns: [],
-            potential_concerns_questions: [],
-            career_level: 'junior',
-          },
-          ai_analysis: {
-            recommendation: 'MODERATE_FIT',
-            individual_scores: {
-              role_responsibility_readiness_score: 0,
-              concerns_mitigation_score: 0,
-              prestige_score: 0,
-              overall_fit_score: 0,
-            },
-            rationale: 'Seed placeholder',
-            candidate_readiness: 'Seed placeholder',
-            strengths_for_role: [],
-            potential_concerns: [],
-            preferred_requirements_analysis: { details: [] },
-            non_negotiables_analysis: { details: [] },
-          },
-        })
-        .eq('id', existing.id)
-    }
-    return existing.id
-  }
 
   const { data: job, error: jobError } = await admin
     .from('jobs')
@@ -233,7 +179,7 @@ test('Re-run AI runs the sync resume pipeline and refreshes the profile', async 
   const jobId = new URL(page.url()).searchParams.get('jobId')
   expect(jobId).toBeTruthy()
 
-  await ensureSeededApplication(jobId!)
+  await seedPipelineApplication(jobId!)
 
   // Re-select the Job so a just-seeded application appears (Realtime INSERT
   // also works; navigating with jobId is deterministic after seed).
@@ -241,7 +187,9 @@ test('Re-run AI runs the sync resume pipeline and refreshes the profile', async 
   await page.waitForLoadState('networkidle')
   await expect(page.getByTestId('candidates-list')).toBeVisible()
 
-  const card = page.getByTestId('candidate-card').first()
+  const card = page
+    .getByTestId('candidate-card')
+    .filter({ hasText: 'Before Pipeline Seed' })
   await expect(card).toBeVisible({ timeout: 15_000 })
   await card.getByTestId('candidate-view-profile').click()
 

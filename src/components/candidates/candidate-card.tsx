@@ -219,12 +219,12 @@ export function CandidateCard({
   const preferredMerged = mergeRequirementsWithAnalysis(
     job.preferred_requirements,
     'preferred',
-    application.ai_analysis.preferred_requirements_analysis.details,
+    application.ai_analysis?.preferred_requirements_analysis?.details,
   )
   const nonNegMerged = mergeRequirementsWithAnalysis(
     job.non_negotiables,
     'non_negotiable',
-    application.ai_analysis.non_negotiables_analysis.details,
+    application.ai_analysis?.non_negotiables_analysis?.details,
   )
   const preferredSummary = summarizeRequirementAnalysis(preferredMerged)
   const nonNegSummary = summarizeRequirementAnalysis(nonNegMerged)
