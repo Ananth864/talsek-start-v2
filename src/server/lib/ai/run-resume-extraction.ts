@@ -51,7 +51,7 @@ export async function runResumeExtraction(
     ],
     providerOptions: {
       openai: {
-        reasoningEffort: 'low',
+        reasoningEffort: 'medium',
         textVerbosity: 'low',
       },
       groq: {

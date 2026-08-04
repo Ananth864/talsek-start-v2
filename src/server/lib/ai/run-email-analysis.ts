@@ -35,7 +35,7 @@ export async function runEmailAnalysis(input: {
     ],
     providerOptions: {
       openai: {
-        reasoningEffort: 'low',
+        reasoningEffort: 'medium',
         textVerbosity: 'low',
       },
     },

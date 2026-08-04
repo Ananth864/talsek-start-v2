@@ -201,7 +201,7 @@ export async function runJobMatchAnalysis(input: {
       ],
       providerOptions: {
         openai: {
-          reasoningEffort: 'low',
+          reasoningEffort: 'medium',
           textVerbosity: 'low',
         },
         groq: {
@@ -238,7 +238,7 @@ export async function runJobMatchAnalysis(input: {
       ],
       providerOptions: {
         openai: {
-          reasoningEffort: 'low',
+          reasoningEffort: 'medium',
         },
       },
     }),
