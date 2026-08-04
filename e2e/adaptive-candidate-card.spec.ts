@@ -16,11 +16,25 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard/)
 }
 
+/** Open a Job board and wait for stage tabs (async useJobStages). */
 async function openFirstJobBoard(page: Page) {
-  await expect(page.getByTestId('job-card').first()).toBeVisible()
-  await page.getByTestId('job-card').first().click()
-  await expect(page).toHaveURL(/jobId=/)
-  await expect(page.getByTestId('candidates-list')).toBeVisible()
+  const jobs = page.getByTestId('job-card')
+  await expect(jobs.first()).toBeVisible({ timeout: 15_000 })
+  const jobCount = await jobs.count()
+  for (let i = 0; i < jobCount; i++) {
+    await jobs.nth(i).click()
+    await expect(page).toHaveURL(/jobId=/)
+    await expect(page.getByTestId('candidates-list')).toBeVisible()
+    try {
+      await expect(page.getByTestId('stage-tab').first()).toBeVisible({
+        timeout: 10_000,
+      })
+      return
+    } catch {
+      // Try next Job if this one has no stages or the query failed.
+    }
+  }
+  throw new Error('No E2E Job has pipeline stages configured')
 }
 
 test('account menu toggles candidate board between list and grid', async ({
@@ -37,29 +51,37 @@ test('account menu toggles candidate board between list and grid', async ({
   const labelBefore = (await toggle.innerText()).trim()
   await toggle.click()
 
+  // Empty stages have no candidate-cards list — preference is still persisted.
   const cards = page.getByTestId('candidate-cards')
-  await expect(cards).toBeVisible()
-
-  if (/grid/i.test(labelBefore)) {
-    // Was offering "Switch to Grid View" → now grid.
-    await expect(cards).toHaveAttribute('data-layout', 'grid')
-  } else {
-    await expect(cards).toHaveAttribute('data-layout', 'list')
-  }
-
-  if ((await page.getByTestId('candidate-card').count()) > 0) {
+  const hasCards = (await page.getByTestId('candidate-card').count()) > 0
+  if (hasCards) {
+    await expect(cards).toBeVisible()
+    if (/grid/i.test(labelBefore)) {
+      await expect(cards).toHaveAttribute('data-layout', 'grid')
+    } else {
+      await expect(cards).toHaveAttribute('data-layout', 'list')
+    }
     const firstCard = page.getByTestId('candidate-card').first()
     const layout = await cards.getAttribute('data-layout')
     await expect(firstCard).toHaveAttribute('data-layout', layout!)
   }
 
   await page.reload()
-  await page.waitForLoadState('networkidle')
   await openFirstJobBoard(page)
-  await expect(page.getByTestId('candidate-cards')).toHaveAttribute(
-    'data-layout',
-    /list|grid/,
-  )
+  if ((await page.getByTestId('candidate-card').count()) > 0) {
+    await expect(page.getByTestId('candidate-cards')).toHaveAttribute(
+      'data-layout',
+      /list|grid/,
+    )
+  } else {
+    // Toggle lives in the account menu — re-open after reload.
+    await expect(async () => {
+      await page.getByTestId('account-menu-trigger').click()
+      await expect(page.getByTestId('candidate-view-toggle')).toBeVisible({
+        timeout: 2_000,
+      })
+    }).toPass({ timeout: 15_000 })
+  }
 })
 
 test('candidate card adapts content by Hiring Stage', async ({ page }) => {

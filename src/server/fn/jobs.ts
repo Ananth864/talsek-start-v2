@@ -191,11 +191,12 @@ export const parseJobDescription = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(parseJobInputSchema)
   .handler(async ({ data }) => {
-    // The real `generateObject` runs whenever a provider key is configured.
-    // When none are present — the no-credentials default — the fn returns a
-    // deterministic derivation so the parse → review → create flow is still
-    // exercisable in dev/E2E without provider credentials. See ADR-0010 §5.
-    if (!serverEnv.OPENAI_API_KEY && !serverEnv.GROK_API_KEY) {
+    // Deterministic when stubbed (Playwright) or when no provider keys exist —
+    // otherwise live hedged generateObject. See ADR-0010 §5 / AI_PIPELINE_STUB.
+    if (
+      serverEnv.AI_PIPELINE_STUB ||
+      (!serverEnv.OPENAI_API_KEY && !serverEnv.GROK_API_KEY)
+    ) {
       return deterministicParse(data)
     }
     const { object } = await generateObjectWithRetry({

@@ -5,8 +5,9 @@
  */
 import { AlertTriangle, ArrowRight, Wallet } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-import { Button } from '#/components/ui/button'
+import { buttonVariants } from '#/components/ui/button'
 import { useCreditBalance, useServiceRates } from '#/hooks/use-billing'
+import { cn } from '#/lib/utils'
 
 type CreditsExhaustedBannerProps = {
   companyId: string | null
@@ -36,7 +37,7 @@ export function CreditsExhaustedBanner({
     <div
       data-testid="credits-exhausted-banner"
       data-state={isExhausted ? 'exhausted' : 'low'}
-      className={`fixed bottom-4 right-4 z-50 max-w-xs rounded-md border shadow-md ${
+      className={`fixed bottom-4 right-4 z-[100] max-w-xs rounded-md border shadow-md ${
         isExhausted
           ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950'
           : 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
@@ -98,20 +99,27 @@ export function CreditsExhaustedBanner({
             </p>
           </div>
 
-          <Button
-            asChild
-            size="sm"
-            className={`h-6 gap-1 px-2 text-[10px] ${
+          {/*
+            Plain Link (not Button asChild): dashboard replace-navigates
+            ?jobId=/&stageId= while this overlay is open; reloadDocument makes
+            the CTA win that race. SVG keeps pointer events so center-clicks
+            don't fall through onto the board.
+          */}
+          <Link
+            to="/billing"
+            reloadDocument
+            data-testid="credits-banner-add"
+            className={cn(
+              buttonVariants({ size: 'sm' }),
+              'h-6 gap-1 px-2 text-[10px] [&_svg]:pointer-events-auto',
               isExhausted
                 ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-amber-600 text-white hover:bg-amber-700'
-            }`}
+                : 'bg-amber-600 text-white hover:bg-amber-700',
+            )}
           >
-            <Link to="/billing" data-testid="credits-banner-add">
-              Add
-              <ArrowRight className="h-2.5 w-2.5" />
-            </Link>
-          </Button>
+            Add
+            <ArrowRight className="h-2.5 w-2.5" />
+          </Link>
         </div>
       </div>
     </div>

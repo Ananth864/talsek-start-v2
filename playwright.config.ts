@@ -55,7 +55,12 @@ export default defineConfig({
     : {
         command: target === 'source' ? 'npm run dev' : 'bun run dev',
         url: baseURL,
-        reuseExistingServer: true,
+        // New-app E2E pins AI/BILLING/EMAIL stubs + webhook secrets on the
+        // child process. Reusing a hand-started `bun run dev` (no stubs /
+        // empty CRON_SECRET from .env.local) makes signed cron/webhook
+        // tests 401. Opt in with E2E_REUSE_SERVER=1 when you know the
+        // running server has the same env.
+        reuseExistingServer: process.env.E2E_REUSE_SERVER === '1',
         timeout: 120_000,
         cwd: target === 'source' ? '../talsek' : undefined,
         // Stub the Resume AI pipeline so #9 E2E exercises the sync chain

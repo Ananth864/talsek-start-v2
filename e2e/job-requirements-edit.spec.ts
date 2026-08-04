@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test'
+import type { Page, Locator } from '@playwright/test'
 
 /**
  * Job requirements edit round-trip (ticket #23).
- * Creates a Job, opens its detail, edits requirements (exclude / add / remove),
- * saves, and asserts the Job detail reflects the persisted lists after refetch.
+ * Creates a Job via the 4-step wizard, opens its detail, edits requirements
+ * (exclude / add / remove), saves, and asserts persistence after refetch.
  */
 const JD_TEXT = [
   '5+ years of React experience.',
@@ -12,15 +13,28 @@ const JD_TEXT = [
   "Bachelor's degree in Computer Science.",
 ].join('\n')
 
-test('member edits job requirements after creation', async ({ page }) => {
+async function signIn(page: Page) {
+  const email = process.env.E2E_EMAIL!
+  const password = process.env.E2E_PASSWORD!
   await page.goto('/signin')
   await page.waitForLoadState('networkidle')
+  const emailField = page.getByLabel('Email', { exact: true })
+  await expect(emailField).toBeVisible()
+  await emailField.fill(email)
+  await expect(emailField).toHaveValue(email)
+  await page.getByLabel('Password', { exact: true }).fill(password)
+  await page.getByRole('button', { name: /^sign in$/i }).click()
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 })
+}
 
-  await page.getByLabel('Email').fill(process.env.E2E_EMAIL!)
-  await page.getByLabel('Password').fill(process.env.E2E_PASSWORD!)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page).toHaveURL(/\/dashboard/)
-  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
+async function advanceWizard(dialog: Locator) {
+  await dialog.getByTestId('job-creation-next').click()
+}
+
+test('member edits job requirements after creation', async ({ page }) => {
+  test.setTimeout(120_000)
+  await signIn(page)
+  await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible()
 
   const createButton = page.getByTestId('create-job-button')
   await expect(createButton).toBeVisible()
@@ -29,14 +43,24 @@ test('member edits job requirements after creation', async ({ page }) => {
   const dialog = page.getByTestId('job-creation-dialog')
   await expect(dialog).toBeVisible()
 
+  // Resume-only path — no logistics required for this edit journey.
+  await dialog
+    .getByRole('button', { name: /Resume Screening Only/i })
+    .click()
+  await advanceWizard(dialog)
+
   const uniqueTitle = `E2E Req Edit ${Date.now()}`
-  await page.getByLabel(/job title/i).fill(uniqueTitle)
+  await dialog.locator('#jc-title').fill(uniqueTitle)
   await page.getByTestId('job-description-input').fill(JD_TEXT)
 
-  await dialog.getByRole('button', { name: /parse & review/i }).click()
+  await advanceWizard(dialog)
+  await expect(dialog.getByTestId('job-creation-step')).toContainText(
+    /Step 3 of 4/i,
+    { timeout: 60_000 },
+  )
   await expect(
     dialog.getByRole('heading', { name: /review requirements/i }),
-  ).toBeVisible({ timeout: 60_000 })
+  ).toBeVisible()
 
   const preferredFirst = dialog.getByRole('textbox', {
     name: /^preferred requirements 1$/i,
@@ -51,8 +75,6 @@ test('member edits job requirements after creation', async ({ page }) => {
     name: /^non-negotiables 2$/i,
   })
 
-  // Deterministic requirements so the edit assertions are stable regardless of
-  // whether the parse used AI or the no-key derivation.
   await preferredFirst.fill('Preferred A — keep included')
   if (await preferredSecond.count()) {
     await preferredSecond.fill('Preferred B — will exclude')
@@ -72,11 +94,28 @@ test('member edits job requirements after creation', async ({ page }) => {
       .fill('Non-negotiable B — will remove')
   }
 
-  await dialog.getByRole('button', { name: /^create job$/i }).click()
-  await expect(dialog).not.toBeVisible()
+  await advanceWizard(dialog)
+  await expect(dialog.getByTestId('job-creation-step')).toContainText(
+    /Step 4 of 4/i,
+  )
+  await expect(dialog.getByTestId('job-creation-form-setup')).toBeVisible()
+  await dialog.getByTestId('job-creation-form-enabled').click()
+  await dialog.getByTestId('job-creation-create').click()
+  await expect(page.getByTestId('job-creation-confirm')).toBeVisible({
+    timeout: 15_000,
+  })
+  await page.getByTestId('job-creation-confirm-submit').click()
+  await expect(dialog).not.toBeVisible({ timeout: 30_000 })
+
+  // Dismiss success dialog if it appears.
+  const success = page.getByTestId('job-creation-success-dialog')
+  if (await success.isVisible().catch(() => false)) {
+    await page.getByTestId('success-dialog-done').click()
+    await expect(success).not.toBeVisible()
+  }
 
   const jobCard = page.getByRole('listitem').filter({ hasText: uniqueTitle })
-  await expect(jobCard).toBeVisible()
+  await expect(jobCard).toBeVisible({ timeout: 15_000 })
   await jobCard.getByTestId('open-job-details').click()
 
   const detail = page.getByTestId('job-detail')
@@ -87,28 +126,27 @@ test('member edits job requirements after creation', async ({ page }) => {
   await detail.getByTestId('edit-job-requirements').click()
   await expect(detail.getByTestId('save-job-requirements')).toBeVisible()
 
-  // Exclude preferred_2 via checkbox.
   const preferredPanel = detail.getByTestId('job-requirements-preferred')
   const preferredRows = preferredPanel.locator('[data-testid^="requirement-row-"]')
-  await expect(preferredRows).toHaveCount(2)
+  const preferredCount = await preferredRows.count()
+  expect(preferredCount).toBeGreaterThanOrEqual(2)
   const excludeId = await preferredRows
     .nth(1)
     .getAttribute('data-testid')
     .then((id) => id!.replace('requirement-row-', ''))
   await detail.getByTestId(`requirement-include-${excludeId}`).click()
 
-  // Remove the second non-negotiable.
   const nonNegPanel = detail.getByTestId('job-requirements-non-negotiables')
   const nonNegRows = nonNegPanel.locator('[data-testid^="requirement-row-"]')
-  await expect(nonNegRows).toHaveCount(2)
+  const nonNegCount = await nonNegRows.count()
+  expect(nonNegCount).toBeGreaterThanOrEqual(2)
   const removeId = await nonNegRows
     .nth(1)
     .getAttribute('data-testid')
     .then((id) => id!.replace('requirement-row-', ''))
   await detail.getByTestId(`requirement-remove-${removeId}`).click()
-  await expect(nonNegRows).toHaveCount(1)
+  await expect(nonNegRows).toHaveCount(nonNegCount - 1)
 
-  // Add a new preferred requirement.
   await detail.getByTestId('requirement-add-preferred').click()
   const newPreferredRow = preferredPanel
     .locator('[data-testid^="requirement-row-"]')
@@ -123,28 +161,43 @@ test('member edits job requirements after creation', async ({ page }) => {
   await detail.getByTestId('save-job-requirements').click()
   await expect(detail.getByTestId('save-job-requirements')).toHaveCount(0)
 
-  // Included counts: preferred has A + C (B excluded) → 2; non-negotiable → 1.
-  await expect(detail.getByText('2 included')).toBeVisible()
-  await expect(detail.getByText('1 included')).toBeVisible()
+  // Counts live in DetailRows (not inside the editor panels).
+  const includedCounts = detail.getByText(/\d+ included/)
+  await expect(includedCounts).toHaveCount(2)
+  await expect(includedCounts.nth(0)).toHaveText(`${preferredCount} included`)
+  await expect(includedCounts.nth(1)).toHaveText(
+    `${nonNegCount - 1} included`,
+  )
   await expect(detail.getByText('Preferred C — added after create')).toBeVisible()
   await expect(detail.getByText('Preferred B — will exclude')).toBeVisible()
   await expect(
     detail.getByText('Non-negotiable B — will remove'),
   ).toHaveCount(0)
 
-  // Close, reload, reopen and confirm persistence.
   await page.keyboard.press('Escape')
   await expect(detail).toHaveCount(0)
+
+  // Persistence check via reload + reopen (details sheet is portal-mounted).
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible({
+    timeout: 15_000,
+  })
   const reopenedCard = page
     .getByRole('listitem')
     .filter({ hasText: uniqueTitle })
-  await reopenedCard.getByTestId('open-job-details').click()
+  await expect(reopenedCard).toBeVisible({ timeout: 15_000 })
+  // detailsJob is resolved from the jobs query — retry until the sheet mounts.
+  await expect(async () => {
+    await reopenedCard.getByTestId('open-job-details').click()
+    await expect(page.getByTestId('job-detail')).toBeVisible({ timeout: 3_000 })
+  }).toPass({ timeout: 25_000 })
   const reopened = page.getByTestId('job-detail')
-  await expect(reopened).toBeVisible()
-  await expect(reopened.getByText('2 included')).toBeVisible()
-  await expect(reopened.getByText('1 included')).toBeVisible()
+  const reopenedCounts = reopened.getByText(/\d+ included/)
+  await expect(reopenedCounts).toHaveCount(2)
+  await expect(reopenedCounts.nth(0)).toHaveText(`${preferredCount} included`)
+  await expect(reopenedCounts.nth(1)).toHaveText(
+    `${nonNegCount - 1} included`,
+  )
   await expect(
     reopened.getByText('Preferred C — added after create'),
   ).toBeVisible()

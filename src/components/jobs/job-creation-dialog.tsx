@@ -33,6 +33,7 @@ import {
 } from '#/components/ui/select'
 import { cn } from '#/lib/utils'
 import { JobCreationSuccessDialog } from '#/components/jobs/job-creation-success-dialog'
+import { JobFormConfigDialog } from '#/components/forms/job-form-config-dialog'
 import { FormQuestionBuilder } from '#/components/forms/form-question-builder'
 import { FormPreview } from '#/components/forms/form-preview'
 import { useCreateJob } from '#/hooks/use-create-job'
@@ -135,6 +136,9 @@ export function JobCreationDialog({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [forwardingEmail, setForwardingEmail] = useState('')
   const [formLink, setFormLink] = useState<string | null>(null)
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null)
+  const [createdJobTitle, setCreatedJobTitle] = useState('')
+  const [formConfigOpen, setFormConfigOpen] = useState(false)
 
   const parseMutation = useParseJobDescription()
   const createMutation = useCreateJob()
@@ -332,6 +336,8 @@ export function JobCreationDialog({
     try {
       const result = await createMutation.mutateAsync(payload)
       setFormLink(null)
+      setCreatedJobId(result.id)
+      setCreatedJobTitle(title.trim())
       if (formEnabled && canManageForms && formQuestions.length > 0) {
         const labels: Record<string, string> = { ...customQuestionText }
         for (const q of formQuestions) {
@@ -725,7 +731,30 @@ export function JobCreationDialog({
         forwardingEmail={forwardingEmail}
         formLink={formLink}
         canManageForms={canManageForms}
+        onConfigureForm={
+          createdJobId
+            ? () => {
+                setSuccessOpen(false)
+                setFormConfigOpen(true)
+              }
+            : undefined
+        }
       />
+      {createdJobId ? (
+        <JobFormConfigDialog
+          open={formConfigOpen}
+          onOpenChange={async (next) => {
+            setFormConfigOpen(next)
+            if (!next) {
+              await refreshFormLink(createdJobId)
+              setSuccessOpen(true)
+            }
+          }}
+          companyId={companyId}
+          jobId={createdJobId}
+          jobTitle={createdJobTitle}
+        />
+      ) : null}
     </>
   )
 }
@@ -905,23 +934,35 @@ function LogisticsFields({
       </div>
 
       {logistics.locationMode === 'Hybrid' ? (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="jc-hybrid">Hybrid arrangement</Label>
-          <Select
-            value={logistics.workArrangement || undefined}
-            onValueChange={(v) => onChange({ workArrangement: v })}
-          >
-            <SelectTrigger id="jc-hybrid" data-testid="jc-hybrid">
-              <SelectValue placeholder="Select arrangement" />
-            </SelectTrigger>
-            <SelectContent>
-              {HYBRID_WORK_ARRANGEMENT_VALUES.map((v) => (
-                <SelectItem key={v} value={v}>
-                  {HYBRID_WORK_ARRANGEMENT_LABELS[v]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="jc-location-details">Location details</Label>
+            <Input
+              id="jc-location-details"
+              value={logistics.locationDetails}
+              onChange={(e) => onChange({ locationDetails: e.target.value })}
+              placeholder="City / region"
+              data-testid="jc-location-details"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="jc-hybrid">Hybrid arrangement</Label>
+            <Select
+              value={logistics.workArrangement || undefined}
+              onValueChange={(v) => onChange({ workArrangement: v })}
+            >
+              <SelectTrigger id="jc-hybrid" data-testid="jc-hybrid">
+                <SelectValue placeholder="Select arrangement" />
+              </SelectTrigger>
+              <SelectContent>
+                {HYBRID_WORK_ARRANGEMENT_VALUES.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {HYBRID_WORK_ARRANGEMENT_LABELS[v]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       ) : logistics.locationMode === 'Remote (In Country)' ||
         logistics.locationMode === 'Work From office' ? (

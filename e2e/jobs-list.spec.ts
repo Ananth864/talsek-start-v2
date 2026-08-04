@@ -15,7 +15,7 @@ test('member sees the Jobs list and can open a Job detail', async ({
   await page.getByRole('button', { name: /sign in/i }).click()
 
   await expect(page).toHaveURL(/\/dashboard/)
-  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible()
 
   const jobsList = page.getByTestId('jobs-list')
   await expect(jobsList).toBeVisible()
@@ -35,9 +35,11 @@ test('job search filters the Jobs list', async ({ page }) => {
   await page.getByLabel('Email').fill(process.env.E2E_EMAIL!)
   await page.getByLabel('Password').fill(process.env.E2E_PASSWORD!)
   await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible()
 
-  await page.getByLabel('Search jobs').fill('zzzz-no-such-job-zzzz')
+  // Search starts collapsed (icon button); expand before filling.
+  await page.getByTestId('jobs-search-toggle').click()
+  await page.getByTestId('jobs-search-input').fill('zzzz-no-such-job-zzzz')
   await expect(page.getByTestId('jobs-list')).toBeVisible()
   await expect(page.getByText(/no jobs match your search/i)).toBeVisible()
 })

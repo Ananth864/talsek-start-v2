@@ -177,7 +177,8 @@ test.describe('billing', () => {
 
       await page.getByTestId('billing-nav').click()
       await expect(page).toHaveURL(/\/billing/)
-      await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible()
+      // Source-faithful billing has no page H1 — tabs + current-plan card are the chrome.
+      await expect(page.getByTestId('billing-tab')).toBeVisible()
       await expect(page.getByTestId('current-plan-card')).toBeVisible()
       await expect(page.getByTestId('current-plan-name')).not.toHaveText(
         'No Plan',

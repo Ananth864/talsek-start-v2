@@ -16,20 +16,36 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard/)
 }
 
+/** Open a Job board and wait for stage tabs (async useJobStages). */
+async function openJobWithStages(page: Page) {
+  await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible()
+  const jobs = page.getByTestId('job-card')
+  await expect(jobs.first()).toBeVisible({ timeout: 15_000 })
+  const jobCount = await jobs.count()
+  for (let i = 0; i < jobCount; i++) {
+    await jobs.nth(i).click()
+    await expect(page).toHaveURL(/jobId=/)
+    await expect(page.getByTestId('candidates-list')).toBeVisible()
+    const firstTab = page.getByTestId('stage-tab').first()
+    try {
+      await expect(firstTab).toBeVisible({ timeout: 10_000 })
+      return
+    } catch {
+      // Try next Job if this one has no stages or the query failed.
+    }
+  }
+  throw new Error('No E2E Job has pipeline stages configured')
+}
+
 test('selecting a Job shows its candidate board grouped by Hiring Stage', async ({
   page,
 }) => {
   await signIn(page)
-  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
+  await openJobWithStages(page)
 
-  const firstJob = page.getByTestId('job-card').first()
-  await expect(firstJob).toBeVisible()
-  await firstJob.click()
-  await expect(page).toHaveURL(/jobId=/)
-
-  await expect(page.getByTestId('candidates-list')).toBeVisible()
   await expect(page.getByTestId('stage-tabs')).toBeVisible()
   const stageTabs = page.getByTestId('stage-tab')
+  await expect(stageTabs.first()).toBeVisible({ timeout: 15_000 })
   const tabCount = await stageTabs.count()
   expect(tabCount).toBeGreaterThan(0)
 
@@ -38,8 +54,10 @@ test('selecting a Job shows its candidate board grouped by Hiring Stage', async 
   )
   await expect(selectedTabs).toHaveCount(1)
 
+  // Source-faithful board chrome: Bulk Action + Filter only (no board search).
   await expect(page.getByTestId('fit-filter')).toBeVisible()
-  await expect(page.getByTestId('candidate-search')).toBeVisible()
+  await expect(page.getByTestId('bulk-action-menu')).toBeVisible()
+  await expect(page.getByTestId('candidate-search')).toHaveCount(0)
 
   const cards = page.getByTestId('candidate-card')
   const cardCount = await cards.count()
@@ -66,14 +84,14 @@ test('opening a candidate from the board shows the full profile dialog (#7)', as
   page,
 }) => {
   await signIn(page)
-  await page.getByTestId('job-card').first().click()
-  await expect(page).toHaveURL(/jobId=/)
-  await expect(page.getByTestId('candidates-list')).toBeVisible()
+  await openJobWithStages(page)
 
   const cards = page.getByTestId('candidate-card')
   const cardCount = await cards.count()
   if (cardCount === 0) {
-    await expect(page.getByText(/no candidates in this stage/i)).toBeVisible()
+    await expect(
+      page.getByText(/no candidates (in this stage|match this filter)/i),
+    ).toBeVisible()
     return
   }
 

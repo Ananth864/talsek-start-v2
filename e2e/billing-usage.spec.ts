@@ -125,7 +125,8 @@ test.describe('billing usage tab', () => {
           job_id: job.id,
           job_application_id: applicationId,
           candidate_id: candidateId,
-          token: `e2e-usage-${sessionId.slice(0, 8)}`,
+          // DB column is uuid — do not use a non-uuid string prefix.
+          token: randomUUID(),
           expires_at: expiresAt,
           status: 'completed',
           interview_context: {},
@@ -176,16 +177,21 @@ test.describe('billing usage tab', () => {
 
       await signIn(page)
       await page.goto('/billing')
-      await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible()
+      // Source-faithful billing has no page H1 — tabs + current-plan card are the chrome.
+      await expect(page.getByTestId('billing-tab')).toBeVisible()
+      await expect(page.getByTestId('current-plan-card')).toBeVisible()
 
       await page.getByTestId('usage-tab').click()
-      await expect(page.getByTestId('usage-panel')).toBeVisible()
+      await expect(page.getByTestId('usage-panel')).toBeVisible({
+        timeout: 15_000,
+      })
       await expect(page.getByTestId('usage-daily-chart')).toBeVisible()
       await expect(page.getByTestId('usage-service-chart')).toBeVisible()
       await expect(page.getByTestId('usage-job-table')).toBeVisible()
 
       await expect(page.getByText('Daily Credit Usage')).toBeVisible()
-      await expect(page.getByText('Usage by Service')).toBeVisible()
+      // Source-faithful copy (not "Usage by Service").
+      await expect(page.getByText('Usage by Category')).toBeVisible()
       await expect(page.getByText('Credits Used per Job')).toBeVisible()
 
       // Totals include any pre-existing company usage — assert at least our seed.

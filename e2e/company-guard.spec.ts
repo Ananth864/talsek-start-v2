@@ -69,7 +69,8 @@ test.describe('dashboard company guard', () => {
       await expect(
         page.getByRole('heading', { name: /complete your setup/i }),
       ).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Jobs' })).not.toBeVisible()
+      // Visible Jobs chrome is gated; the page may still mount an sr-only H1.
+      await expect(page.getByTestId('jobs-list')).toHaveCount(0)
 
       const marker = `E2E Guard Co ${Date.now()}`
       await page.getByLabel(/company name/i).fill(marker)
@@ -79,9 +80,10 @@ test.describe('dashboard company guard', () => {
         .getByRole('button', { name: /continue to dashboard/i })
         .click()
 
-      await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible({
+      await expect(page.getByTestId('jobs-list')).toBeVisible({
         timeout: 30_000,
       })
+      await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible()
       await expect(
         page.getByTestId('company-collection-dialog'),
       ).not.toBeVisible()

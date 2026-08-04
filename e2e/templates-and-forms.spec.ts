@@ -109,7 +109,7 @@ test.describe('reachout templates + form customization', () => {
     await page.goto('/form-settings')
     await expect(page).toHaveURL(/\/form-settings/)
     await expect(
-      page.getByRole('heading', { name: 'Customize Form' }),
+      page.getByRole('heading', { name: 'Customize Application Form' }),
     ).toBeVisible()
 
     const addGithub = page.getByTestId('add-question-github')
@@ -160,9 +160,15 @@ test.describe('reachout templates + form customization', () => {
     const selectedCard = page.getByTestId('job-card').and(
       page.locator('[aria-pressed="true"]'),
     )
-    await expect(selectedCard).toBeVisible()
-    await selectedCard.getByTestId('open-job-details').click()
-    await expect(page.getByTestId('job-detail')).toBeVisible()
+    await expect(selectedCard).toBeVisible({ timeout: 15_000 })
+    // Dialog mounts only once the Jobs query has the row; retry the pencil
+    // click if the first press races the list hydrate.
+    await expect(async () => {
+      await selectedCard.getByTestId('open-job-details').click()
+      await expect(page.getByTestId('job-detail')).toBeVisible({
+        timeout: 3_000,
+      })
+    }).toPass({ timeout: 20_000 })
     await page.getByTestId('configure-job-form').click()
     await expect(page.getByTestId('job-form-config-dialog')).toBeVisible()
 

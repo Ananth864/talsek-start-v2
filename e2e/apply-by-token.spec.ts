@@ -150,7 +150,7 @@ test('applicant applies by form token and pipeline activates the card', async ({
   test.setTimeout(120_000)
 
   await signIn(page)
-  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your Jobs' })).toBeVisible()
 
   const firstJob = page.getByTestId('job-card').first()
   await expect(firstJob).toBeVisible()

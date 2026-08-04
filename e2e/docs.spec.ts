@@ -12,9 +12,8 @@ test('docs index redirects to get-started', async ({ page }) => {
   await expect(page).toHaveURL(/\/docs\/get-started\/?$/)
   await expect(page.getByTestId('docs-layout')).toBeVisible()
   await expect(page.getByTestId('docs-sidebar')).toBeVisible()
-  await expect(
-    page.getByRole('heading', { name: 'Get Started', exact: true }),
-  ).toBeVisible()
+  // Sidebar accordion also exposes a "Get Started" heading — scope to the page H1.
+  await expect(page.locator('h1', { hasText: 'Get Started' })).toBeVisible()
 })
 
 test('nested docs page renders with TOC sections', async ({ page }) => {

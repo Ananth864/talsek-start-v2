@@ -36,7 +36,11 @@ export const Route = createFileRoute('/_member')({
       })
     }
 
-    const profile = await context.queryClient.ensureQueryData({
+    // fetchQuery (not ensureQueryData): after company setup, router.invalidate()
+    // must await a refetch of a stale profile. ensureQueryData returns stale
+    // cache immediately and only refetches in the background, which leaves the
+    // company guard stuck open with company_id: null.
+    const profile = await context.queryClient.fetchQuery({
       queryKey: ['member-profile', user.id],
       queryFn: () => fetchMemberProfile(),
       staleTime: MEMBER_AUTH_STALE_MS,

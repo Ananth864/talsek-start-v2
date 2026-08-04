@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { CompanyCollectionModal } from '#/components/auth/company-collection-modal'
 import { completeCompanySetup } from '#/server/fn/company'
@@ -27,6 +28,7 @@ export function DashboardCompanyGuard({
   userName,
 }: DashboardCompanyGuardProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   if (!needsCompanySetup) {
     return <>{children}</>
@@ -39,7 +41,9 @@ export function DashboardCompanyGuard({
     await completeCompanySetup({
       data: { companyName, companySize },
     })
-    // Re-run beforeLoad so companyId flows into the Jobs query key.
+    // Drop the cached company-less profile so `_member` beforeLoad's fetchQuery
+    // cannot serve company_id: null after router.invalidate().
+    await queryClient.removeQueries({ queryKey: ['member-profile'] })
     await router.invalidate()
   }
 

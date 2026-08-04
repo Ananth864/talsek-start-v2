@@ -16,13 +16,18 @@ test('sign-up form validates and rejects a weak password client-side', async ({
   await page.getByLabel('First name').fill('E2E')
   await page.getByLabel('Last name').fill('Test')
   await page.getByLabel('Email').fill('e2e-signup@example.com')
-  await page.getByLabel('Password').fill('weakpass')
+  // Exact: Confirm password also matches getByLabel('Password').
+  await page.getByLabel('Password', { exact: true }).fill('weakpass')
+  // Confirm must be filled or native `required` blocks submit before JS rules.
+  await page.getByLabel('Confirm password').fill('weakpass')
 
-  // Native required-attr validation can satisfy required fields, but the weak
-  // password fails the client rule and shows the message without submitting.
+  // Weak password fails the client rule (needs upper + lower + digit) without a
+  // Supabase call.
   await page.getByRole('button', { name: /create account/i }).click()
   await expect(
-    page.getByText(/password must be at least 8 characters/i),
+    page.getByText(
+      /password must be at least 8 characters and include upper, lower, and a digit/i,
+    ),
   ).toBeVisible()
   // Still on /signup (no navigation, no Supabase call).
   await expect(page).toHaveURL(/\/signup/)
@@ -37,9 +42,12 @@ test('forgot-password is non-revealing for an unknown address', async ({
   await page.getByLabel('Email').fill('definitely-not-a-member-e2e@example.com')
   await page.getByRole('button', { name: /send reset link/i }).click()
 
-  // Same success card regardless of whether the address exists.
+  // Success chrome (copy appears twice; assert the unique heading + CTA).
   await expect(
-    page.getByText(/if an account exists/i),
+    page.getByRole('heading', { name: 'Check your email', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText(/if an account exists for this address/i),
   ).toBeVisible()
 })
 
