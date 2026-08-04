@@ -12,6 +12,10 @@ export default [
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/require-await': 'off',
       'pnpm/json-enforce-catalog': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
     },
   },
   {
