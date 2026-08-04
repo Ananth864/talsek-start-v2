@@ -17,8 +17,8 @@ type RunResumeExtractionResult = {
 
 /**
  * Resume Extraction AI op — ports
- * `supabase/functions/_shared/runResumeExtraction.ts`. Primary Gemini →
- * fallback OpenAI; PDF attached as a multimodal file part.
+ * `supabase/functions/_shared/runResumeExtraction.ts`. Primary OpenAI →
+ * fallback Gemini; PDF attached as a multimodal file part.
  */
 export async function runResumeExtraction(
   input: RunResumeExtractionInput,
@@ -29,8 +29,8 @@ export async function runResumeExtraction(
   } = input
 
   const result = await generateObjectWithRetry({
-    primaryModel: 'gemini',
-    fallbackModel: 'openai',
+    primaryModel: 'openai',
+    fallbackModel: 'gemini',
     schema: resumeExtractionSchema,
     operationName: 'Resume Extraction',
     messages: [

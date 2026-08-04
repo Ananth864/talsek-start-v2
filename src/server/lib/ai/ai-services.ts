@@ -36,7 +36,7 @@ type ProviderOptions = Record<string, Record<string, JSONValue>>
 export type AiProvider = 'openai' | 'grok' | 'gemini'
 
 function getModelName(provider: AiProvider): string {
-  if (provider === 'openai') return 'GPT-5 Mini'
+  if (provider === 'openai') return 'GPT-5.6 Luna'
   if (provider === 'gemini') return 'Gemini 2.5 Flash'
   return 'Grok-4 Fast'
 }
@@ -57,7 +57,7 @@ function getModelByProvider(provider: AiProvider) {
       apiKey: serverEnv.OPENAI_API_KEY,
       baseURL: serverEnv.OPENAI_BASE_URL,
     })
-    return openai('gpt-5-mini')
+    return openai('gpt-5.6-luna')
   }
   if (provider === 'gemini') {
     if (!serverEnv.GEMINI_API_KEY) {
