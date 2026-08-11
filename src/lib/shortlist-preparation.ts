@@ -1,20 +1,21 @@
 /**
  * Deep Shortlist preparation module — owns the Member-facing preparation
- * policy for Shortlisting a single Job Application: permission, credits,
- * Reachout Template readiness, personalization, interview-link requirements,
- * editable confirmation validation, and send-outcome copy.
+ * policy for Shortlisting: permission, credits, Reachout Template readiness,
+ * personalization (single) / template-with-placeholders (bulk), interview-link
+ * requirements, editable confirmation validation, and send-outcome copy.
  *
- * Pure (no React, no network). The board-level hook (`useShortlistActions`)
- * holds the dialog state and the mutation, and delegates every policy
- * decision here. This is the expand step for the later cross-Job (#44) and
- * bulk (#45) migrations, which adopt the same module without redesign —
- * only their Job/Stages resolution strategy differs.
+ * Pure (no React, no network). Three React adapters delegate every policy
+ * decision here: the board-level single-app hook (`useShortlistActions`), the
+ * cross-Job Candidates search hook (`useCrossJobShortlistActions`, #45), and the
+ * bulk path in `CandidatesList` (#44). Each differs only in its Job/Stages
+ * resolution strategy; the gate policy and copy are single-sourced here.
  *
- * The server-side Reachout send-and-advance path (`sendReachoutAndAdvance` /
- * `shortlistJobApplication`) remains authoritative for delivery, Interview
- * Session creation, persistence, and Job Stage advancement (ADR-0023). This
- * module is the Member-facing UX gate only; the server function re-checks
- * `canSendReachout` and template validity authoritatively.
+ * The server-side Reachout send-and-advance paths (`sendReachoutAndAdvance` /
+ * `shortlistJobApplication` / `bulkShortlistJobApplications`) remain
+ * authoritative for delivery, Interview Session creation, persistence, and Job
+ * Stage advancement (ADR-0023 / ADR-0024). This module is the Member-facing UX
+ * gate only; the server functions re-check `canSendReachout` and template
+ * validity authoritatively.
  */
 import {
   generatePersonalizedEmail,
@@ -43,6 +44,13 @@ import type { JobWithCompanyRow } from '#/server/fn/jobs'
 export const DEFAULT_INTERVIEW_COST = 40
 
 /**
+ * Maximum number of Job Applications selectable for one bulk Shortlist send
+ * (source parity — `bulk-shortlist-candidates` cap). The server schema re-checks
+ * this authoritatively (ADR-0024 §1).
+ */
+export const BULK_SHORTLIST_MAX = 10
+
+/**
  * Member-facing copy for the Shortlist preparation policy. Single source of
  * truth so the board, the cross-job page, and bulk all phrase gates alike.
  */
@@ -53,6 +61,7 @@ export const SHORTLIST_COPY = {
     'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
   rejected: 'Rejected candidates cannot be shortlisted',
   finalStage: 'This candidate is already at the final stage.',
+  finalStageBulk: 'No further stage in this pipeline.',
   interviewLinkMissing:
     'Interview template must include {{interview_link}} variable. Please add it back to the message.',
   prepareFailed: 'Failed to prepare Reachout. Please try again.',
@@ -225,6 +234,140 @@ export function prepareShortlist(
   )
 
   return { kind: 'open-confirm', templateType, nextStage, personalized }
+}
+
+// ─── Bulk preparation gate ─────────────────────────────────────────────────
+
+/**
+ * Inputs to the bulk Shortlist preparation gate. Bulk operates on a batch of
+ * same-stage Job Applications (validated authoritatively by the server), so the
+ * gate resolves the next Stage and Template kind once from the shared stage
+ * position rather than per application. `selectedCount` drives the credit gate
+ * multiplier (ADR-0024 §2).
+ */
+export type BulkShortlistPreparationInput = {
+  canSendReachout: boolean
+  selectedCount: number
+  nextStage: StageInfo | null
+  templates: ShortlistTemplatesSnapshot | null
+  creditBalance: number
+  interviewCost: number
+  creditsLoading: boolean
+  ratesLoading: boolean
+}
+
+/**
+ * Discriminated outcome of the bulk preparation gate. Mirrors the single-app
+ * `ShortlistDecision` family but with two intentional differences that reflect
+ * bulk semantics (ADR-0024 §4):
+ *
+ *   - `open-confirm` carries the template subject/body with placeholders intact
+ *     (the server personalizes per candidate in the send loop), not a
+ *     pre-personalized email for one candidate.
+ *   - `block-insufficient-credits` carries `required` = `interviewCost *
+ *     selectedCount` so the modal can show the total deficit.
+ *
+ * The per-application gates (`application-missing`, `job-missing`,
+ * `block-rejected`) do not apply to the batch gate — the server validates each
+ * selected id authoritatively.
+ */
+export type BulkShortlistDecision =
+  | { kind: 'block-permission'; message: string }
+  | { kind: 'block-selection-cap'; message: string }
+  | { kind: 'block-final-stage'; message: string }
+  | { kind: 'wait-credits-loading' }
+  | { kind: 'block-insufficient-credits'; required: number }
+  | { kind: 'templates-not-loaded' }
+  | {
+      kind: 'open-template-setup'
+      templateType: TemplateKind
+      nextStage: StageInfo
+    }
+  | {
+      kind: 'open-confirm'
+      templateType: TemplateKind
+      nextStage: StageInfo
+      subject: string
+      body: string
+    }
+
+/**
+ * Resolve the Member-facing bulk Shortlist decision for a batch of selected
+ * same-stage Job Applications.
+ *
+ * Gate order (mirrors `prepareShortlist` minus the per-application gates):
+ *   permission → selection cap → stage → credits (interview only, × count)
+ *   → template readiness → open-confirm (template with placeholders).
+ *
+ * Returns `templates-not-loaded` when the Templates query has not loaded yet
+ * so the caller can refetch and re-resolve — same contract as the single gate.
+ */
+export function prepareBulkShortlist(
+  input: BulkShortlistPreparationInput,
+): BulkShortlistDecision {
+  const {
+    canSendReachout,
+    selectedCount,
+    nextStage,
+    templates,
+    creditBalance,
+    interviewCost,
+    creditsLoading,
+    ratesLoading,
+  } = input
+
+  if (!canSendReachout) {
+    return { kind: 'block-permission', message: SHORTLIST_COPY.noPermission }
+  }
+
+  if (selectedCount > BULK_SHORTLIST_MAX) {
+    return {
+      kind: 'block-selection-cap',
+      message: `You can only shortlist up to ${BULK_SHORTLIST_MAX} candidates at a time. Please deselect ${selectedCount - BULK_SHORTLIST_MAX} candidate(s).`,
+    }
+  }
+
+  if (!nextStage) {
+    return { kind: 'block-final-stage', message: SHORTLIST_COPY.finalStageBulk }
+  }
+
+  const templateType = templateKindForNextStage(nextStage.name)
+
+  if (templateType === 'interview') {
+    if (creditsLoading || ratesLoading) {
+      return { kind: 'wait-credits-loading' }
+    }
+    const totalCost = interviewCost * selectedCount
+    if (creditBalance < totalCost) {
+      return { kind: 'block-insufficient-credits', required: totalCost }
+    }
+  }
+
+  if (!templates) {
+    return { kind: 'templates-not-loaded' }
+  }
+
+  const configured =
+    templateType === 'interview'
+      ? templates.hasInterviewTemplate
+      : templates.hasReachoutTemplate
+  if (!configured) {
+    return { kind: 'open-template-setup', templateType, nextStage }
+  }
+
+  const template =
+    templateType === 'interview' ? templates.interview : templates.reachout
+  if (!template || !hasConfiguredTemplate(template)) {
+    return { kind: 'open-template-setup', templateType, nextStage }
+  }
+
+  return {
+    kind: 'open-confirm',
+    templateType,
+    nextStage,
+    subject: template.subject,
+    body: template.body,
+  }
 }
 
 // ─── Confirmation validation ──────────────────────────────────────────────

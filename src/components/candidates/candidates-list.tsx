@@ -15,10 +15,16 @@ import {
   filterCandidates,
 } from '#/lib/candidate-filters'
 import type { CandidateFilter } from '#/lib/candidate-filters'
+import { templateKindForNextStage } from '#/lib/email-template-engine'
 import {
-  hasConfiguredTemplate,
-  templateKindForNextStage,
-} from '#/lib/email-template-engine'
+  describeShortlistPrepareError,
+  prepareBulkShortlist,
+  validateShortlistConfirmation,
+} from '#/lib/shortlist-preparation'
+import type {
+  BulkShortlistDecision,
+  ShortlistTemplatesSnapshot,
+} from '#/lib/shortlist-preparation'
 import { parsedSummary } from '#/lib/parsed-candidate'
 import { Button } from '#/components/ui/button'
 import {
@@ -146,30 +152,50 @@ export function CandidatesList({
     else bulkState.selectAll(visibleIds)
   }
 
-  const openBulkShortlistDialog = async () => {
-    let data = templatesQuery.data
-    if (!data) {
-      const refreshed = await templatesQuery.refetch()
-      data = refreshed.data
-    }
-    const configured =
-      bulkTemplateType === 'interview'
-        ? Boolean(data?.hasInterviewTemplate)
-        : Boolean(data?.hasReachoutTemplate)
-    const template =
-      bulkTemplateType === 'interview' ? data?.interview : data?.reachout
+  const resolveBulkPreparation = (
+    templates: ShortlistTemplatesSnapshot | null,
+  ): BulkShortlistDecision =>
+    prepareBulkShortlist({
+      canSendReachout,
+      selectedCount: bulkState.selectedCount,
+      nextStage,
+      templates,
+      creditBalance,
+      interviewCost,
+      creditsLoading,
+      ratesLoading,
+    })
 
-    if (!configured || !template || !hasConfiguredTemplate(template)) {
-      setIsBulkTemplateSetupOpen(true)
-      return
+  /**
+   * Translate a bulk preparation decision into React state effects. The deep
+   * module owns the policy and copy; this is the mechanical State bridge —
+   * the board-single equivalent lives in `useShortlistActions.applyDecision`.
+   */
+  const applyBulkDecision = (decision: BulkShortlistDecision) => {
+    switch (decision.kind) {
+      case 'open-confirm':
+        setBulkSubject(decision.subject)
+        setBulkBody(decision.body)
+        setIsBulkShortlistOpen(true)
+        break
+      case 'open-template-setup':
+        setIsBulkTemplateSetupOpen(true)
+        break
+      case 'block-insufficient-credits':
+        setBulkCreditsGate({ required: decision.required })
+        break
+      case 'block-permission':
+      case 'block-selection-cap':
+      case 'block-final-stage':
+        setBulkError(decision.message)
+        break
+      case 'wait-credits-loading':
+      case 'templates-not-loaded':
+        break
     }
-
-    setBulkSubject(template.subject)
-    setBulkBody(template.body)
-    setIsBulkShortlistOpen(true)
   }
 
-  const handleBulkConfirmClick = () => {
+  const handleBulkConfirmClick = async () => {
     setBulkError(null)
 
     if (bulkState.mode === 'selecting-reject') {
@@ -177,63 +203,42 @@ export function CandidatesList({
       return
     }
 
-    if (!canSendReachout) {
-      setBulkError(
-        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
-      )
-      return
-    }
-    if (bulkState.selectedCount > 10) {
-      setBulkError(
-        `You can only shortlist up to 10 candidates at a time. Please deselect ${bulkState.selectedCount - 10} candidate(s).`,
-      )
-      return
-    }
-    if (!nextStage) {
-      setBulkError('No further stage in this pipeline')
-      return
-    }
-    if (bulkTemplateType === 'interview') {
-      // Wait until balance/rates are known — never skip the paid-action gate.
-      if (creditsLoading || ratesLoading) return
-      const totalCost = interviewCost * bulkState.selectedCount
-      if (creditBalance < totalCost) {
-        setBulkCreditsGate({ required: totalCost })
+    let decision = resolveBulkPreparation(templatesQuery.data ?? null)
+
+    if (decision.kind === 'templates-not-loaded') {
+      try {
+        const refreshed = await templatesQuery.refetch()
+        decision = resolveBulkPreparation(refreshed.data ?? null)
+      } catch (err) {
+        setBulkError(describeShortlistPrepareError(err))
         return
       }
     }
 
-    void openBulkShortlistDialog()
+    applyBulkDecision(decision)
   }
 
   const handleBulkTemplateSaved = async () => {
     setIsBulkTemplateSetupOpen(false)
-    const refreshed = await templatesQuery.refetch()
-    const data = refreshed.data
-    const template =
-      bulkTemplateType === 'interview' ? data?.interview : data?.reachout
-    if (!template || !hasConfiguredTemplate(template)) return
-    setBulkSubject(template.subject)
-    setBulkBody(template.body)
-    setIsBulkShortlistOpen(true)
+    try {
+      const refreshed = await templatesQuery.refetch()
+      const decision = resolveBulkPreparation(refreshed.data ?? null)
+      applyBulkDecision(decision)
+    } catch (err) {
+      setBulkError(describeShortlistPrepareError(err))
+    }
   }
 
   const handleBulkShortlistConfirm = () => {
     if (!nextStage) return
-    if (!canSendReachout) {
-      setBulkError(
-        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
-      )
-      setIsBulkShortlistOpen(false)
-      return
-    }
-    if (
-      bulkTemplateType === 'interview' &&
-      !bulkBody.includes('{{interview_link}}')
-    ) {
-      setBulkError(
-        'Interview template must include {{interview_link}} variable. Please add it back to the message.',
-      )
+    const decision = validateShortlistConfirmation({
+      canSendReachout,
+      templateType: bulkTemplateType,
+      body: bulkBody,
+    })
+    if (decision.kind !== 'valid') {
+      setBulkError(decision.message)
+      if (decision.kind === 'block-permission') setIsBulkShortlistOpen(false)
       return
     }
 

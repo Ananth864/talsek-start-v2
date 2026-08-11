@@ -274,6 +274,158 @@ async function seedActiveApplication(jobId: string): Promise<{
   }
 }
 
+// ─── Bulk credits-gate helpers (#44) ──────────────────────────────────────
+
+type LedgerSnapshot = { id: string; amount_remaining: number }
+
+async function snapshotAndZeroCredits(
+  companyId: string,
+): Promise<LedgerSnapshot[]> {
+  const admin = adminClient()
+  const { data: lots, error } = await admin
+    .from('credit_ledger')
+    .select('id, amount_remaining')
+    .eq('company_id', companyId)
+  if (error) {
+    throw new Error(`Failed to read credit ledger: ${error.message}`)
+  }
+  const snapshot = (lots ?? []) as LedgerSnapshot[]
+  if (snapshot.length > 0) {
+    const { error: zeroError } = await admin
+      .from('credit_ledger')
+      .update({ amount_remaining: 0 })
+      .eq('company_id', companyId)
+    if (zeroError) {
+      throw new Error(`Failed to zero credits: ${zeroError.message}`)
+    }
+  }
+  return snapshot
+}
+
+async function restoreCredits(
+  companyId: string,
+  snapshot: LedgerSnapshot[],
+) {
+  const admin = adminClient()
+  for (const lot of snapshot) {
+    await admin
+      .from('credit_ledger')
+      .update({ amount_remaining: lot.amount_remaining })
+      .eq('id', lot.id)
+      .eq('company_id', companyId)
+  }
+}
+
+async function findPreInterviewStage(
+  companyId: string,
+): Promise<{ jobId: string; stageId: string }> {
+  const admin = adminClient()
+  const { data: rows, error } = await admin
+    .from('job_stages')
+    .select(
+      'id, job_id, stage_order, hiring_stage:hiring_stages(name), jobs!inner(company_id)',
+    )
+    .eq('jobs.company_id', companyId)
+    .order('stage_order', { ascending: true })
+  if (error) {
+    throw new Error(`Failed to load stages: ${error.message}`)
+  }
+
+  const byJob = new Map<
+    string,
+    { id: string; name: string; order: number }[]
+  >()
+  for (const row of rows ?? []) {
+    const hs = row.hiring_stage as
+      | { name?: string }
+      | { name?: string }[]
+      | null
+    const name = Array.isArray(hs) ? hs[0]?.name : hs?.name
+    if (!row.job_id || !name) continue
+    const arr = byJob.get(row.job_id) ?? []
+    arr.push({ id: row.id, name, order: row.stage_order })
+    byJob.set(row.job_id, arr)
+  }
+
+  for (const [jobId, stages] of byJob) {
+    const interviewIdx = stages.findIndex(
+      (s) => s.name === 'Screening Interview',
+    )
+    if (interviewIdx > 0) {
+      return { jobId, stageId: stages[interviewIdx - 1].id }
+    }
+  }
+  throw new Error(
+    'No Job with a stage before Screening Interview found for the E2E company',
+  )
+}
+
+async function seedCandidateAtStage(
+  jobId: string,
+  stageId: string,
+  marker: string,
+): Promise<string> {
+  const admin = adminClient()
+  const candidateId = randomUUID()
+  const candidateEmail = `e2e.bulk.credits.${candidateId.slice(0, 8)}@example.com`
+  const { error: candError } = await admin.from('candidates').insert({
+    id: candidateId,
+    email: candidateEmail,
+  })
+  if (candError) {
+    throw new Error(`Failed to seed candidate: ${candError.message}`)
+  }
+  const { error: appError } = await admin.from('job_applications').insert({
+    id: randomUUID(),
+    job_id: jobId,
+    candidate_id: candidateId,
+    current_stage_id: stageId,
+    candidate_name: marker,
+    status: 'active',
+    match_score: 20,
+    final_score: 80,
+    meets_all_non_negotiables: true,
+    preferred_requirements_matched: 1,
+    processing_source: 'form',
+    parsed_candidate_data: {
+      name: marker,
+      email: candidateEmail,
+      phone: 'not mentioned',
+      location: 'Remote',
+      current_role: 'Engineer',
+      total_experience_years: 3,
+      work_experience: [],
+      education: [],
+      technical_skills: [{ skill: 'TypeScript', justification: 'E2E' }],
+      soft_skills: [],
+      certifications: [],
+      summary: 'Seeded for bulk credits E2E.',
+      potential_concerns: [],
+      potential_concerns_questions: [],
+      career_level: 'mid',
+    },
+    ai_analysis: {
+      recommendation: 'GOOD_FIT',
+      individual_scores: {
+        role_responsibility_readiness_score: 70,
+        concerns_mitigation_score: 70,
+        prestige_score: 70,
+        overall_fit_score: 70,
+      },
+      rationale: 'E2E seed',
+      candidate_readiness: 'Ready',
+      strengths_for_role: ['TypeScript'],
+      potential_concerns: [],
+      preferred_requirements_analysis: { details: [] },
+      non_negotiables_analysis: { details: [] },
+    },
+  })
+  if (appError) {
+    throw new Error(`Failed to seed job application: ${appError.message}`)
+  }
+  return candidateEmail
+}
+
 test.describe('Bulk upload + bulk shortlist + bulk reject (#10 / #21)', () => {
   test('uploads a resume, bulk shortlists with Reachout, advances stage', async ({
     page,
@@ -451,5 +603,69 @@ test.describe('Bulk upload + bulk shortlist + bulk reject (#10 / #21)', () => {
         { timeout: 15_000 },
       )
       .toBe('rejected')
+  })
+
+  test('bulk interview shortlist blocks when credits are insufficient for the batch', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000)
+    const { companyId } = await ensureE2EPermsTemplateAndCredits()
+    const snapshot = await snapshotAndZeroCredits(companyId)
+
+    try {
+      const { jobId, stageId } = await findPreInterviewStage(companyId)
+      const email1 = await seedCandidateAtStage(
+        jobId,
+        stageId,
+        'E2E Bulk Credits A',
+      )
+      const email2 = await seedCandidateAtStage(
+        jobId,
+        stageId,
+        'E2E Bulk Credits B',
+      )
+
+      await signIn(page)
+      await page.goto(`/dashboard?jobId=${jobId}&stageId=${stageId}`)
+      await expect(page.getByTestId('candidates-list')).toBeVisible({
+        timeout: 30_000,
+      })
+      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(
+        () => {},
+      )
+
+      const card1 = page
+        .getByTestId('candidate-card')
+        .filter({ hasText: email1 })
+      const card2 = page
+        .getByTestId('candidate-card')
+        .filter({ hasText: email2 })
+      await expect(card1).toBeVisible({ timeout: 60_000 })
+      await expect(card2).toBeVisible({ timeout: 60_000 })
+
+      await page.getByTestId('bulk-action-menu').click()
+      await page.getByTestId('bulk-shortlist-enter').click()
+      await expect(page.getByTestId('bulk-action-confirm-bar')).toBeVisible()
+      await card1.getByTestId('candidate-bulk-select').click()
+      await card2.getByTestId('candidate-bulk-select').click()
+      await expect(page.getByTestId('bulk-action-confirm-bar')).toContainText(
+        /2 selected/,
+      )
+
+      // The credit/rates queries may still be loading on first paint; the
+      // bulk gate no-ops while they settle, then fires the blocking dialog.
+      const modal = page.getByTestId('insufficient-credits-modal')
+      for (let attempt = 0; attempt < 8; attempt++) {
+        await page.getByTestId('bulk-action-confirm').click()
+        if (await modal.isVisible().catch(() => false)) break
+        await page.waitForTimeout(750)
+      }
+      await expect(modal).toBeVisible({ timeout: 20_000 })
+      await expect(
+        page.getByTestId('insufficient-credits-required'),
+      ).not.toHaveText('0')
+    } finally {
+      await restoreCredits(companyId, snapshot)
+    }
   })
 })
