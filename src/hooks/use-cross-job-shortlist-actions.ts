@@ -6,14 +6,21 @@ import {
 import { useCreditBalance, useServiceRates } from '#/hooks/use-billing'
 import { useShortlistJobApplication } from '#/hooks/use-shortlist-job-application'
 import {
-  generatePersonalizedEmail,
-  hasConfiguredTemplate,
-  templateKindForNextStage,
-} from '#/lib/email-template-engine'
-import {
   currentStageName,
   nextStageForApplication,
 } from '#/lib/candidate-stage-navigation'
+import { templateKindForNextStage } from '#/lib/email-template-engine'
+import {
+  DEFAULT_INTERVIEW_COST,
+  describeShortlistPrepareError,
+  describeShortlistSendError,
+  prepareShortlist,
+  validateShortlistConfirmation,
+} from '#/lib/shortlist-preparation'
+import type {
+  ShortlistDecision,
+  ShortlistTemplatesSnapshot,
+} from '#/lib/shortlist-preparation'
 import type {
   JobApplicationRow,
   JobStageRow,
@@ -30,9 +37,16 @@ type UseCrossJobShortlistActionsParams = {
 }
 
 /**
- * Shortlist flow for the cross-job Candidates page — same Reachout confirm /
- * template-setup / credits gate as `useShortlistActions`, but resolves Job +
- * Job Stages per Job Application.
+ * Shortlist flow for the cross-Job Candidates page. Same preparation policy
+ * (permission, credits, Reachout Template readiness, personalization,
+ * interview-link requirements, editable confirmation, send-outcome copy) as the
+ * Candidate board — all owned by `src/lib/shortlist-preparation.ts` — but
+ * resolves the Job and ordered Job Stages per Job Application before
+ * preparation (ADR-0028 §4).
+ *
+ * Dialog state lives here, not on each CandidateCard, so Realtime/refetch
+ * remounts do not clear the confirm / template-setup modals mid-flow — same
+ * remount-survival contract as the board-level hook.
  */
 export function useCrossJobShortlistActions({
   applications,
@@ -60,7 +74,7 @@ export function useCrossJobShortlistActions({
     useCreditBalance(companyId)
   const { data: serviceRates, isLoading: ratesLoading } =
     useServiceRates(companyId)
-  const interviewCost = serviceRates?.screening_interview_cost ?? 40
+  const interviewCost = serviceRates?.screening_interview_cost ?? DEFAULT_INTERVIEW_COST
 
   const application = useMemo(
     () =>
@@ -70,7 +84,12 @@ export function useCrossJobShortlistActions({
     [applications, activeApplicationId],
   )
 
-  const job = application ? (jobsById.get(application.job_id) ?? null) : null
+  // Resolve the active application's Job + Stages per application (the only
+  // structural difference from the board-level hook, which holds one Job/Stages
+  // set for the whole board).
+  const job = application
+    ? (jobsById.get(application.job_id) ?? null)
+    : null
   const stages = application
     ? (stagesByJobId.get(application.job_id) ?? [])
     : []
@@ -95,188 +114,152 @@ export function useCrossJobShortlistActions({
     })
   }, [])
 
-  const openConfirmFor = useCallback(
-    (app: JobApplicationRow, subject: string, body: string) => {
-      setActiveApplicationId(app.id)
-      setMessageSubject(subject)
-      setMessageBody(body)
-      setIsShortlistModalOpen(true)
+  /**
+   * Resolve a preparation decision for an application against the current
+   * billing/template context, resolving the correct Job and ordered Job Stages
+   * for that application before delegating to the shared module. `templates` is
+   * a parameter (not captured) so the caller can substitute the
+   * freshly-refetched snapshot after a `templates-not-loaded` signal.
+   */
+  const resolvePreparation = useCallback(
+    (
+      app: JobApplicationRow | null,
+      templates: ShortlistTemplatesSnapshot | null,
+    ): ShortlistDecision => {
+      const appJob = app ? (jobsById.get(app.job_id) ?? null) : null
+      const appStages = app ? (stagesByJobId.get(app.job_id) ?? []) : []
+      return prepareShortlist({
+        application: app,
+        job: appJob,
+        stages: appStages,
+        canSendReachout,
+        templates,
+        creditBalance,
+        interviewCost,
+        creditsLoading,
+        ratesLoading,
+      })
     },
-    [],
+    [
+      jobsById,
+      stagesByJobId,
+      canSendReachout,
+      creditBalance,
+      interviewCost,
+      creditsLoading,
+      ratesLoading,
+    ],
+  )
+
+  /**
+   * Translate a preparation decision into React state effects. Identical to
+   * the board-level hook — the deep module owns the policy and copy; this is
+   * the mechanical State bridge.
+   */
+  const applyDecision = useCallback(
+    (decision: ShortlistDecision, applicationId: string) => {
+      switch (decision.kind) {
+        case 'open-confirm':
+          setActiveApplicationId(applicationId)
+          setMessageSubject(decision.personalized.subject)
+          setMessageBody(decision.personalized.body)
+          setIsShortlistModalOpen(true)
+          break
+        case 'open-template-setup':
+          setActiveApplicationId(applicationId)
+          setIsTemplateModalOpen(true)
+          break
+        case 'block-insufficient-credits':
+          setIsInsufficientCreditsModalOpen(true)
+          break
+        case 'application-missing':
+        case 'job-missing':
+        case 'block-permission':
+        case 'block-rejected':
+        case 'block-final-stage':
+          setErrorFor(applicationId, decision.message)
+          break
+        case 'wait-credits-loading':
+        case 'templates-not-loaded':
+          break
+      }
+    },
+    [setErrorFor],
   )
 
   const handleShortlistClick = useCallback(
     async (applicationId: string) => {
       clearErrorFor(applicationId)
-      const app = applications.find((a) => a.id === applicationId)
-      if (!app) {
-        setErrorFor(applicationId, 'Candidate is no longer in the results.')
-        return
-      }
+      const app = applications.find((a) => a.id === applicationId) ?? null
 
-      const appJob = jobsById.get(app.job_id)
-      if (!appJob) {
-        setErrorFor(applicationId, 'Could not resolve this candidate’s Job.')
-        return
-      }
+      // First resolution uses the current (possibly null) Templates snapshot.
+      // The credits gate runs before any Templates fetch, so a loading billing
+      // state returns `wait-credits-loading` without touching Templates.
+      let decision = resolvePreparation(app, templatesQuery.data ?? null)
 
-      if (!canSendReachout) {
-        setErrorFor(
-          applicationId,
-          'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
-        )
-        return
-      }
-
-      const appStages = stagesByJobId.get(app.job_id) ?? []
-      const target = nextStageForApplication(app, appStages)
-      if (!target || app.status === 'rejected') {
-        setErrorFor(
-          applicationId,
-          app.status === 'rejected'
-            ? 'Rejected candidates cannot be shortlisted'
-            : 'This candidate is already at the final stage.',
-        )
-        return
-      }
-
-      const kind = templateKindForNextStage(target.name)
-      if (kind === 'interview') {
-        if (creditsLoading || ratesLoading) return
-        if (creditBalance < interviewCost) {
-          setIsInsufficientCreditsModalOpen(true)
-          return
-        }
-      }
-
-      setActiveApplicationId(applicationId)
-      setPreparingId(applicationId)
-      try {
-        let data = templatesQuery.data
-        if (!data) {
+      if (decision.kind === 'templates-not-loaded') {
+        // Past the permission/stage/credits gates; load Templates then
+        // re-resolve. `activeApplicationId` is set before the await so the
+        // confirm/template-setup modals survive Realtime card remounts that
+        // may land while the fetch is in flight.
+        setActiveApplicationId(applicationId)
+        setPreparingId(applicationId)
+        try {
           const refreshed = await templatesQuery.refetch()
-          data = refreshed.data
-        }
-        const configured =
-          kind === 'interview'
-            ? Boolean(data?.hasInterviewTemplate)
-            : Boolean(data?.hasReachoutTemplate)
-
-        if (!configured) {
-          setIsTemplateModalOpen(true)
+          decision = resolvePreparation(app, refreshed.data ?? null)
+        } catch (err) {
+          setErrorFor(applicationId, describeShortlistPrepareError(err))
           return
+        } finally {
+          setPreparingId((current) =>
+            current === applicationId ? null : current,
+          )
         }
-
-        const template =
-          kind === 'interview' ? data?.interview : data?.reachout
-        if (!template || !hasConfiguredTemplate(template)) {
-          setIsTemplateModalOpen(true)
-          return
-        }
-
-        const { subject, body } = generatePersonalizedEmail(
-          template,
-          {
-            candidate_name: app.candidate_name,
-            candidate_email: app.candidate.email,
-            match_score: app.match_score,
-            parsed_candidate_data: app.parsed_candidate_data,
-          },
-          {
-            title: appJob.title,
-            location: appJob.location,
-            company_name: appJob.companies.name,
-          },
-        )
-        openConfirmFor(app, subject, body)
-      } catch (err) {
-        setErrorFor(
-          applicationId,
-          err instanceof Error
-            ? err.message
-            : 'Failed to prepare Reachout. Please try again.',
-        )
-      } finally {
-        setPreparingId((current) =>
-          current === applicationId ? null : current,
-        )
       }
+
+      applyDecision(decision, applicationId)
     },
     [
       applications,
-      jobsById,
-      stagesByJobId,
-      canSendReachout,
-      creditsLoading,
-      ratesLoading,
-      creditBalance,
-      interviewCost,
       templatesQuery,
+      resolvePreparation,
+      applyDecision,
       clearErrorFor,
       setErrorFor,
-      openConfirmFor,
     ],
   )
 
   const handleTemplateSaved = useCallback(async () => {
     setIsTemplateModalOpen(false)
     if (!activeApplicationId) return
-    const app = applications.find((a) => a.id === activeApplicationId)
+    const app = applications.find((a) => a.id === activeApplicationId) ?? null
     if (!app) return
-    const appJob = jobsById.get(app.job_id)
-    if (!appJob) return
 
     const refreshed = await templatesQuery.refetch()
-    const data = refreshed.data
-    const appStages = stagesByJobId.get(app.job_id) ?? []
-    const target = nextStageForApplication(app, appStages)
-    const kind = templateKindForNextStage(target?.name)
-    const template =
-      kind === 'interview' ? data?.interview : data?.reachout
-    if (!template || !hasConfiguredTemplate(template)) return
-
-    const { subject, body } = generatePersonalizedEmail(
-      template,
-      {
-        candidate_name: app.candidate_name,
-        candidate_email: app.candidate.email,
-        match_score: app.match_score,
-        parsed_candidate_data: app.parsed_candidate_data,
-      },
-      {
-        title: appJob.title,
-        location: appJob.location,
-        company_name: appJob.companies.name,
-      },
-    )
-    openConfirmFor(app, subject, body)
+    // Re-run the full preparation gate against the freshly-saved template and
+    // route the outcome through the same State bridge as the click handler.
+    // This surfaces concurrent changes (e.g. a credit drain mid-setup opens
+    // the Insufficient Credits modal) instead of silently dropping the flow.
+    const decision = resolvePreparation(app, refreshed.data ?? null)
+    applyDecision(decision, app.id)
   }, [
     activeApplicationId,
     applications,
-    jobsById,
-    stagesByJobId,
     templatesQuery,
-    openConfirmFor,
+    resolvePreparation,
+    applyDecision,
   ])
 
   const handleShortlistConfirm = useCallback(() => {
     if (!application || !nextStage || !job) return
-    if (!canSendReachout) {
-      setErrorFor(
-        application.id,
-        'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
-      )
-      setIsShortlistModalOpen(false)
-      return
-    }
-    if (
-      templateType === 'interview' &&
-      !messageBody.includes('{{interview_link}}')
-    ) {
-      setErrorFor(
-        application.id,
-        'Interview template must include {{interview_link}} variable. Please add it back to the message.',
-      )
+    const decision = validateShortlistConfirmation({
+      canSendReachout,
+      templateType,
+      body: messageBody,
+    })
+    if (decision.kind !== 'valid') {
+      setErrorFor(application.id, decision.message)
+      if (decision.kind === 'block-permission') setIsShortlistModalOpen(false)
       return
     }
 
@@ -300,12 +283,7 @@ export function useCrossJobShortlistActions({
           setActiveApplicationId(null)
         },
         onError: (err) => {
-          setErrorFor(
-            application.id,
-            err instanceof Error
-              ? err.message
-              : 'Failed to shortlist candidate',
-          )
+          setErrorFor(application.id, describeShortlistSendError(err))
         },
       },
     )
@@ -315,8 +293,8 @@ export function useCrossJobShortlistActions({
     job,
     canSendReachout,
     templateType,
-    messageBody,
     messageSubject,
+    messageBody,
     shortlist,
     setErrorFor,
     clearErrorFor,
