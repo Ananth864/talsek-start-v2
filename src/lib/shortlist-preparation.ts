@@ -51,11 +51,18 @@ export const DEFAULT_INTERVIEW_COST = 40
 export const BULK_SHORTLIST_MAX = 10
 
 /**
+ * Member-facing surface that owns the Shortlist click. Affects only the
+ * "application disappeared" copy — board vs cross-Job search results.
+ */
+export type ShortlistSurface = 'board' | 'search'
+
+/**
  * Member-facing copy for the Shortlist preparation policy. Single source of
  * truth so the board, the cross-job page, and bulk all phrase gates alike.
  */
 export const SHORTLIST_COPY = {
   applicationMissingBoard: 'Candidate is no longer on the board.',
+  applicationMissingSearch: 'Candidate is no longer in the results.',
   jobMissing: 'Could not resolve this candidate\u2019s Job.',
   noPermission:
     'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
@@ -83,10 +90,10 @@ export type ShortlistTemplatesSnapshot = {
   hasInterviewTemplate: boolean
 }
 
-/** Minimal Job shape needed for Reachout personalization. */
+/** Minimal Job shape needed for Reachout personalization and confirm send. */
 export type ShortlistJobInput = Pick<
   JobWithCompanyRow,
-  'title' | 'location' | 'companies'
+  'id' | 'title' | 'location' | 'companies'
 >
 
 /** Inputs to the preparation gate. All fields are read-only snapshots. */
@@ -107,6 +114,11 @@ export type ShortlistPreparationInput = {
   interviewCost: number
   creditsLoading: boolean
   ratesLoading: boolean
+  /**
+   * Which Member surface owns the click. Defaults to `board`. Cross-Job search
+   * passes `search` so a vanished application uses search-specific copy.
+   */
+  surface?: ShortlistSurface
 }
 
 /**
@@ -135,6 +147,58 @@ export type ShortlistDecision =
       personalized: PersonalizedEmail
     }
 
+type TemplateReadiness =
+  | { kind: 'templates-not-loaded' }
+  | {
+      kind: 'open-template-setup'
+      templateType: TemplateKind
+      nextStage: StageInfo
+    }
+  | {
+      kind: 'ready'
+      templateType: TemplateKind
+      nextStage: StageInfo
+      template: ReachoutTemplate
+    }
+
+/**
+ * Shared template-readiness resolution for single and bulk Shortlist gates.
+ * Returns `templates-not-loaded` when the snapshot is still null so callers can
+ * refetch and re-resolve.
+ */
+function resolveTemplateReadiness(
+  templates: ShortlistTemplatesSnapshot | null,
+  nextStage: StageInfo,
+): TemplateReadiness {
+  const templateType = templateKindForNextStage(nextStage.name)
+
+  if (!templates) {
+    return { kind: 'templates-not-loaded' }
+  }
+
+  const configured =
+    templateType === 'interview'
+      ? templates.hasInterviewTemplate
+      : templates.hasReachoutTemplate
+  if (!configured) {
+    return { kind: 'open-template-setup', templateType, nextStage }
+  }
+
+  const template =
+    templateType === 'interview' ? templates.interview : templates.reachout
+  if (!template || !hasConfiguredTemplate(template)) {
+    return { kind: 'open-template-setup', templateType, nextStage }
+  }
+
+  return { kind: 'ready', templateType, nextStage, template }
+}
+
+function missingApplicationMessage(surface: ShortlistSurface): string {
+  return surface === 'search'
+    ? SHORTLIST_COPY.applicationMissingSearch
+    : SHORTLIST_COPY.applicationMissingBoard
+}
+
 // ─── Preparation gate ─────────────────────────────────────────────────────
 
 /**
@@ -162,12 +226,13 @@ export function prepareShortlist(
     interviewCost,
     creditsLoading,
     ratesLoading,
+    surface = 'board',
   } = input
 
   if (!application) {
     return {
       kind: 'application-missing',
-      message: SHORTLIST_COPY.applicationMissingBoard,
+      message: missingApplicationMessage(surface),
     }
   }
 
@@ -200,26 +265,13 @@ export function prepareShortlist(
     }
   }
 
-  if (!templates) {
-    return { kind: 'templates-not-loaded' }
-  }
-
-  const configured =
-    templateType === 'interview'
-      ? templates.hasInterviewTemplate
-      : templates.hasReachoutTemplate
-  if (!configured) {
-    return { kind: 'open-template-setup', templateType, nextStage }
-  }
-
-  const template =
-    templateType === 'interview' ? templates.interview : templates.reachout
-  if (!template || !hasConfiguredTemplate(template)) {
-    return { kind: 'open-template-setup', templateType, nextStage }
+  const readiness = resolveTemplateReadiness(templates, nextStage)
+  if (readiness.kind !== 'ready') {
+    return readiness
   }
 
   const personalized = generatePersonalizedEmail(
-    template,
+    readiness.template,
     {
       candidate_name: application.candidate_name,
       candidate_email: application.candidate.email,
@@ -233,7 +285,12 @@ export function prepareShortlist(
     },
   )
 
-  return { kind: 'open-confirm', templateType, nextStage, personalized }
+  return {
+    kind: 'open-confirm',
+    templateType: readiness.templateType,
+    nextStage: readiness.nextStage,
+    personalized,
+  }
 }
 
 // ─── Bulk preparation gate ─────────────────────────────────────────────────
@@ -343,30 +400,17 @@ export function prepareBulkShortlist(
     }
   }
 
-  if (!templates) {
-    return { kind: 'templates-not-loaded' }
-  }
-
-  const configured =
-    templateType === 'interview'
-      ? templates.hasInterviewTemplate
-      : templates.hasReachoutTemplate
-  if (!configured) {
-    return { kind: 'open-template-setup', templateType, nextStage }
-  }
-
-  const template =
-    templateType === 'interview' ? templates.interview : templates.reachout
-  if (!template || !hasConfiguredTemplate(template)) {
-    return { kind: 'open-template-setup', templateType, nextStage }
+  const readiness = resolveTemplateReadiness(templates, nextStage)
+  if (readiness.kind !== 'ready') {
+    return readiness
   }
 
   return {
     kind: 'open-confirm',
-    templateType,
-    nextStage,
-    subject: template.subject,
-    body: template.body,
+    templateType: readiness.templateType,
+    nextStage: readiness.nextStage,
+    subject: readiness.template.subject,
+    body: readiness.template.body,
   }
 }
 

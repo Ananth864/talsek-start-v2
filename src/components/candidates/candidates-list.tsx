@@ -17,6 +17,7 @@ import {
 import type { CandidateFilter } from '#/lib/candidate-filters'
 import { templateKindForNextStage } from '#/lib/email-template-engine'
 import {
+  DEFAULT_INTERVIEW_COST,
   describeShortlistPrepareError,
   prepareBulkShortlist,
   validateShortlistConfirmation,
@@ -85,7 +86,8 @@ export function CandidatesList({
     useCreditBalance(companyId)
   const { data: serviceRates, isLoading: ratesLoading } =
     useServiceRates(companyId)
-  const interviewCost = serviceRates?.screening_interview_cost ?? 40
+  const interviewCost =
+    serviceRates?.screening_interview_cost ?? DEFAULT_INTERVIEW_COST
 
   const [selectedFilter, setSelectedFilter] = useState<CandidateFilter>('all')
   const [isBulkShortlistOpen, setIsBulkShortlistOpen] = useState(false)
