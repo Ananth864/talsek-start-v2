@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test'
-import type { Page } from '@playwright/test'
-import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
+import {
+  ensureShortlistMemberReady,
+  shortlistAdminClient,
+  signInAsE2EMember,
+} from './helpers/shortlist'
 
 /**
  * #20 — single Shortlist sends Reachout (EMAIL_STUB) and advances stage.
@@ -10,133 +13,13 @@ import { randomUUID } from 'node:crypto'
  * `sent_reachout_emails` (stub observable) + resulting Job Stage.
  */
 
-async function signIn(page: Page) {
-  await page.goto('/signin')
-  await page.waitForLoadState('networkidle')
-  await page.getByLabel('Email').fill(process.env.E2E_EMAIL!)
-  await page.getByLabel('Password').fill(process.env.E2E_PASSWORD!)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page).toHaveURL(/\/dashboard/)
-}
-
-function adminClient() {
-  const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    throw new Error(
-      'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required for shortlist E2E',
-    )
-  }
-  return createClient(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-}
-
-async function ensureE2EPermsTemplateAndCredits(): Promise<{
-  companyId: string
-  userId: string
-}> {
-  const admin = adminClient()
-  const email = process.env.E2E_EMAIL!
-  const { data: profile, error } = await admin
-    .from('profiles')
-    .select('id, company_id, permissions')
-    .eq('email', email)
-    .maybeSingle()
-  if (error || !profile?.company_id) {
-    throw new Error(`E2E member profile not found: ${error?.message}`)
-  }
-
-  const { error: updateError } = await admin
-    .from('profiles')
-    .update({
-      role: 'admin',
-      must_change_password: false,
-      permissions: {
-        canCreateJob: true,
-        canSendReachout: true,
-        canManageTemplates: true,
-        canManageForms: true,
-      },
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', profile.id)
-  if (updateError) {
-    throw new Error(`Failed to seed permissions: ${updateError.message}`)
-  }
-
-  const companyId = profile.company_id
-  const { data: settingsRow } = await admin
-    .from('company_settings')
-    .select('company_id, settings')
-    .eq('company_id', companyId)
-    .maybeSingle()
-
-  const settings = (settingsRow?.settings ?? {}) as Record<string, unknown>
-  const reachout = {
-    subject: 'E2E Reachout {{job_title}}',
-    body: `Hi {{candidate_name}},\n\nWe would like to move forward for {{job_title}}.\n\nBest,\nE2E`,
-    reply_to_email: email,
-    created_at: new Date().toISOString(),
-  }
-  const interview = {
-    subject: 'E2E Interview {{job_title}}',
-    body: `Hi {{candidate_name}},\n\nPlease take the interview:\n{{interview_link}}\n\nBest,\nE2E`,
-    reply_to_email: email,
-    created_at: new Date().toISOString(),
-  }
-  const nextSettings = {
-    ...settings,
-    reachout_template: reachout,
-    interview_template: interview,
-  }
-
-  if (settingsRow) {
-    const { error: settingsError } = await admin
-      .from('company_settings')
-      .update({ settings: nextSettings })
-      .eq('company_id', companyId)
-    if (settingsError) {
-      throw new Error(`Failed to seed templates: ${settingsError.message}`)
-    }
-  } else {
-    const { error: insertError } = await admin.from('company_settings').insert({
-      company_id: companyId,
-      settings: nextSettings,
-    })
-    if (insertError) {
-      throw new Error(`Failed to insert templates: ${insertError.message}`)
-    }
-  }
-
-  const { data: balance } = await admin.rpc('get_company_credit_balance', {
-    p_company_id: companyId,
-  })
-  if (typeof balance !== 'number' || balance < 500) {
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 365)
-    const { error: creditError } = await admin.from('credit_ledger').insert({
-      company_id: companyId,
-      amount_initial: 1000,
-      amount_remaining: 1000,
-      expires_at: expiresAt.toISOString(),
-      source_type: 'topup',
-    })
-    if (creditError) {
-      throw new Error(`Failed to seed credits: ${creditError.message}`)
-    }
-  }
-
-  return { companyId, userId: profile.id }
-}
-
 async function seedActiveApplication(jobId: string): Promise<{
   applicationId: string
   candidateEmail: string
   firstStageId: string
   secondStageId: string
 }> {
-  const admin = adminClient()
+  const admin = shortlistAdminClient()
   const { data: job, error: jobError } = await admin
     .from('jobs')
     .select('id, company_id')
@@ -232,8 +115,8 @@ test.describe('Shortlist Reachout send (#20)', () => {
     page,
   }) => {
     test.setTimeout(120_000)
-    await ensureE2EPermsTemplateAndCredits()
-    await signIn(page)
+    await ensureShortlistMemberReady()
+    await signInAsE2EMember(page)
     await expect(page.getByTestId('candidates-list')).toBeVisible({
       timeout: 30_000,
     })
@@ -307,7 +190,7 @@ test.describe('Shortlist Reachout send (#20)', () => {
       page.getByTestId('candidate-card').filter({ hasText: candidateEmail }),
     ).toBeVisible({ timeout: 30_000 })
 
-    const admin = adminClient()
+    const admin = shortlistAdminClient()
     await expect
       .poll(
         async () => {

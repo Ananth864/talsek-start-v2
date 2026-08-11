@@ -24,6 +24,10 @@ export default [
       'prettier.config.js',
       // Orchestrator lives outside the app typecheck/lint graph (Bun globals).
       'scripts/**',
+      // Unit tests run under `bun test` (bun:test) — outside the app ESLint graph.
+      '**/*.test.ts',
+      // Behavioural E2E seeding helpers talk to untyped admin Supabase clients.
+      'e2e/helpers/**',
       // Supabase-generated / vendored types — not hand-maintained
       'src/integrations/supabase/database-generated.types.ts',
       'src/routeTree.gen.ts',

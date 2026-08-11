@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
+    "test:unit": "bun test src",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
     "e2e": "playwright test",
