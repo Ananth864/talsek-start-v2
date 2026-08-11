@@ -1,11 +1,10 @@
 # Regenerate shadcn fresh in the existing style; port the HSL theme verbatim
 
-The UI migrates to React 19 + Tailwind v4 by **regenerating shadcn components
-fresh** (via the CLI) into the new repo configured with the *old* style
-(`style: "default"`, `baseColor: "slate"`), and **porting the existing HSL theme
-token values verbatim** into v4's CSS-first `styles.css`. The new repo's
-shipped `new-york` / `zinc` / `oklch` defaults are discarded because they would
-silently change the product's appearance, violating the UX-preservation goal.
+We use React 19 + Tailwind v4 with **regenerated shadcn components** (via the
+CLI) configured in the legacy style (`style: "default"`, `baseColor: "slate"`),
+and **keep the existing HSL theme token values verbatim** in v4's CSS-first
+`styles.css`. The scaffold's shipped `new-york` / `zinc` / `oklch` defaults are
+discarded because they would silently change the product's appearance.
 
 ## Considered options
 

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TanStack Start — Server Functions Reference</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+</head>
+<body>
+  <article class="lesson">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Reference &middot; Cheat sheet</p>
+      <h1 class="lesson__title">Server functions</h1>
+      <p class="lesson__meta">
+        The <code>createServerFn</code> RPC pipeline. Companion to
+        <a href="../lessons/0003-server-functions.html">Lesson 0003</a>.
+        Primary sources:
+        <a href="https://tanstack.com/start/latest/docs/framework/react/guide/execution-model" target="_blank" rel="noopener">Execution Model</a>,
+        <a href="https://tanstack.com/start/latest/docs/framework/react/guide/middleware" target="_blank" rel="noopener">Middleware</a>,
+        <a href="https://tanstack.com/start/latest/docs/framework/react/guide/authentication-server-primitives" target="_blank" rel="noopener">Auth primitives</a>.
+      </p>
+    </header>
+
+    <p class="lead">A server function runs <strong>only on the server</strong> but is called from the client like a local function. The call becomes a network request (an RPC). It is Start's replacement for hand-rolled <code>fetch('/api/...')</code>.</p>
+
+    <h2><span class="num">The pipeline</span>method &rarr; validator &rarr; middleware &rarr; handler</h2>
+<pre><code><span class="tok-com">// from src/server/fn/jobs.ts</span>
+<span class="tok-key">export const</span> fetchJobs = <span class="tok-fn">createServerFn</span>({ method: <span class="tok-str">'GET'</span> })
+  .<span class="tok-fn">middleware</span>([authMiddleware])
+  .<span class="tok-fn">handler</span>(<span class="tok-key">async</span> ({ context }) =&gt; {
+    <span class="tok-key">const</span> { data, error } = <span class="tok-key">await</span> <span class="tok-fn">jobsQuery</span>(context.supabase)  <span class="tok-com">// client came from middleware</span>
+    <span class="tok-key">if</span> (error) <span class="tok-key">throw new</span> <span class="tok-fn">Error</span>(<span class="tok-str">`Failed: ${error.message}`</span>)
+    <span class="tok-key">return</span> data
+  })</code></pre>
+
+    <table class="tbl">
+      <thead><tr><th>Stage</th><th>Role</th><th>Required?</th></tr></thead>
+      <tbody>
+        <tr><td><code>{ method }</code></td><td><code>'GET'</code> for cacheable reads, <code>'POST'</code> (default) for mutations</td><td>Optional (defaults POST)</td></tr>
+        <tr><td><code>.validator(fn)</code></td><td>Parse + validate the caller's input; its return becomes typed <code>data</code> downstream</td><td>Optional</td></tr>
+        <tr><td><code>.middleware([...])</code></td><td>Run before the handler; enrich <code>context</code> (e.g. attach <code>supabase</code>, <code>session</code>)</td><td>Optional</td></tr>
+        <tr><td><code>.handler(({ data, context }) =&gt; ...)</code></td><td>The actual server logic. <strong>Server-only.</strong></td><td>Yes</td></tr>
+      </tbody>
+    </table>
+    <p>The simplest form skips validator + middleware — like <code>getAuthState = createServerFn({ method: 'GET' }).handler(async () =&gt; ({ user: await getVerifiedUser() }))</code> in <code>src/server/fn/auth.ts</code>.</p>
+
+    <h2><span class="num">Middleware</span>The real pattern from this repo</h2>
+<pre><code><span class="tok-com">// src/server/middleware/auth.ts</span>
+<span class="tok-key">export const</span> authMiddleware = <span class="tok-fn">createMiddleware</span>({ type: <span class="tok-str">'function'</span> }).<span class="tok-fn">server</span>(
+  <span class="tok-key">async</span> ({ next }) =&gt; {
+    <span class="tok-key">const</span> { client, session } = <span class="tok-key">await</span> <span class="tok-fn">requireUserClient</span>()
+    <span class="tok-key">return</span> <span class="tok-fn">next</span>({ context: { supabase: client, session } })
+  },
+)</code></pre>
+    <p>Now any function with <code>.middleware([authMiddleware])</code> gets <code>context.supabase</code> (a <strong>user-scoped</strong> client) and <code>context.session</code> in its handler — that's how <code>fetchJobs</code> reads <code>context.supabase</code> above. Company scoping is enforced by <strong>Row-Level Security</strong> on that client, not by a manual filter. Middleware can also have a <code>.client()</code> side (runs in the browser before the call).</p>
+
+    <h2><span class="num">Validators</span>Input parsing (zod)</h2>
+<pre><code><span class="tok-com">// src/server/fn/auth.ts</span>
+<span class="tok-key">export const</span> signIn = <span class="tok-fn">createServerFn</span>({ method: <span class="tok-str">'POST'</span> })
+  .<span class="tok-fn">validator</span>(z.<span class="tok-fn">object</span>({ email: z.<span class="tok-fn">string</span>().<span class="tok-fn">email</span>(), password: z.<span class="tok-fn">string</span>().<span class="tok-fn">min</span>(1) }))
+  .<span class="tok-fn">handler</span>(<span class="tok-key">async</span> ({ data }) =&gt; {
+    <span class="tok-com">// data is typed: { email: string; password: string }</span>
+    <span class="tok-key">return</span> client.auth.<span class="tok-fn">signInWithPassword</span>(data)
+  })</code></pre>
+    <p>The validator is both a <strong>guard</strong> (rejects bad input) and the <strong>source</strong> of the handler's typed <code>data</code>. No validator &rarr; no <code>data</code>.</p>
+
+    <h2><span class="num">The contrast</span>Server function vs API route</h2>
+    <p>Two ways to put code on the server. Both run server-side; the difference is the <em>interface</em>:</p>
+    <table class="tbl">
+      <thead><tr><th></th><th>Server function (<code>createServerFn</code>)</th><th>API route (<code>server.handlers</code>)</th></tr></thead>
+      <tbody>
+        <tr><td>Interface</td><td>A function call</td><td>A real URL + HTTP method</td></tr>
+        <tr><td>Types</td><td>End-to-end (input/output typed)</td><td>Manual (parse the <code>Request</code> yourself)</td></tr>
+        <tr><td>Use when</td><td>App code calling the server; no public URL needed</td><td>Webhooks, cron, third-party fetches</td></tr>
+        <tr><td><em>In this repo</em></td><td>All data access (<code>fetchJobs</code>, <code>createJob</code>, auth fns)</td><td>Webhooks (<code>api/webhooks/dodo</code> &amp; co.), cron (<code>api/cron/*</code>)</td></tr>
+      </tbody>
+    </table>
+    <p>The decision rule: <strong>does something <em>external</em> need a URL to hit?</strong> Dodo payments posting a webhook, or a cron scheduler pinging an endpoint &rarr; <strong>API route</strong>. Your components calling the server &rarr; <strong>server function</strong>.</p>
+<pre><code><span class="tok-com">// src/routes/api/webhooks/dodo.ts -&gt; an API route, because Dodo POSTs to a URL</span>
+<span class="tok-key">export const</span> Route = <span class="tok-fn">createFileRoute</span>(<span class="tok-str">'/api/webhooks/dodo'</span>)({
+  server: { handlers: { POST: <span class="tok-key">async</span> ({ request }) =&gt; { <span class="tok-com">/* verify + process */</span> } } },
+})</code></pre>
+
+    <h2><span class="num">Red flags</span>What to catch in AI output</h2>
+    <div class="callout is-bad">
+      <span class="callout__label">Mutation with no validator</span>
+      <p>A <code>POST</code> server function that takes input but has no <code>.validator()</code> — the handler's <code>data</code> is untyped/untrusted. Always validate mutation input (this repo does, with zod).</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Using <code>GET</code> for a mutation</span>
+      <p>A write (create/update/delete) on <code>{ method: 'GET' }</code>. GETs are cacheable and may be replayed/prefetched. Use POST (the default) for mutations — see <code>createJob</code> vs <code>fetchJobs</code>.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Secret at module scope <em>outside</em> the handler</span>
+      <p>Reading <code>process.env.SECRET</code> at the top of the file still leaks (Lesson 1). Inside the <code>.handler()</code> or <code>.server()</code> it's safe — that's the server-only boundary. Watch where the read sits.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Returning non-serialisable values</span>
+      <p>A server function returns across the network — it must be serialisable (JSON). Returning a Supabase client, a class instance, or a function breaks the call. Return plain data.</p>
+    </div>
+
+    <footer class="lesson__footer">
+      <p>
+        Back to <a href="../lessons/0003-server-functions.html">Lesson 0003 — Server functions</a>
+        &middot; <a href="./execution-model.html">Execution model ref</a>
+        &middot; <a href="./routing.html">Routing ref</a>
+        &middot; <a href="./glossary.html">Glossary</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

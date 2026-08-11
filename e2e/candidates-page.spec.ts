@@ -4,9 +4,8 @@ import path from 'node:path'
 import fs from 'node:fs'
 
 /**
- * Cross-job Candidates page (#27): filters compose with a result count;
- * Excel and PDF-ZIP exports download. Playwright suite is paused for the
- * port-completion batch — this spec is written for when E2E is re-enabled.
+ * Cross-job Candidates page: filters compose with a result count;
+ * Excel and PDF-ZIP exports download.
  */
 
 async function signIn(page: Page) {

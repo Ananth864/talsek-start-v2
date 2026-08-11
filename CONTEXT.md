@@ -4,8 +4,8 @@ Talsek is an AI-assisted applicant-tracking system (ATS): recruiters create
 **Jobs**, candidates apply via token-accessible **Forms** or sit AI
 **Interviews**, resumes are parsed and scored by an AI pipeline, and recruiters
 move applicants through hiring **Stages** with templated **Reachouts**. This
-glossary captures the project's canonical language for the port — it is a living
-document and grows as domains are built.
+glossary is the project's canonical language — a living document that grows with
+the product.
 
 ## People & access
 

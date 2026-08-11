@@ -1,9 +1,9 @@
 # Auth completion: PKCE SSR, verified guards, request-derived redirects
 
-Ticket #3 completes the Member auth surface (sign-up, OAuth, forgot/reset,
-confirm, protected-route guards) on top of the cookie-session seam from #2
-(`src/server/lib/supabase.ts`, ADR-1, ADR-4). This record captures the
-non-obvious API decisions relied on; it does not contradict 0001–0007.
+Member auth (sign-up, OAuth, forgot/reset, confirm, protected-route guards)
+runs on the cookie-session seam from ADR-0001 and ADR-0004
+(`src/server/lib/supabase.ts`). This record captures the non-obvious API
+decisions relied on.
 
 ## Decisions
 

@@ -1,7 +1,7 @@
 # Team invites & Member permissions
 
-Ticket #15 ports admin Team management: invite a Member (Resend email),
-resend a pending invite, and update `Profile.permissions` capability flags.
+Admin Team management: invite a Member (Resend email), resend a pending invite,
+and update `Profile.permissions` capability flags.
 
 ## Decisions
 
@@ -28,7 +28,7 @@ lookups and Auth Admin API remain service-role.
 
 ### 3. Small Resend seam in `src/server/lib/email.ts`
 
-Invite HTML/text + `sendInviteEmail` live in one module so #17 can deepen
+Invite HTML/text + `sendInviteEmail` live in one module so ADR-0022 can deepen
 notifications without a second outbound path. Env:
 `RESEND_API_KEY`, optional `RESEND_INVITE_FROM` / `REPLY_TO` / `SUBJECT`.
 

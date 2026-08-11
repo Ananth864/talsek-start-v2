@@ -1,13 +1,12 @@
 # Source-faithful layout structure + interaction UX (paint relaxed)
 
-Parent spec #34 re-raises the layout/UX bar after behavioural port completion
-(#18 / #19–#33). The Aug 2026 port-spec amendment had relaxed visual parity to
-ported design-system consistency, which left structure and interaction drift
-in-bounds for cutover. This record amends that bar for four surfaces only. It
-does **not** reopen behavioural capability gaps from #18 — behaviours are
-assumed present; this workstream tightens **how** they look and feel
-structurally. Vocabulary from `CONTEXT.md`. Does not contradict ADRs 0001–0029
-except by narrowing the Aug 2026 visual-parity relaxation as stated below.
+This record raises the layout/UX bar for four product surfaces after behavioural
+capability work completed. An earlier Aug 2026 amendment had relaxed visual
+parity to design-system consistency, which left structure and interaction drift
+in-bounds. This record amends that bar for Member shell, Member product, Auth,
+and Applicant only. It does **not** reopen behavioural capability gaps —
+behaviours are assumed present; this workstream tightens **how** they look and
+feel structurally. Vocabulary from `CONTEXT.md`.
 
 ## Decisions
 
@@ -58,18 +57,18 @@ companion, not a code seam).
 ### 6. Marketing and documentation remain out of scope
 
 Marketing landing, pricing, contact, legal, and documentation layout work are
-**out of scope** for this workstream and remain under the Aug 2026
-paint-consistency bar in `docs/spec/port-to-tanstack-start.md`. This amendment
-does not raise a source-faithful structure/UX bar for those surfaces.
+**out of scope** for this workstream and stay on the ported design-system
+paint bar only. This amendment does not raise a source-faithful structure/UX
+bar for those surfaces.
 
 ## Consequences
 
 - Agents must not re-apply the Aug 2026 “visual parity = design-system
   consistency” reading to Member shell, Member product, Auth, or Applicant —
   structure and interaction are source-faithful; paint stays relaxed.
-- Follow-on tickets under #34 implement the surfaces and the
-  `e2e/layout-parity/` suite; this ADR is the policy record only (ticket #35).
+- Follow-on layout-parity work implements the surfaces and the
+  `e2e/layout-parity/` suite; this ADR is the policy record only.
 - Existing behavioural Playwright specs stay the capability gate; layout/UX is
   a parallel gate.
 - Schema, RLS, Supabase project, and new product capabilities remain out of
-  scope (unchanged from the port spec).
+  scope for layout-parity work.

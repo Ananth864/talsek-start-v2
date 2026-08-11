@@ -1,0 +1,408 @@
+/* =========================================================================
+   TanStack Start lessons — shared stylesheet
+   A reusable component. Every lesson links this so the course looks like
+   one consistent set of pages, not a pile of one-offs.
+   Design notes: Tufte-leaning. System font stacks (works offline via file://).
+   Print-friendly. Respects dark mode via prefers-color-scheme.
+   ========================================================================= */
+
+:root {
+  --serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Book Antiqua",
+    Georgia, "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+
+  /* light palette — warm paper */
+  --bg: #fbfaf7;
+  --bg-soft: #f3f1ea;
+  --ink: #1d1d1f;
+  --ink-soft: #515154;
+  --ink-faint: #86827b;
+  --rule: #e4e0d6;
+  --accent: #7a4f2c;        /* walnut */
+  --accent-soft: #f0e7da;
+  --code-bg: #f4f1ea;
+  --ok: #2f6b3a;
+  --ok-bg: #e7f1e6;
+  --bad: #9a3232;
+  --bad-bg: #f6e6e3;
+  --warn: #8a5a00;
+  --warn-bg: #f7eed8;
+  --link: #7a4f2c;
+  --maxw: 42rem;            /* reading measure */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16161a;
+    --bg-soft: #1e1e24;
+    --ink: #ece9e3;
+    --ink-soft: #b8b4ac;
+    --ink-faint: #8a857c;
+    --rule: #2c2c33;
+    --accent: #d8a878;
+    --accent-soft: #2a231a;
+    --code-bg: #1e1e24;
+    --ok: #8fce99;
+    --ok-bg: #1d2a20;
+    --bad: #e69b9b;
+    --bad-bg: #2e1f1f;
+    --warn: #e3c178;
+    --warn-bg: #2a2417;
+    --link: #d8a878;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  font-feature-settings: "kern", "liga", "onum";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- layout shell -------------------------------------------------------- */
+
+.lesson {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 6rem;
+}
+
+.lesson__header {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2.25rem;
+}
+
+.lesson__eyebrow {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.5rem;
+}
+
+.lesson__title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+
+.lesson__meta {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  margin: 0;
+}
+.lesson__meta a { color: var(--ink-soft); }
+
+.lesson__nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  margin-top: 1.25rem;
+}
+.lesson__nav a {
+  color: var(--link);
+  text-decoration: none;
+}
+.lesson__nav a:hover { text-decoration: underline; }
+.lesson__nav .is-disabled { color: var(--ink-faint); pointer-events: none; }
+
+/* ---- typography ---------------------------------------------------------- */
+
+h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.4rem;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  margin: 2.5rem 0 0.75rem;
+}
+h2 .num {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 1.6rem 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration-color: var(--link); }
+
+strong { font-weight: 600; color: var(--ink); }
+em { font-style: italic; }
+
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.4rem; }
+li { margin-bottom: 0.4rem; }
+li > p { margin-bottom: 0.5rem; }
+
+hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 2.5rem 0;
+}
+
+/* lead paragraph */
+.lead {
+  font-size: 1.18rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin-bottom: 1.6rem;
+}
+
+/* ---- code ---------------------------------------------------------------- */
+
+code, kbd {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code-bg);
+  padding: 0.12em 0.38em;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+}
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  line-height: 1.55;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.84rem;
+}
+
+/* light syntax tokens (no highlighter lib — keep it simple, readable) */
+.tok-com { color: var(--ink-faint); font-style: italic; }
+.tok-key { color: var(--accent); }
+.tok-str { color: var(--ok); }
+.tok-fn  { color: var(--warn); }
+
+/* ---- callouts ------------------------------------------------------------ */
+
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 0.9rem 1.1rem;
+  border-radius: 0 6px 6px 0;
+  margin: 0 0 1.3rem;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout__label {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.callout.is-note  { border-color: var(--ink-faint); background: var(--bg-soft); }
+.callout.is-note  .callout__label { color: var(--ink-soft); }
+.callout.is-warn  { border-color: var(--warn); background: var(--warn-bg); }
+.callout.is-warn  .callout__label { color: var(--warn); }
+.callout.is-bad   { border-color: var(--bad); background: var(--bad-bg); }
+.callout.is-bad   .callout__label { color: var(--bad); }
+
+/* ---- tables -------------------------------------------------------------- */
+
+table.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  margin: 0 0 1.4rem;
+}
+table.tbl th, table.tbl td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.6rem 0.7rem;
+  border-bottom: 1px solid var(--rule);
+}
+table.tbl thead th {
+  font-weight: 600;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--rule);
+}
+table.tbl code { font-size: 0.82em; }
+
+/* ---- key terms (inline glossary seeds) ----------------------------------- */
+
+.dl-terms { margin: 0 0 1.3rem; padding-left: 0; }
+.dl-terms dt {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 0.7rem;
+}
+.dl-terms dd { margin: 0.15rem 0 0; padding-left: 0; color: var(--ink-soft); }
+
+/* ---- footer -------------------------------------------------------------- */
+
+.lesson__footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.lesson__footer a { color: var(--link); text-decoration: none; }
+.lesson__footer a:hover { text-decoration: underline; }
+
+/* ---- quiz widget (styles for assets/quiz.js) ----------------------------- */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 1.3rem 1.3rem 1.1rem;
+  background: var(--bg);
+  margin: 0 0 1.5rem;
+}
+.quiz__title {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 1rem;
+}
+.quiz__progress {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin-bottom: 0.6rem;
+}
+.quiz__q {
+  font-size: 1.04rem;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+.quiz__code {
+  margin: 0.4rem 0 1rem;
+}
+.quiz__options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+/* Equal-width buttons remove answer-length as a visual clue. */
+.quiz__options button {
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.5rem;
+  border: 1px solid var(--rule);
+  background: var(--bg-soft);
+  color: var(--ink);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+}
+.quiz__options button:hover { border-color: var(--accent); }
+.quiz__options button:active { transform: translateY(1px); }
+.quiz__options button.is-correct {
+  background: var(--ok-bg);
+  border-color: var(--ok);
+  color: var(--ok);
+  font-weight: 600;
+}
+.quiz__options button.is-wrong {
+  background: var(--bad-bg);
+  border-color: var(--bad);
+  color: var(--bad);
+  font-weight: 600;
+}
+.quiz__options button:disabled { cursor: default; }
+
+.quiz__feedback {
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  min-height: 1rem;
+  margin-bottom: 0.9rem;
+}
+.quiz__feedback strong { color: var(--ink); }
+
+.quiz__actions { display: flex; gap: 0.6rem; align-items: center; }
+.quiz__btn {
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  padding: 0.5rem 1rem;
+  border-radius: 7px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  font-weight: 600;
+}
+.quiz__btn:disabled { opacity: 0.4; cursor: default; }
+.quiz__btn--ghost {
+  background: transparent;
+  color: var(--accent);
+}
+.quiz__score {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.quiz__score b { color: var(--accent); }
+
+.quiz__done {
+  font-family: var(--sans);
+  text-align: center;
+}
+.quiz__done .quiz__score { font-size: 1rem; margin-bottom: 0.9rem; }
+
+/* ---- print --------------------------------------------------------------- */
+
+@media print {
+  body { background: #fff; color: #000; font-size: 11pt; }
+  .lesson { max-width: none; padding: 0; }
+  .lesson__nav, .quiz__actions { display: none; }
+  .quiz { break-inside: avoid; }
+  a { color: #000; text-decoration: underline; }
+  pre, code { border-color: #ccc; }
+}

@@ -1,9 +1,9 @@
 # Bulk Reachout + bulk reject
 
-Ticket #21 completes bulk board actions: Shortlist sends a Reachout to every
-selected Job Application (capped at 10, with a client credit check for
-interview), and Members can bulk-reject selected rows after confirmation.
-Supersedes ADR-0016 §4 (stage-only bulk shortlist).
+Bulk board actions: Shortlist sends a Reachout to every selected Job Application
+(capped at 10, with a client credit check for interview), and Members can
+bulk-reject selected rows after confirmation. Supersedes ADR-0016 §4
+(stage-only bulk shortlist).
 
 ## Decisions
 
@@ -18,7 +18,7 @@ Live Resend keeps a 500ms delay between sends; `EMAIL_STUB` skips the delay.
 
 ### 2. Client credit gate for interview bulk Shortlist
 
-Matching source `CandidatesList` and single Shortlist (#20): when the next
+Matching source `CandidatesList` and single Shortlist (ADR-0023): when the next
 Hiring Stage implies the interview template, the UI blocks open if
 `creditBalance < interviewCost * selectedCount`. Charge still happens at
 interview start — the gate is UX, not a server ledger write.

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TanStack Start — Execution Model Reference</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+</head>
+<body>
+  <article class="lesson">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Reference &middot; Cheat sheet</p>
+      <h1 class="lesson__title">The Execution Model</h1>
+      <p class="lesson__meta">
+        Where TanStack Start code runs. Companion to
+        <a href="../lessons/0001-execution-model.html">Lesson 0001</a>.
+        Primary source:
+        <a href="https://tanstack.com/start/latest/docs/framework/react/guide/execution-model" target="_blank" rel="noopener">Execution Model guide</a>.
+      </p>
+    </header>
+
+    <p class="lead">One sentence to remember: <strong>everything is isomorphic by default</strong> — it runs in both the server and client bundles unless you explicitly constrain it. The APIs below are how you constrain it.</p>
+
+    <h2><span class="num">Core principle</span>Isomorphic by default</h2>
+    <p>Code with no special marker runs on <strong>both</strong> server and client. That includes a surprising amount — plain helper functions, business logic, and <strong>route <code>loader</code>s</strong> (server during the initial SSR request, client during later navigations).</p>
+
+    <h2><span class="num">The boundary</span>Two environments</h2>
+    <table class="tbl">
+      <thead>
+        <tr><th>Server</th><th>Client (browser)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Node (or edge) runtime</td>
+          <td>Browser runtime</td>
+        </tr>
+        <tr>
+          <td>File system, databases, <code>process.env</code>, secrets</td>
+          <td>DOM, <code>localStorage</code>, user events, browser APIs</td>
+        </tr>
+        <tr>
+          <td>During SSR, on server-function (RPC) calls, at build</td>
+          <td>After hydration, during client-side navigation</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2><span class="num">Control APIs</span>Pinning code to one side</h2>
+    <table class="tbl">
+      <thead>
+        <tr><th>API</th><th>Runs on</th><th>If called on the other side</th><th>Use for</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>createServerFn()</code></td>
+          <td>Server</td>
+          <td>Client call → a network request (RPC)</td>
+          <td>Data fetch / mutation the client can invoke</td>
+        </tr>
+        <tr>
+          <td><code>createServerOnlyFn(fn)</code></td>
+          <td>Server</td>
+          <td>Throws</td>
+          <td>Server utilities (e.g. read a secret)</td>
+        </tr>
+        <tr>
+          <td><code>createClientOnlyFn(fn)</code></td>
+          <td>Client</td>
+          <td>Throws</td>
+          <td>Browser utilities (<code>localStorage</code>)</td>
+        </tr>
+        <tr>
+          <td><code>createIsomorphicFn()</code></td>
+          <td>Both — different impl each</td>
+          <td>—</td>
+          <td>Same contract, env-specific body</td>
+        </tr>
+        <tr>
+          <td><code>&lt;ClientOnly&gt;</code></td>
+          <td>Client</td>
+          <td>Renders a fallback during SSR</td>
+          <td>Components needing browser APIs</td>
+        </tr>
+        <tr>
+          <td><code>useHydrated()</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>Boolean: <code>false</code> until hydration completes</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout is-note">
+      <span class="callout__label">Why some take <code>(fn)</code> and others don't</span>
+      <p>
+        The <strong>&ldquo;Only&rdquo;</strong> variants — <code>createServerOnlyFn(fn)</code>,
+        <code>createClientOnlyFn(fn)</code> — are <em>simple wrappers</em>: they pin one
+        function to one side and crash on the other. Nothing to configure, so you hand them
+        the function directly. <code>createServerFn()</code> and <code>createIsomorphicFn()</code>
+        take <em>no</em> fn — they are <strong>builders</strong> you chain
+        (<code>.validator().middleware().handler()</code> or <code>.server().client()</code>).
+        Rule of thumb: <strong>&ldquo;Only&rdquo; = wrapper (takes fn); everything else = builder.</strong>
+      </p>
+    </div>
+
+    <h2><span class="num">Don't confuse</span>Loaders vs <code>create*Fn</code></h2>
+    <p>
+      These are <strong>different categories</strong>, not alternatives. A common mistake is
+      to treat them as rival ways to fetch data.
+    </p>
+    <table class="tbl">
+      <thead><tr><th></th><th>Route <code>loader</code></th><th><code>createServerFn</code></th></tr></thead>
+      <tbody>
+        <tr><td><strong>What it is</strong></td>
+          <td>A route option — the &ldquo;fetch this route's data before it renders&rdquo; hook (you know this from React Router)</td>
+          <td>An execution-boundary marker — a function guaranteed to run on the server, callable from anywhere</td></tr>
+        <tr><td><strong>Answers which question</strong></td>
+          <td><em>When</em> in the lifecycle do we load data? (on navigation)</td>
+          <td><em>Where</em> does this code run? (server only)</td></tr>
+        <tr><td><strong>Tied to routing?</strong></td>
+          <td>Yes — lives on a route</td>
+          <td>No — call it from a loader, a click handler, anywhere</td></tr>
+        <tr><td><strong>Runs on</strong></td>
+          <td><strong>Both</strong> (isomorphic: server on SSR, client on navigation)</td>
+          <td>Server only</td></tr>
+      </tbody>
+    </table>
+    <p>
+      The idiomatic pattern composes them: the <strong>loader</strong> (lifecycle) <em>calls</em> a
+      <strong>server function</strong> (safe server access). Putting DB or
+      <code>process.env</code> code <em>directly</em> in a loader is the anti-pattern below —
+      because the loader runs in the browser too.
+    </p>
+
+    <h2><span class="num">File-level</span>Import protection</h2>
+    <p>Mark a whole file so its imports can never leak across the boundary:</p>
+    <ul>
+      <li>Filename suffix: <code>*.server.ts</code> / <code>*.client.ts</code></li>
+      <li>Or a side-effect import at the top:
+        <code>import '@tanstack/react-start/server-only'</code> (or <code>client-only</code>)</li>
+    </ul>
+    <p>Both markers in one file is an error. See the
+      <a href="https://tanstack.com/start/latest/docs/framework/react/guide/import-protection" target="_blank" rel="noopener">Import Protection guide</a>.</p>
+
+    <h2><span class="num">Red flags</span>What to catch in AI output</h2>
+    <div class="callout is-bad">
+      <span class="callout__label">Secret read at module scope</span>
+      <p><code>const KEY = process.env.SECRET</code> at the top of a module.</p>
+      <p><strong>Why it leaks.</strong> <code>process.env</code> is a Node API, yes — but the
+        <em>line of code that reads it</em> sits in an isomorphic module, so the module is shipped
+        to the <strong>client bundle</strong> too. Two things can then happen to that line in the
+        browser: the bundler statically replaces <code>process.env.SECRET</code> with the literal
+        secret string (the leak — it's now plain text in your client JS), or it leaves the
+        reference and the browser throws <code>process is not defined</code>. Both wrong.
+        (On edge SSR runtimes there's a third problem: env is injected per-request, so a
+        module-scope read runs before the env exists and is <code>undefined</code> even on the server.)</p>
+      <p><strong>Why the fix works.</strong> Wrapping the read in <code>createServerOnlyFn</code>
+        (or putting it inside a <code>.handler()</code> / middleware) marks that code
+        <strong>server-only</strong> &rarr; import protection <em>strips it from the client bundle
+        entirely</em>. The read now happens at <em>call time, on the server</em> — it never reaches
+        the browser. ⚠️ Moving it inside a <strong>loader does not fix it</strong>: loaders are
+        isomorphic, so the line still runs in the browser.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Assuming a loader is server-only</span>
+      <p>A route <code>loader</code> that touches <code>process.env</code> or a DB connection directly. Loaders are isomorphic — that code also runs in the browser. <strong>Fix:</strong> have the loader call a <code>createServerFn</code>.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Hydration mismatch</span>
+      <p>Rendering time/random/DOM-dependent values straight into markup. Server and client produce different HTML → React warns and re-renders. <strong>Fix:</strong> compute in <code>useEffect</code> or gate with <code>useHydrated()</code>.</p>
+    </div>
+
+    <h2><span class="num">Decision guide</span>Which side?</h2>
+    <table class="tbl">
+      <thead><tr><th>Pick</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Server-only</strong></td><td>Secrets, file system, DB, external API keys</td></tr>
+        <tr><td><strong>Client-only</strong></td><td>DOM, <code>localStorage</code>, geolocation, analytics</td></tr>
+        <tr><td><strong>Isomorphic</strong></td><td>Formatting, business logic, shared utils, route loaders</td></tr>
+      </tbody>
+    </table>
+
+    <footer class="lesson__footer">
+      <p>
+        Back to <a href="../lessons/0001-execution-model.html">Lesson 0001 — The execution model</a>
+        &middot; <a href="../RESOURCES.md">All resources</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

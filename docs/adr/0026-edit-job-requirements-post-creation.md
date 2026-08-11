@@ -1,11 +1,9 @@
 # Edit Job requirements post-creation
 
-Ticket #23 lets a Member refine a Job's preferred and non-negotiable
-requirements after creation (add / remove / include-exclude) from the Job
-Details modal, so later pipeline scoring uses the refined lists. No schema
-changes. Corrects the earlier port layout that inlined Job Details in the
-dashboard pane — details are a Dialog opened from the job-card pencil control
-(source parity; amends ADR-0009 §3).
+A Member can refine a Job's preferred and non-negotiable requirements after
+creation (add / remove / include-exclude) from the Job Details modal, so later
+pipeline scoring uses the refined lists. No schema changes. Job Details are a
+Dialog opened from the job-card pencil control (amends ADR-0009 §3).
 
 ## Decisions
 
@@ -26,8 +24,8 @@ owns the modal open state; the right-hand dashboard pane is the board alone.
 
 ### 3. Add / remove in addition to include-exclude
 
-Source JobDetails only toggled `include`. Spec story 12 and ticket #23 require
-add and remove as well. The editor keeps stable requirement ids
+Source JobDetails only toggled `include`. This ADR requires add and remove as
+well. The editor keeps stable requirement ids
 (`preferred_n` / `non_negotiable_n`) when toggling or editing text, and
 allocates the next free id on add so existing AI analysis keyed by id stays
 aligned for unchanged rows.

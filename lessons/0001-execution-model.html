@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lesson 0001 — The execution model: what runs where</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+</head>
+<body>
+  <article class="lesson">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Lesson 0001 &middot; TanStack Start</p>
+      <h1 class="lesson__title">The execution model: what runs where</h1>
+      <p class="lesson__meta">
+        ~10 min &middot; The foundation every other lesson stands on.
+        Save the cheat sheet: <a href="../reference/execution-model.html">Execution Model reference</a>.
+      </p>
+      <nav class="lesson__nav">
+        <span class="is-disabled">&larr; First lesson</span>
+        <a href="../reference/execution-model.html">Cheat sheet &rarr;</a>
+      </nav>
+    </header>
+
+    <p class="lead">
+      You want to read TanStack Start code and <em>know</em>, at a glance, whether a
+      line runs on the server or in the browser — well enough to catch it when AI
+      gets that wrong. That single skill rests on one mental model. This lesson builds it.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The one idea</span>Start is Router + a server</h2>
+
+    <p>
+      TanStack Start is not a brand-new thing. It is
+      <strong>TanStack Router</strong> — the type-safe router you can almost feel
+      through your React Router instincts — with a <strong>server layer</strong>
+      bolted on. The docs are blunt about it: Start &ldquo;relies 100% on TanStack
+      Router for its routing system,&rdquo; and adds SSR, server functions, API
+      routes, and middleware on top
+      (<a href="https://tanstack.com/start/latest/docs/framework/react/overview" target="_blank" rel="noopener">Overview</a>).
+    </p>
+
+    <p>
+      So when you're orienting in any Start file, ask two questions, in order:
+    </p>
+    <ol>
+      <li><strong>Routing question</strong> — which route is this, and how does it fit the tree? (You already have the instincts for this from React Router.)</li>
+      <li><strong>Execution question</strong> — does this code run on the <em>server</em>, in the <em>browser</em>, or <em>both</em>? (This is the new muscle.)</li>
+    </ol>
+
+    <p>This lesson is the second question. Get it right and the rest of the framework unlocks.</p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The default</span>Everything is isomorphic</h2>
+
+    <p>
+      Here is the rule that surprises everyone, and the one most AI-generated code
+      gets subtly wrong:
+    </p>
+
+    <div class="callout">
+      <span class="callout__label">Core principle</span>
+      <p>
+        <strong>All code in TanStack Start is isomorphic by default</strong> — it is
+        included in <em>and runs in</em> both the server bundle and the client
+        bundle, unless you explicitly constrain it.
+        <a href="https://tanstack.com/start/latest/docs/framework/react/guide/execution-model" target="_blank" rel="noopener">(Execution Model guide)</a>
+      </p>
+    </div>
+
+    <p>That includes a plain helper:</p>
+<pre><code><span class="tok-com">// runs on BOTH server and client</span>
+<span class="tok-key">function</span> <span class="tok-fn">formatPrice</span>(price: number) {
+  <span class="tok-key">return</span> <span class="tok-key">new</span> <span class="tok-fn">Intl.NumberFormat</span>(<span class="tok-str">'en-US'</span>, { style: <span class="tok-str">'currency'</span>, currency: <span class="tok-str">'USD'</span> }).<span class="tok-fn">format</span>(price)
+}</code></pre>
+
+    <p>And — this is the gotcha — it includes route <strong>loaders</strong>:</p>
+<pre><code><span class="tok-key">export const</span> Route = <span class="tok-fn">createFileRoute</span>(<span class="tok-str">'/products'</span>)({
+  <span class="tok-fn">loader</span>: <span class="tok-key">async</span> () =&gt; {
+    <span class="tok-com">// ISOMORPHIC: server during the initial SSR request,</span>
+    <span class="tok-com">//             client during later in-app navigation.</span>
+    <span class="tok-key">const</span> r = <span class="tok-key">await</span> <span class="tok-fn">fetch</span>(<span class="tok-str">'/api/products'</span>)
+    <span class="tok-key">return</span> r.<span class="tok-fn">json</span>()
+  },
+})</code></pre>
+
+    <p>
+      If you assume &ldquo;loader = server,&rdquo; you'll approve code that quietly
+      ships database logic to the browser. Don't assume it.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The boundary</span>Two environments</h2>
+
+    <p>Your code lives in one of two worlds. The boundary is what each can reach:</p>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Server</th><th>Client (browser)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Node / edge runtime</td><td>Browser runtime</td></tr>
+        <tr><td>File system, databases, <code>process.env</code>, secrets</td><td>DOM, <code>localStorage</code>, user events</td></tr>
+        <tr><td>During SSR, on server-function calls, at build</td><td>After hydration, during client-side navigation</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Control APIs</span>Pinning code to one side</h2>
+
+    <p>
+      When &ldquo;both&rdquo; isn't safe (a secret, a database, a browser API), you
+      pin code to one side with one of these. Learn the shape of each — recognising
+      them in AI output is most of the job:
+    </p>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>API</th><th>Runs on</th><th>If called on the other side</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>createServerFn()</code></td>
+          <td>Server</td>
+          <td>Client call becomes a network request (an RPC)</td>
+        </tr>
+        <tr>
+          <td><code>createServerOnlyFn(fn)</code></td>
+          <td>Server</td>
+          <td>Throws</td>
+        </tr>
+        <tr>
+          <td><code>createClientOnlyFn(fn)</code></td>
+          <td>Client</td>
+          <td>Throws</td>
+        </tr>
+        <tr>
+          <td><code>createIsomorphicFn()</code></td>
+          <td>Both &mdash; a different body each</td>
+          <td>&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      The headline one is <code>createServerFn</code>. Calling it from a component
+      doesn't run the function locally — it fires a network request to the server,
+      which runs the <code>.handler()</code> and returns the result. That round-trip
+      <em>is</em> the type-safe RPC. Everything you'd normally build a separate API
+      route + fetch for, Start gives you as a function call.
+    </p>
+
+<pre><code><span class="tok-com">// Runs ONLY on the server. The client call below is a network request.</span>
+<span class="tok-key">const</span> fetchUser = <span class="tok-fn">createServerFn</span>().<span class="tok-fn">handler</span>(<span class="tok-key">async</span> () =&gt; <span class="tok-key">await</span> db.users.<span class="tok-fn">find</span>())
+
+<span class="tok-com">// In a component:</span>
+<span class="tok-key">const</span> user = <span class="tok-key">await</span> <span class="tok-fn">fetchUser</span>() <span class="tok-com">// a fetch happens under the hood</span></code></pre>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">From React Router</span>What's actually new for you</h2>
+
+    <p>You already know routing. Here's the delta Start adds over plain React Router:</p>
+    <ul>
+      <li><strong>SSR by default.</strong> The first render of a page happens on the server, then the browser <em>hydrates</em> and takes over. React Router was client-only; Start is not.</li>
+      <li><strong>Code runs in two places now.</strong> In React Router, everything was the browser. In Start, you must reason about the boundary — this lesson.</li>
+      <li><strong>Server functions replace hand-rolled APIs.</strong> Where you'd <code>fetch('/api/x')</code> in React Router, in Start you call a server function directly and it type-checks end to end.</li>
+      <li><strong>Loaders are isomorphic.</strong> React Router's loaders were client-side. Start's run on the server <em>and</em> client. (See the gotcha above.)</li>
+    </ul>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Practice</span>Classify where it runs</h2>
+
+    <p>
+      Five snippets. For each, decide: does it run on the <strong>Server</strong>,
+      in the <strong>Client</strong>, or <strong>Both</strong>? Immediate feedback
+      follows each answer. The last one is the red flag worth memorising.
+    </p>
+
+    <div class="quiz" data-quiz data-title="Where does this run?">
+      <script type="application/json" data-questions>
+[
+  {
+    "q": "A plain helper with no special API:",
+    "code": "function formatPrice(n: number) {\n  return new Intl.NumberFormat('en-US').format(n)\n}",
+    "options": ["Server", "Client", "Both"],
+    "answer": 2,
+    "explain": "Isomorphic by default. No marker = included in both bundles and run in both. This is the rule the rest of the quiz leans on."
+  },
+  {
+    "q": "A route loader that calls fetch:",
+    "code": "createFileRoute('/products')({\n  loader: async () => {\n    return (await fetch('/api/products')).json()\n  },\n})",
+    "options": ["Server", "Client", "Both"],
+    "answer": 2,
+    "explain": "Loaders are isomorphic: the server runs them during the initial SSR request; the browser runs them again during later in-app navigation. The common wrong answer is 'Server' -- that assumption is what leaks secrets into the client."
+  },
+  {
+    "q": "The body inside a server function:",
+    "code": "const fetchUser = createServerFn().handler(async () => {\n  return await db.users.find()\n})",
+    "options": ["Server", "Client", "Both"],
+    "answer": 0,
+    "explain": "The handler runs ONLY on the server. When a component calls fetchUser(), the client just makes a network request (the RPC); it never executes this body."
+  },
+  {
+    "q": "A client-only utility:",
+    "code": "const loadTheme = createClientOnlyFn(() => {\n  return localStorage.getItem('theme')\n})",
+    "options": ["Server", "Client", "Both"],
+    "answer": 1,
+    "explain": "Client only. localStorage is a browser API, so this throws if it ever runs during server rendering. createClientOnlyFn is how you say 'browser, never server.'"
+  },
+  {
+    "q": "A secret read at the top of a module (red flag):",
+    "code": "const API_KEY = process.env.SECRET_KEY\n\nexport function getConfig() { return API_KEY }",
+    "options": ["Server", "Client", "Both"],
+    "answer": 2,
+    "explain": "Both -- and that's the bug. With no marker it's isomorphic, so the value gets inlined into the client bundle: a leak. Fix: wrap it in createServerOnlyFn, or read process.env inside a .handler() / middleware so the read happens per-call on the server."
+  }
+]
+      </script>
+    </div>
+    <script src="../assets/quiz.js" defer></script>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Red flags</span>What to catch in AI output</h2>
+
+    <p>Three smells that mean &ldquo;stop and fix&rdquo; when you're reviewing AI-written Start code:</p>
+
+    <div class="callout is-bad">
+      <span class="callout__label">Secret at module scope</span>
+      <p><code>const KEY = process.env.SECRET</code> at the top of a file. Leaks to the client bundle and is <code>undefined</code> on edge runtimes. Move it into a <code>createServerOnlyFn</code> or a handler.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">DB / env inside a loader</span>
+      <p>A loader touching a database connection or <code>process.env</code> directly. Loaders are isomorphic — that runs in the browser too. Have the loader <em>call</em> a <code>createServerFn</code>.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Hydration mismatch</span>
+      <p>Rendering <code>new Date()</code>, <code>Math.random()</code>, or DOM-dependent values straight into markup. Server and browser disagree &rarr; React warns and re-renders. Gate with <code>useHydrated()</code> or compute in <code>useEffect</code>.</p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Try it in your repo</span>The auth guard</h2>
+
+    <p>
+      Open <a href="../src/routes/_member.tsx"><code>src/routes/_member.tsx</code></a>
+      (the pathless layout for signed-in pages) and
+      <a href="../src/server/fn/auth.ts"><code>src/server/fn/auth.ts</code></a>.
+      The guard is a server function called from <code>beforeLoad</code>:
+    </p>
+
+<pre><code><span class="tok-com">// src/server/fn/auth.ts</span>
+<span class="tok-key">export const</span> getAuthState = <span class="tok-fn">createServerFn</span>({ method: <span class="tok-str">'GET'</span> }).<span class="tok-fn">handler</span>(
+  <span class="tok-key">async</span> () =&gt; ({ user: <span class="tok-key">await</span> <span class="tok-fn">getVerifiedUser</span>() }),
+)
+
+<span class="tok-com">// src/routes/_member.tsx</span>
+beforeLoad: <span class="tok-key">async</span> ({ context, location }) =&gt; {
+  <span class="tok-key">const</span> { user } = <span class="tok-key">await</span> context.queryClient.<span class="tok-fn">ensureQueryData</span>({
+    queryKey: [<span class="tok-str">'member-auth-state'</span>], queryFn: () =&gt; <span class="tok-fn">getAuthState</span>(),
+  })
+  <span class="tok-key">if</span> (!user) <span class="tok-key">throw</span> <span class="tok-fn">redirect</span>({ to: <span class="tok-str">'/signin'</span>, search: { redirect: location.pathname } })
+  <span class="tok-com">/* ...return profile context for the child routes */</span>
+}</code></pre>
+
+    <p>Read it with your new model and answer, for yourself:</p>
+    <ul>
+      <li>The <code>getAuthState</code> handler — server, client, or both? <em>(It's a <code>createServerFn</code>: server only. The <code>getVerifiedUser()</code> identity check never reaches the browser.)</em></li>
+      <li><code>beforeLoad</code> calls <code>getAuthState()</code>. On the <strong>first</strong> page load (SSR), where does that call resolve? On a later in-app navigation? <em>(Server both times — but via different mechanisms: SSR on first load, an RPC round-trip on later nav.)</em></li>
+      <li>Why is a route guard &ldquo;UX, not security&rdquo;? <em>(The real data boundary is <strong>Supabase Row-Level Security</strong> on the user-scoped client — the guard just keeps unauthenticated users out of the UI surface.)</em></li>
+    </ul>
+
+    <p>
+      If you could answer those, you just <em>used</em> the model on real code —
+      exactly the verification skill the mission is after.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Key terms</span>Seeded glossary</h2>
+    <dl class="dl-terms">
+      <dt>Isomorphic</dt>
+      <dd>Code that runs in (and is bundled for) both server and client. The Start default.</dd>
+      <dt>SSR</dt>
+      <dd>Server-side rendering — the server produces the first HTML; the browser hydrates it into an interactive app.</dd>
+      <dt>Hydration</dt>
+      <dd>The browser attaching React's event handlers to the server-rendered HTML, making it interactive.</dd>
+      <dt>RPC</dt>
+      <dd>Remote procedure call — calling a server function from the client looks like a local function call, but crosses the network. <code>createServerFn</code> is Start's RPC.</dd>
+      <dt>Server function</dt>
+      <dd>A function created with <code>createServerFn</code> — runs on the server, callable from the client. Start's replacement for hand-rolled API endpoints.</dd>
+    </dl>
+    <p>
+      <em>These seed a glossary that will grow each lesson; for now they also live in the
+      <a href="../reference/execution-model.html">execution-model reference</a>.</em>
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Read this next</span>Primary source</h2>
+
+    <p>
+      Spend five minutes skimming the official
+      <a href="https://tanstack.com/start/latest/docs/framework/react/guide/execution-model" target="_blank" rel="noopener">Execution Model guide</a>
+      — it's the source this lesson is built on, and it has the two extra APIs
+      (<code>&lt;ClientOnly&gt;</code>, <code>useHydrated</code>) and the
+      filename-suffix import protection we skimmed over. You don't need to memorise
+      them; just notice they exist.
+    </p>
+    <p>Further reading, when you want depth:</p>
+    <ul>
+      <li><a href="https://tanstack.com/start/latest/docs/framework/react/overview" target="_blank" rel="noopener">Start Overview</a> — the Router + server framing.</li>
+      <li><a href="https://tanstack.com/start/latest/docs/framework/react/guide/selective-ssr" target="_blank" rel="noopener">Selective SSR</a> — the <code>ssr: true | false | 'data-only'</code> knob (a later lesson).</li>
+      <li><a href="https://tanstack.com/start/latest/docs/framework/react/guide/import-protection" target="_blank" rel="noopener">Import Protection</a> — <code>*.server.ts</code> / <code>*.client.ts</code> files.</li>
+    </ul>
+
+    <!-- ==================================================================== -->
+    <div class="callout is-note">
+      <span class="callout__label">Ask your teacher</span>
+      <p>
+        Anything in here fuzzy? The loaders-are-isomorphic point and the
+        module-scope leak are the two that trip most people up — push back on
+        either. Ask: &ldquo;why is X not server-only?&rdquo; or &ldquo;how would I
+        tell, just by reading?&rdquo; I'll work it through with you before we move on.
+      </p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <footer class="lesson__footer">
+      <p>
+        <strong>Up next (lesson 0002):</strong> File-based routing &amp; the route
+        tree — mapping your React Router instincts onto TanStack Router's
+        codegen-driven routes, layouts, and pathless routes (the
+        <code>_member</code> file you just read).
+      </p>
+      <p>
+        <a href="./0002-file-based-routing.html">Lesson 0002 — File-based routing</a>
+        &middot; <a href="../reference/execution-model.html">Execution-model cheat sheet</a>
+        &middot; <a href="../RESOURCES.md">All resources</a>
+        &middot; <a href="../MISSION.md">Mission</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

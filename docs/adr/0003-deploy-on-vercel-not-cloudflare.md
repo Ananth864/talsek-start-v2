@@ -1,9 +1,9 @@
 # Deploy on Vercel, not Cloudflare Workers
 
-The new TanStack Start app targets Vercel via the Nitro `vercel` preset, not
-Cloudflare Workers. This reverts an earlier inclination toward Workers and
-removes the Cloudflare wiring the installer added (`@cloudflare/vite-plugin`,
-`wrangler.jsonc`, `instrument.server.mjs`).
+We deploy on Vercel via the Nitro `vercel` preset, not Cloudflare Workers.
+This reverts an earlier inclination toward Workers and removes the Cloudflare
+wiring the installer added (`@cloudflare/vite-plugin`, `wrangler.jsonc`,
+`instrument.server.mjs`).
 
 ## Considered options
 

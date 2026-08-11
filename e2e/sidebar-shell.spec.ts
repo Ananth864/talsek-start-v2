@@ -2,9 +2,7 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 /**
- * Member sidebar shell (#25): shared nav, account menu theme toggle, sign-out.
- * Playwright suite is paused for the port-completion batch — this spec is
- * written for when E2E is re-enabled.
+ * Member sidebar shell: shared nav, account menu theme toggle, sign-out.
  */
 async function signIn(page: Page) {
   await page.goto('/signin')

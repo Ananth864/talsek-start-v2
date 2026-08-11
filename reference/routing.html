@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TanStack Start — Routing Reference</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+</head>
+<body>
+  <article class="lesson">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Reference &middot; Cheat sheet</p>
+      <h1 class="lesson__title">File-based routing &amp; the route tree</h1>
+      <p class="lesson__meta">
+        Filename &rarr; URL &rarr; tree position. Companion to
+        <a href="../lessons/0002-file-based-routing.html">Lesson 0002</a>.
+        Primary sources:
+        <a href="https://tanstack.com/router/latest/docs/routing/file-naming-conventions" target="_blank" rel="noopener">File Naming Conventions</a>,
+        <a href="https://tanstack.com/router/latest/docs/routing/routing-concepts" target="_blank" rel="noopener">Routing Concepts</a>.
+      </p>
+    </header>
+
+    <p class="lead">The <strong>filename is the config</strong>. You never hand-write the route tree — codegen reads your <code>routes/</code> folder and builds <code>routeTree.gen.ts</code> for you.</p>
+
+    <h2><span class="num">Convention</span>Filename &rarr; URL</h2>
+    <table class="tbl">
+      <thead><tr><th>File</th><th>URL</th><th>Kind</th></tr></thead>
+      <tbody>
+        <tr><td><code>__root.tsx</code></td><td>— (wraps everything)</td><td>Root route</td></tr>
+        <tr><td><code>_marketing/index.tsx</code></td><td><code>/</code></td><td>Index (under a pathless layout)</td></tr>
+        <tr><td><code>signin.tsx</code></td><td><code>/signin</code></td><td>Static</td></tr>
+        <tr><td><code>auth/callback.tsx</code></td><td><code>/auth/callback</code></td><td>Folder nesting</td></tr>
+        <tr><td><code>apply.$token.tsx</code></td><td><code>/apply/:token</code></td><td>Dynamic param</td></tr>
+        <tr><td><code>docs/$.tsx</code></td><td><code>/docs/*</code></td><td>Splat (catch-all)</td></tr>
+        <tr><td><code>_member.tsx</code></td><td><strong>none — pathless</strong></td><td>Pathless layout</td></tr>
+      </tbody>
+    </table>
+    <p><em>Dot-notation and folders are interchangeable for nesting: <code>apply.$token</code> &equiv; <code>apply/$token</code> in URL terms.</em></p>
+
+    <h2><span class="num">Pathless routes</span>The underscore prefix</h2>
+    <div class="callout">
+      <span class="callout__label">Rule</span>
+      <p>A segment prefixed with <code>_</code> (e.g. <code>_member</code>, <code>_marketing</code>) is a <strong>pathless layout route</strong>. It does <em>not</em> add a segment to the URL. It exists to wrap its children (via <code>&lt;Outlet/&gt;</code>) and run shared logic — guards, layouts, providers.</p>
+    </div>
+    <table class="tbl">
+      <thead><tr><th></th><th>Route ID / tree position</th><th>URL users visit</th></tr></thead>
+      <tbody>
+        <tr><td><code>_member/dashboard.tsx</code></td><td><code>/_member/dashboard</code></td><td><code>/dashboard</code></td></tr>
+      </tbody>
+    </table>
+    <p>That gap is the whole trick. The string you pass <code>createFileRoute('/_member/dashboard')</code> is the route's <strong>identity in the tree</strong> (pathless segments included); the URL is derived by <strong>stripping</strong> the pathless segments.</p>
+
+    <h2><span class="num">Folders</span>Four kinds — don't confuse them</h2>
+    <p>A folder does very different things depending on its name. The naive &ldquo;a folder groups pages under shared logic&rdquo; model is wrong — a plain folder shares <em>nothing</em>:</p>
+    <table class="tbl">
+      <thead><tr><th>Kind</th><th>Example</th><th>URL?</th><th>Shared layout/logic?</th></tr></thead>
+      <tbody>
+        <tr><td>Plain folder</td><td><code>api/</code></td><td>yes</td><td><strong>No</strong> — just organises</td></tr>
+        <tr><td>Layout route (pathed)</td><td><code>docs.tsx</code> &nbsp;or&nbsp; <code>docs/route.tsx</code></td><td>yes</td><td><strong>Yes</strong> — wraps children via <code>&lt;Outlet/&gt;</code></td></tr>
+        <tr><td>Pathless layout</td><td><code>_member.tsx</code> &nbsp;or&nbsp; <code>_member/route.tsx</code></td><td>No</td><td><strong>Yes</strong></td></tr>
+        <tr><td>Route group</td><td><code>(app)/</code></td><td>No</td><td>No — pure organisation</td></tr>
+      </tbody>
+    </table>
+    <p>Want shared logic/layout <em>without</em> a URL segment? Reach for a <strong>pathless layout</strong> (<code>_</code> prefix) — that's exactly what <code>_member</code> (authed) and <code>_marketing</code> (public) are. A plain folder won't share anything.</p>
+    <div class="callout is-note">
+      <span class="callout__label">API routes are not pages</span>
+      <p><code>api/webhooks/dodo.ts</code> &rarr; <code>/api/webhooks/dodo</code> and <code>api/cron/billing-auto-refill.ts</code> &rarr; <code>/api/cron/billing-auto-refill</code> are server endpoints, declared with <code>server.handlers</code> (no <code>component</code>). <code>docs/$.tsx</code> &rarr; <code>/docs/*</code> uses a <strong>splat</strong> to serve any docs path from one route. Covered in Lesson 0005.</p>
+    </div>
+    <div class="callout is-note">
+      <span class="callout__label"><code>-</code> excludes a file</span>
+      <p>A <code>-</code>-prefixed file (<code>-table.tsx</code>) or folder is ignored by codegen — handy for colocating components/utils inside <code>routes/</code> without making them routes.</p>
+    </div>
+
+    <h2><span class="num">Codegen</span>routeTree.gen.ts</h2>
+    <ul>
+      <li>Auto-generated by the Vite plugin (or <code>tsr generate</code>). <strong>Never edit it</strong> — it's overwritten.</li>
+      <li>It wires each route's <code>getParentRoute</code> from the folder structure.</li>
+      <li>The <code>createFileRoute('/...')</code> path must match the file's tree position, or codegen/typecheck fails.</li>
+      <li>Type-safety flows from it: <code>Route.useParams()</code>, <code>&lt;Link to&gt;</code>, <code>loader</code> return types are all inferred.</li>
+    </ul>
+<pre><code><span class="tok-com">// from this repo's routeTree.gen.ts:</span>
+<span class="tok-key">const</span> MemberRoute = MemberRouteImport.<span class="tok-fn">update</span>({
+  id: <span class="tok-str">'/_member'</span>,                 <span class="tok-com">// no `path` field -&gt; pathless</span>
+  getParentRoute: () =&gt; rootRouteImport,
+} <span class="tok-key">as any</span>)</code></pre>
+
+    <div class="callout is-note">
+      <span class="callout__label"><code>as any</code> in the gen file is normal</span>
+      <p>The file starts with <code>// @ts-nocheck</code> and uses <code>as any</code> on its wiring because the route-tree generics are recursive and too complex to generate cleanly. The real type-safety lives in each <code>createFileRoute('/...')</code> path string (it gives TypeScript your file identity) and the <code>declare module Register { router }</code> in <code>router.tsx</code>. Never import types from <code>routeTree.gen.ts</code> — and don't treat its <code>as any</code> as permission to use <code>as any</code> yourself.</p>
+    </div>
+    <div class="callout is-note">
+      <span class="callout__label">What <code>getParentRoute</code> is for</span>
+      <p>It wires the parent-child edge. Along it flow: rendering (<code>&lt;Outlet/&gt;</code>), loader data, <code>beforeLoad</code> context, search-param schemas, and accumulated types. It's a thunk (<code>() =&gt; Parent</code>) to defer resolution past circular initialisation. Codegen writes it from your file structure — you almost never do.</p>
+    </div>
+
+    <h2><span class="num">Map</span>React Router &rarr; TanStack Router</h2>
+    <table class="tbl">
+      <thead><tr><th>React Router</th><th>TanStack Router</th></tr></thead>
+      <tbody>
+        <tr><td><code>&lt;Route path="/about"&gt;</code> (config)</td><td><code>about.tsx</code> file</td></tr>
+        <tr><td>Router config / <code>createBrowserRouter</code></td><td>Generated <code>routeTree.gen.ts</code></td></tr>
+        <tr><td>Nested <code>&lt;Route&gt;</code> children</td><td>Folder or dot-notation</td></tr>
+        <tr><td>Layout / parent route</td><td>Pathless <code>_</code> route (e.g. <code>_member</code>)</td></tr>
+        <tr><td><code>index: true</code></td><td><code>index.tsx</code></td></tr>
+        <tr><td><code>&lt;Outlet/&gt;</code></td><td><code>&lt;Outlet/&gt;</code> (unchanged)</td></tr>
+        <tr><td><code>useParams()</code></td><td><code>Route.useParams()</code> (typed)</td></tr>
+        <tr><td><code>loader</code> (client-only)</td><td><code>loader</code> — now <strong>isomorphic</strong> (Lesson 0001)</td></tr>
+      </tbody>
+    </table>
+
+    <h2><span class="num">Red flags</span>What to catch in AI output</h2>
+    <div class="callout is-bad">
+      <span class="callout__label">Hand-editing routeTree.gen.ts</span>
+      <p>If AI proposes a change inside <code>routeTree.gen.ts</code>, reject it. Add/rename a file under <code>routes/</code> instead and let codegen regenerate.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">createFileRoute path doesn't match the file</span>
+      <p><code>_member/dashboard.tsx</code> must call <code>createFileRoute('/_member/dashboard')</code> — not <code>('/dashboard')</code>. A mismatch breaks codegen/typecheck. The arg is the <em>tree position</em>, including pathless segments.</p>
+    </div>
+    <div class="callout is-bad">
+      <span class="callout__label">Linking to a pathless segment</span>
+      <p><code>&lt;Link to="/_member/dashboard"&gt;</code> is wrong — the URL has no <code>_member</code>. Link to <code>/dashboard</code>. (AI gets this wrong often.)</p>
+    </div>
+
+    <footer class="lesson__footer">
+      <p>
+        Back to <a href="../lessons/0002-file-based-routing.html">Lesson 0002 — File-based routing</a>
+        &middot; <a href="./glossary.html">Glossary</a>
+        &middot; <a href="../RESOURCES.md">All resources</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

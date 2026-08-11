@@ -2,9 +2,7 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 /**
- * Get Started onboarding checklist + action hub (#29).
- * Playwright suite is paused for the port-completion batch — this spec is
- * written for when E2E is re-enabled.
+ * Get Started onboarding checklist + action hub.
  */
 
 const STEP_IDS = [

@@ -1,11 +1,10 @@
 # Jobs write path: create + JD parse, RLS audit
 
-Ticket #5 builds the **write path** for Jobs on top of the #4 read path: a Member
-creates a Job via the ported `JobCreationDialog`, a pasted job description is
-parsed into structured requirements, and the created Job appears in the list.
-`canCreateJob` is enforced. This record captures the non-obvious decisions and
-the domain's **write-path RLS audit** (ADR-0004 is incremental per-domain); it
-does not contradict 0001–0009.
+The Jobs write path lets a Member create a Job via `JobCreationDialog`, parse a
+pasted job description into structured requirements, and see the created Job in
+the list. `canCreateJob` is enforced. This record captures the non-obvious
+decisions and the domain's **write-path RLS audit** (ADR-0004 is incremental
+per-domain).
 
 ## Decisions
 
@@ -82,7 +81,7 @@ them); they land with the resume/email AI domains that do.
 
 The testing decision (ADR/spec) is that E2E mocks the non-deterministic AI
 output. In the source this was a browser-side intercept of the edge-function
-HTTP call. In the port the parse runs **server-side**, so there is no
+HTTP call. Here the parse runs **server-side**, so there is no
 browser request to intercept. Rather than wire a server-side mock HTTP target,
 `parseJobDescription` returns a **deterministic derivation** from the pasted JD
 when no provider key is present (`OPENAI_API_KEY`/`GROK_API_KEY` absent). This
@@ -103,24 +102,11 @@ columns are **re-added to `jobsQuery`** (additive — `JobWithCompanyRow` widens
 no fork in the cache). This is the sanctioned long-term fix short of registering
 superjson as the server-function serializer (still open).
 
-### 7. The dialog is a focused 2-step port; the form-config step is deferred
+### 7. Create dialog — superseded by ADR-0029
 
-> **Amended (ADR-0029, layout-parity Aug 2026):** create UX is restored to the
-> source **4-step** wizard (screening → details → requirements → form setup).
-> The paragraph below is historical context for the #5 collapse.
-
-The source's `JobCreationDialog` is a 4-step wizard (service type → details →
-review → application-form config). This port collapses it to the two steps the
-#5 acceptance criteria exercise — **details** and **review parsed requirements**
-— and defers the application-form-config step to #11/#12 (Applicant Form). Parse
-fires on the details → review transition (source parity: not a button, onPaste,
-or debounce). The full screening-interview form (shift timings, travel %) is
-also deferred; `screening_interview_information` is built from the dialog's
-service-type + location-type selection with sensible defaults (source parity for
-`resume_only`; a minimal valid shape for `resume_interview`). The query-key
-invalidation (`['jobs']` prefix, source parity) makes the created Job appear in
-the list via a refetch — no optimistic update, since the server is the authority
-and the final row shape is only correct post-insert.
+> **Superseded by ADR-0029:** create UX is the source **4-step** wizard
+> (screening → details → requirements → form setup). The earlier 2-step collapse
+> is historical only.
 
 ## RLS audit — Jobs write path (ADR-0004)
 

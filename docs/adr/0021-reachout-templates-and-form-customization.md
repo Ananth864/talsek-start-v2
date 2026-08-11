@@ -1,9 +1,8 @@
 # Reachout Templates + Form customization
 
-Ticket #16 ports Member management of Reachout / Interview templates and
-application Form Template + per-Job Form Config, gated by
-`canManageTemplates` / `canManageForms`, and introduces the shared
-`useAppForm` field kit.
+Member management of Reachout / Interview templates and application Form
+Template + per-Job Form Config, gated by `canManageTemplates` /
+`canManageForms`, plus the shared `useAppForm` field kit.
 
 ## Decisions
 
@@ -49,7 +48,7 @@ interactive list UIs, not TanStack Form fields.
 ### 5. No Reachout send in this ticket
 
 Saving templates does not send email or create Interview Sessions. Shortlist
-send / notifications deepen in #17 (reuse `src/server/lib/email.ts`).
+send / notifications deepen in ADR-0022 (reuse `src/server/lib/email.ts`).
 
 ## Consequences
 

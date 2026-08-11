@@ -1,9 +1,9 @@
 # Applicant interview by token
 
-Ticket #12 ports the public Applicant Interview surface: open by token, start
-(credit gate), progress through question types, AI conversation tool-calling
-(follow-up vs advance), audio transcription via Storage, and completion.
-This record captures the seams that diverge from the source edge functions.
+The public Applicant Interview surface opens by token, starts (credit gate),
+progresses through question types, uses AI conversation tool-calling (follow-up
+vs advance), transcribes audio via Storage, and completes. This record captures
+the seams that diverge from the source edge functions.
 
 ## Decisions
 
@@ -18,7 +18,7 @@ throw `INTERVIEW_EXPIRED`.
 ### 2. Audio via Storage signed upload (not FormData through Vercel)
 
 Source `transcribe-audio` accepts multipart audio bytes. ADR-0003 forbids
-shipping media through the Vercel request body, so the port mirrors form
+shipping media through the Vercel request body, so this app mirrors form
 resume upload:
 
 1. `prepareInterviewAudioUpload` — path

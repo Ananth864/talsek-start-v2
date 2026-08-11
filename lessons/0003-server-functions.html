@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lesson 0003 — Server functions</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+</head>
+<body>
+  <article class="lesson">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Lesson 0003 &middot; TanStack Start</p>
+      <h1 class="lesson__title">Server functions</h1>
+      <p class="lesson__meta">
+        ~13 min &middot; The <code>createServerFn</code> RPC pipeline, and when to
+        pick it over an API route.
+        Cheat sheet: <a href="../reference/server-functions.html">Server functions reference</a>.
+      </p>
+      <nav class="lesson__nav">
+        <a href="./0002-file-based-routing.html">&larr; 0002: File-based routing</a>
+        <a href="../reference/server-functions.html">Cheat sheet &rarr;</a>
+      </nav>
+    </header>
+
+    <p class="lead">
+      Lesson 0001's auth guard (<code>getAuthState</code>) was the simplest possible
+      server function. This repo has dozens of richer ones in
+      <a href="../src/server/fn" target="_blank" rel="noopener"><code>src/server/fn/</code></a>
+      &mdash; with validators, with middleware. This lesson takes the mechanism apart:
+      the <code>validator &rarr; middleware &rarr; handler</code> pipeline, and &mdash;
+      the thing you asked to nail down &mdash; when you reach for it instead of an
+      API route.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The model</span>An RPC, not a fetch</h2>
+
+    <p>
+      React Router had no answer for &ldquo;run this on the server from my
+      component&rdquo; &mdash; you'd write a separate endpoint and
+      <code>fetch</code> it. A <strong>server function</strong> collapses that into
+      a single typed function:
+    </p>
+<pre><code><span class="tok-com">// Define (server): runs ONLY on the server.</span>
+<span class="tok-key">export const</span> getAuthState = <span class="tok-fn">createServerFn</span>({ method: <span class="tok-str">'GET'</span> }).<span class="tok-fn">handler</span>(
+  <span class="tok-key">async</span> () =&gt; ({ user: <span class="tok-key">await</span> <span class="tok-fn">getVerifiedUser</span>() }),
+)
+
+<span class="tok-com">// Call (client or server): looks local, crosses the network.</span>
+<span class="tok-key">const</span> { user } = <span class="tok-key">await</span> <span class="tok-fn">getAuthState</span>()   <span class="tok-com">// &harr; a GET happens under the hood</span></code></pre>
+
+    <p>
+      The handler body is <strong>server-only</strong> (Lesson 1's execution
+      model: it's stripped from the client bundle). When the client calls
+      <code>getAuthState()</code>, the router fires a network request to the server,
+      which runs the handler and returns the result. <em>That round-trip is the
+      RPC.</em> No URL to design, no JSON to parse by hand, full types end to end.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The pipeline</span>Four stages, in order</h2>
+
+    <p>Here's a richer one from <a href="../src/server/fn/jobs.ts" target="_blank" rel="noopener"><code>src/server/fn/jobs.ts</code></a>:</p>
+<pre><code><span class="tok-key">export const</span> fetchJobs = <span class="tok-fn">createServerFn</span>({ method: <span class="tok-str">'GET'</span> })
+  .<span class="tok-fn">middleware</span>([authMiddleware])
+  .<span class="tok-fn">handler</span>(<span class="tok-key">async</span> ({ context }) =&gt; {
+    <span class="tok-key">const</span> { data, error } = <span class="tok-key">await</span> <span class="tok-fn">jobsQuery</span>(context.supabase)
+    <span class="tok-key">if</span> (error) <span class="tok-key">throw new</span> <span class="tok-fn">Error</span>(<span class="tok-str">`Failed: ${error.message}`</span>)
+    <span class="tok-key">return</span> data
+  })</code></pre>
+
+    <table class="tbl">
+      <thead><tr><th>Stage</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>{ method }</code></td><td><code>'GET'</code> for cacheable reads; <code>'POST'</code> (the default) for mutations.</td></tr>
+        <tr><td><code>.validator(fn)</code></td><td>Parses + validates the caller's input. Its return value becomes the typed <code>data</code> the next stages see.</td></tr>
+        <tr><td><code>.middleware([...])</code></td><td>Runs before the handler; can enrich <code>context</code> (attach a DB client, a session, etc.).</td></tr>
+        <tr><td><code>.handler(({ data, context }) =&gt; ...)</code></td><td>The actual logic. Server-only. Returns a <strong>serialisable</strong> value.</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      Validator and middleware are <strong>optional</strong>. <code>getAuthState</code>
+      takes no input and needs no preprocessing, so it skips both. <code>fetchJobs</code>
+      needs no input either but wants the user-scoped DB client, so it adds
+      <code>middleware</code> (no <code>validator</code>). Add stages as the function needs them.
+    </p>
+
+    <h3>Where <code>data</code> and <code>context</code> come from</h3>
+    <ul>
+      <li><strong><code>data</code></strong> is the <em>validator's</em> output &mdash; the caller's input, parsed and typed. No validator &rarr; no <code>data</code>. (See <code>signIn</code> below for a validator in action.)</li>
+      <li><strong><code>context</code></strong> is assembled by <em>middleware</em>. Each middleware's <code>.server()</code> return is merged in &mdash; so <code>authMiddleware</code> hands <code>fetchJobs</code> the <code>context.supabase</code> it reads above.</li>
+    </ul>
+
+    <div class="callout">
+      <span class="callout__label">The real middleware, from this repo</span>
+<pre><code><span class="tok-com">// src/server/middleware/auth.ts</span>
+<span class="tok-key">export const</span> authMiddleware = <span class="tok-fn">createMiddleware</span>({ type: <span class="tok-str">'function'</span> }).<span class="tok-fn">server</span>(
+  <span class="tok-key">async</span> ({ next }) =&gt; {
+    <span class="tok-key">const</span> { client, session } = <span class="tok-key">await</span> <span class="tok-fn">requireUserClient</span>()
+    <span class="tok-key">return</span> <span class="tok-fn">next</span>({ context: { supabase: client, session } })
+  },
+)</code></pre>
+      <p>Now any function with <code>.middleware([authMiddleware])</code> gets <code>context.supabase</code> (a <strong>user-scoped</strong> client) and <code>context.session</code>. Company scoping is enforced by Row-Level Security on that client &mdash; not by a manual <code>.eq('company_id', &hellip;)</code> filter. (Middleware can also have a <code>.client()</code> side &mdash; see the cheat sheet.)</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__label">Validators in action</span>
+<pre><code><span class="tok-com">// src/server/fn/auth.ts</span>
+<span class="tok-key">export const</span> signIn = <span class="tok-fn">createServerFn</span>({ method: <span class="tok-str">'POST'</span> })
+  .<span class="tok-fn">validator</span>(z.<span class="tok-fn">object</span>({ email: z.<span class="tok-fn">string</span>().<span class="tok-fn">email</span>(), password: z.<span class="tok-fn">string</span>().<span class="tok-fn">min</span>(1) }))
+  .<span class="tok-fn">handler</span>(<span class="tok-key">async</span> ({ data }) =&gt; {
+    <span class="tok-com">// data is typed: { email: string; password: string }</span>
+    &hellip;
+  })</code></pre>
+      <p>The validator is both a <strong>guard</strong> (rejects bad input) and the source of the handler's typed <code>data</code>.</p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The payoff</span>Server function vs API route</h2>
+
+    <p>
+      This is the distinction you asked to lock in. They're the <strong>two ways
+      to put code on the server</strong> in Start. Both run server-side; the
+      difference is the <em>interface</em> they expose:
+    </p>
+
+    <table class="tbl">
+      <thead><tr><th></th><th>Server function (<code>createServerFn</code>)</th><th>API route (<code>server.handlers</code>)</th></tr></thead>
+      <tbody>
+        <tr><td>Interface</td><td>A function call</td><td>A real URL + HTTP method</td></tr>
+        <tr><td>Types</td><td>End-to-end (input + output)</td><td>Manual &mdash; you parse the <code>Request</code></td></tr>
+        <tr><td>Pick it for</td><td>App code calling the server; no public URL needed</td><td>Webhooks, cron, third-party fetches</td></tr>
+      </tbody>
+    </table>
+
+    <p>The decision is simple: <strong>does something <em>external</em> need a URL to hit?</strong></p>
+    <ul>
+      <li><strong>Yes</strong> (Dodo posting a payment webhook, a cron scheduler, a third-party fetch) &rarr; <strong>API route</strong>.</li>
+      <li><strong>No</strong> &mdash; it's just your app calling the server &rarr; <strong>server function</strong>.</li>
+    </ul>
+
+    <div class="callout is-note">
+      <span class="callout__label">This repo uses exactly that split</span>
+      <ul>
+        <li><strong>Server functions</strong> &rarr; <em>all</em> data access: <a href="../src/server/fn/jobs.ts" target="_blank" rel="noopener"><code>fetchJobs</code></a>, <code>createJob</code>, <code>getAuthState</code>, the auth fns. Typed calls from your components/loaders.</li>
+        <li><strong>API routes</strong> &rarr; only external triggers: <a href="../src/routes/api/webhooks/dodo.ts" target="_blank" rel="noopener"><code>api/webhooks/dodo</code></a> (Dodo payments), <code>api/webhooks/email</code>, <code>api/webhooks/cal-booking</code>, and <code>api/cron/*</code>. Real URLs that outside services POST to.</li>
+      </ul>
+      <p>Same question every time: <em>does an outsider need a URL?</em> Jobs data &rarr; no &rarr; server fn. Dodo webhook &rarr; yes &rarr; API route.</p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Practice</span>Read a server function</h2>
+
+    <div class="quiz" data-quiz data-title="Server functions — read it right">
+      <script type="application/json" data-questions>
+[
+  {
+    "q": "A createServerFn handler's body runs:",
+    "options": ["Server only", "Client only", "Both"],
+    "answer": 0,
+    "explain": "Only on the server - it's stripped from the client bundle. Calling it (like getAuthState() or fetchJobs()) triggers a network request (the RPC); the client never executes the body. (Callback to Lesson 1.)"
+  },
+  {
+    "q": "The typed `data` a handler receives (handler({ data })) is produced by:",
+    "options": ["The .validator() step", "The .middleware() step", "The route's loader"],
+    "answer": 0,
+    "explain": "The validator parses and validates the caller's input; its return becomes the typed `data` (see signIn's zod schema in auth.ts). No validator means no data. Always validate mutation input."
+  },
+  {
+    "q": "Server-function middleware's main job is to:",
+    "options": ["Enrich the context for the handler", "Render the route component", "Parse the URL path"],
+    "answer": 0,
+    "explain": "Middleware runs before the handler and merges values into context. authMiddleware in this repo does exactly this: next({ context: { supabase, session } }), so fetchJobs reads context.supabase."
+  },
+  {
+    "q": "Dodo payments needs to POST webhooks to your app. Pick:",
+    "options": ["An API route", "A server function", "A loader"],
+    "answer": 0,
+    "explain": "Dodo needs a real, stable HTTP URL - exactly what an API route (server.handlers) gives you. This repo's api/webhooks/dodo is exactly that. A server function is a function call, not a URL an external service can reach."
+  },
+  {
+    "q": "A typed server call from a button click that loads data, no public URL needed. Pick:",
+    "options": ["A server function", "An API route", "beforeLoad"],
+    "answer": 0,
+    "explain": "Server function: a typed call that becomes a GET/POST under the hood. fetchJobs is the textbook example - your component calls it, it runs server-side, returns typed data."
+  },
+  {
+    "q": "AI reads a secret inside a server-fn handler: const key = process.env.SECRET. Verdict?",
+    "options": ["Fine - handlers are server-only", "Bad - leaks to the client", "Bad - throws at runtime"],
+    "answer": 0,
+    "explain": "This is the SAFE place. Unlike module scope or a loader (Lessons 1-2), the handler body is server-only and stripped from the client bundle. Reading process.env here runs on the server, per call - exactly where secrets belong."
+  }
+]
+      </script>
+    </div>
+    <script src="../assets/quiz.js" defer></script>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Try it in your repo</span>Why that middleware?</h2>
+
+    <p>
+      Open <a href="../src/server/fn/jobs.ts" target="_blank" rel="noopener"><code>src/server/fn/jobs.ts</code></a>
+      (<code>fetchJobs</code>) and <a href="../src/server/middleware/auth.ts" target="_blank" rel="noopener"><code>src/server/middleware/auth.ts</code></a>
+      (<code>authMiddleware</code>). Then answer, using the decision rule above:
+    </p>
+    <ul>
+      <li>Why is <code>fetchJobs</code> a <strong>server function</strong> and not an API route? <em>(It's called from your components/loaders to read data &mdash; no external service needs a URL &rarr; server function.)</em></li>
+      <li>Why does it use <code>authMiddleware</code> instead of resolving the Supabase client in the handler? <em>(So every protected function shares the same user-scoped client + session setup, and RLS owns company scoping. The handler stays focused on the query.)</em></li>
+      <li>Why does <code>fetchJobs</code> have <strong>no validator</strong>? <em>(It takes no input &mdash; the user identity is resolved in middleware, not passed by the caller. Compare <code>signIn</code>, which <em>does</em> validate input.)</em></li>
+    </ul>
+    <p>
+      That first point is the refactoring instinct worth having: when you see the
+      same server pre-logic (auth, DB client, tenancy) repeated across handlers,
+      that's a signal to extract a middleware &mdash; exactly what
+      <code>authMiddleware</code> does here.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Read this next</span>Primary source</h2>
+    <p>
+      Skim the official
+      <a href="https://tanstack.com/start/latest/docs/framework/react/guide/middleware" target="_blank" rel="noopener">Middleware guide</a>
+      and the
+      <a href="https://tanstack.com/start/latest/docs/framework/react/guide/authentication-server-primitives" target="_blank" rel="noopener">Authentication server primitives</a>
+      page &mdash; the source for the <code>createMiddleware &rarr; context</code> pattern this repo's <code>authMiddleware</code> uses.
+    </p>
+
+    <!-- ==================================================================== -->
+    <div class="callout is-note">
+      <span class="callout__label">Ask your teacher</span>
+      <p>
+        The two things worth pushing on: the validator being both a
+        <em>guard</em> and the source of the handler's typed <code>data</code>,
+        and the server-function-vs-API-route line. Ask &ldquo;why is the DB client
+        in middleware and not the handler?&rdquo; or &ldquo;what breaks if
+        <code>fetchJobs</code> returns the Supabase client object?&rdquo; I'll work it through before Lesson 0004.
+      </p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <footer class="lesson__footer">
+      <p>
+        <strong>Up next (lesson 0004):</strong> Loaders, <code>beforeLoad</code>
+        &amp; router context &mdash; the route data-loading lifecycle. The
+        <code>_member</code> guard you've now dissected lives in <code>beforeLoad</code>;
+        next we see exactly how that lifecycle runs and where your data flows.
+      </p>
+      <p>
+        <a href="./0002-file-based-routing.html">&larr; 0002</a>
+        &middot; <a href="../reference/server-functions.html">Server functions cheat sheet</a>
+        &middot; <a href="../reference/glossary.html">Glossary</a>
+        &middot; <a href="../MISSION.md">Mission</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

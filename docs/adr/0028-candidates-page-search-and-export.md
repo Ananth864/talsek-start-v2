@@ -1,9 +1,8 @@
 # Candidates page: cross-job search + Excel/PDF-ZIP export
 
-Ticket #27 ports the source's `/candidates` surface — company-wide Job
-Application search with composable filters and client-side Excel / PDF-ZIP
-export — onto TanStack Start. This record captures the non-obvious decisions;
-it does not contradict 0001–0027.
+The `/candidates` surface provides company-wide Job Application search with
+composable filters and client-side Excel / PDF-ZIP export. This record captures
+the non-obvious decisions.
 
 ## Decisions
 
@@ -51,7 +50,7 @@ Cross-job improvement over the source: Excel and the PDF renderer resolve
 requirements via `jobsById.get(app.job_id)` so each row uses its own Job,
 not only the optional Job filter.
 
-### 4. Results use the adaptive CandidateCard (#26)
+### 4. Results use the adaptive CandidateCard (ADR-0027)
 
 One card with `layout` from `profiles.candidate_list_view`; stage kind from
 the application's Hiring Stage. Shortlist is a cross-job variant of
@@ -70,5 +69,4 @@ after star / reject / Shortlist.
 - Nested stage filter without `!inner` matches the source; if PostgREST
   ever stops filtering parent rows that way, switch the stage-filtered
   select to `job_stages!inner`.
-- E2E (`e2e/candidates-page.spec.ts`) is written but the Playwright suite
-  is paused for the port-completion batch — re-enable with the suite.
+- E2E coverage: `e2e/candidates-page.spec.ts`.

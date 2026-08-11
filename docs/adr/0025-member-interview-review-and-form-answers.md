@@ -1,9 +1,8 @@
 # Member interview review + form answers in profile
 
-Ticket #22 closes the Member read path for Applicant Interview Sessions and
-Form Submissions in the candidate profile dialog. Read-only; no schema
-changes. Supersedes the empty-state deferrals in ADR-0012 §3 and ADR-0017
-consequences.
+The Member read path for Applicant Interview Sessions and Form Submissions in
+the candidate profile dialog. Read-only; no schema changes. Supersedes the
+empty-state deferrals in ADR-0012 §3 and ADR-0017 consequences.
 
 ## Decisions
 

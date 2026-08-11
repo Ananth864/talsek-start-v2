@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * Marketing landing smoke (#31). Playwright suite is paused for the
- * port-completion batch — keep this ready for when E2E is re-enabled.
+ * Marketing landing smoke.
  */
 
 test('landing renders, nav works, and booking dialog opens', async ({

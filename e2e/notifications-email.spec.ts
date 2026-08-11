@@ -4,9 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 
 /**
- * #17 — notification prefs, daily-digest cron, signed inbound email webhook,
+ * Notification prefs, daily-digest cron, signed inbound email webhook,
  * Cal booking confirmation. EMAIL_STUB / AI_PIPELINE_STUB / webhook secrets
- * are pinned by playwright.config for E2E_TARGET=new.
+ * are pinned by playwright.config for the default e2e target.
  */
 
 function adminClient() {

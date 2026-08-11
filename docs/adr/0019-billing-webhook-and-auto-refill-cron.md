@@ -1,9 +1,8 @@
 # Billing webhook + auto-refill cron (Dodo / Vercel)
 
-Ticket #14 ports the session-less billing backend: a signed Dodo webhook API
-route that is the sole writer of subscription/payment/credit state, and a
-secret-guarded Vercel Cron route that charges wallet mandates when balance is
-below threshold.
+The session-less billing backend is a signed Dodo webhook API route that is the
+sole writer of subscription/payment/credit state, plus a secret-guarded Vercel
+Cron route that charges wallet mandates when balance is below threshold.
 
 ## Decisions
 

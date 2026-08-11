@@ -1,8 +1,9 @@
 # Bulk upload + bulk shortlist
 
-Ticket #10 ports Member bulk resume intake and multi-select stage advance.
-Source behaviour lives in `bulk-resume-upload` / `bulk-shortlist-candidates`
-edge functions; the port diverges on Storage transport and Reachout scope.
+Members bulk-upload resumes and multi-select stage advance on the candidate
+board. Source behaviour lived in `bulk-resume-upload` /
+`bulk-shortlist-candidates` edge functions; we diverge on Storage transport and
+Reachout scope (see ADR-0024 for bulk Reachout).
 
 ## Decisions
 
@@ -38,12 +39,12 @@ Job Application with `parsed_candidate_data` + `processing_source:
 'bulk_upload'`, then `await processJobApplicationPipeline(client, {
 applicationId, skipExtraction: true })` (ADR-0014 §7).
 
-### 4. Bulk shortlist advances stage only — Reachout stays #16
+### 4. Bulk shortlist advances stage only — Reachout stays deferred
 
-**Superseded by ADR-0024 / ticket #21.** Issue #10 shipped stage-only bulk
-shortlist; #21 reuses `sendReachoutAndAdvance` for Reachout send + stage
-advance (and adds bulk reject). Historical note: #10 validated same-stage
-selection (max 10) and updated `current_stage_id` only.
+**Superseded by ADR-0024.** ADR-0016 shipped stage-only bulk shortlist; ADR-0024
+reuses `sendReachoutAndAdvance` for Reachout send + stage advance (and adds bulk
+reject). Historical note: ADR-0016 validated same-stage selection (max 10) and
+updated `current_stage_id` only.
 
 ### 5. Credit gate at process time; stub skips consume
 

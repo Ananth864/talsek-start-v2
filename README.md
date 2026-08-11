@@ -1,12 +1,12 @@
 # talsek-start-v2
 
-TanStack Start (SSR) port of the Talsek ATS, deployed to Vercel. Supabase stays
-as the data + identity layer; the Supabase Edge Functions are replaced by
-TanStack server functions.
+Talsek ATS on TanStack Start (SSR), deployed to Vercel. Supabase is the data and
+identity layer; product logic runs in TanStack server functions (plus API routes
+for webhooks/streaming and Vercel Cron for scheduled jobs).
 
-- **Spec:** `docs/spec/port-to-tanstack-start.md` (and issue #1)
-- **Decisions:** `docs/adr/0001`–`0007`
 - **Glossary:** `CONTEXT.md`
+- **Decisions:** `docs/adr/`
+- **Agent notes:** `AGENTS.md`
 
 ## Getting started
 
@@ -24,11 +24,12 @@ bun run build                       # produces .vercel/output (Nitro Vercel pres
 bun run lint
 ```
 
-E2E (characterisation; same specs run against source or new app):
+E2E:
 
 ```bash
 bun e2e:install
-E2E_TARGET=new E2E_EMAIL=… E2E_PASSWORD=… bun e2e
+E2E_EMAIL=… E2E_PASSWORD=… bun e2e
+E2E_EMAIL=… E2E_PASSWORD=… bun run e2e:layout-parity
 ```
 
 Deploy (after `vercel link`):

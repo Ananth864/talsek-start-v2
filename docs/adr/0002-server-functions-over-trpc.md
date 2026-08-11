@@ -1,9 +1,8 @@
 # TanStack server functions primary; drop tRPC
 
-All app-internal edge functions port to TanStack Start `createServerFn` server
-functions (grouped by domain under `src/server/fn/`). Plain API routes are used
-only where plain HTTP is required: SSE/streaming and third-party webhooks. tRPC
-is removed even though the TanStack installer scaffolded it.
+App-internal RPC uses TanStack Start `createServerFn` server functions (grouped
+by domain under `src/server/fn/`). Plain API routes are reserved for plain HTTP:
+SSE/streaming and third-party webhooks. We do not use tRPC.
 
 ## Considered options
 
@@ -14,8 +13,7 @@ is removed even though the TanStack installer scaffolded it.
 - **tRPC primary.** Rejected — would force bridging the cookie-based
   `authMiddleware` into a tRPC `createContext`, duplicating the auth seam for no
   type-safety gain (server functions are already fully typed end-to-end).
-- **Keep both.** Rejected — two RPC stacks is exactly the "framework garbage"
-  the port is meant to remove.
+- **Keep both.** Rejected — two RPC stacks adds boilerplate with no benefit.
 
 ## Consequences
 

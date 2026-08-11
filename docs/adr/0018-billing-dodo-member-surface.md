@@ -1,8 +1,8 @@
 # Billing Member surface via Dodo (checkout, plans, invoice)
 
-Ticket #13 ports the Member billing surface: Dodo checkout for a plan,
-change plan, cancel subscription, credit top-up, and invoice download.
-Webhook sync and auto-refill cron remain ticket #14.
+The Member billing surface covers Dodo checkout for a plan, change plan, cancel
+subscription, credit top-up, and invoice download. Webhook sync and auto-refill
+cron are ADR-0019.
 
 ## Decisions
 
@@ -11,8 +11,7 @@ Webhook sync and auto-refill cron remain ticket #14.
 Checkout, change-plan, cancel, top-up, and reads are `createServerFn`s under
 `src/server/fn/billing.ts` (ADR-0002). Invoice PDF returns base64 across the
 server-fn boundary (avoids inventing cookie-auth for a binary API route).
-`/api/webhooks/dodo` and `/api/cron/billing-auto-refill` are ticket #14
-(ADR-0019).
+`/api/webhooks/dodo` and `/api/cron/billing-auto-refill` are ADR-0019.
 
 ### 2. Resolve products by `plan_code`, not client product IDs
 
@@ -37,7 +36,7 @@ semantics match source: wallet → immediate; normal → `cancel_at_period_end`.
 
 ### 5. `BILLING_STUB` for E2E
 
-When `BILLING_STUB` is `1`/`true` (Playwright injects it for `E2E_TARGET=new`),
+When `BILLING_STUB` is `1`/`true` (Playwright injects it in e2e),
 Dodo API calls are skipped: checkout returns a same-origin return URL,
 top-up/change-plan succeed without charging, cancel still updates local rows
 when present, and invoice returns a minimal PDF. Live paths require
@@ -45,7 +44,7 @@ when present, and invoice returns a minimal PDF. Live paths require
 
 ## Consequences
 
-- Credits from successful payments land when the #14 webhook grants them
-  (ADR-0019); #13 starts the charge/checkout and surfaces history already in DB.
-- Usage tab (#30) adds recharts daily + by-service charts and a per-Job table
-  via `fetchUsageStats`, styled with `--chart-*` tokens.
+- Credits from successful payments land when the ADR-0019 webhook grants them;
+  this ADR starts the charge/checkout and surfaces history already in DB.
+- Usage tab adds recharts daily + by-service charts and a per-Job table via
+  `fetchUsageStats`, styled with `--chart-*` tokens.

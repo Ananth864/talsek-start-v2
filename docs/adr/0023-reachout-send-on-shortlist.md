@@ -1,16 +1,15 @@
 # Reachout send on single Shortlist
 
-Ticket #20 restores behavioural Shortlist: send a Reachout rendered from the
-stage's Reachout Template, then advance the Job Application. ADR-0013 / 0016 /
-0021 deferred this to a later ticket; this record captures the send-path
-decisions without contradicting 0001–0022.
+Single Shortlist sends a Reachout rendered from the stage's Reachout Template,
+then advances the Job Application. ADR-0013 / 0016 / 0021 had deferred Reachout
+send; this record captures the send-path decisions.
 
 ## Decisions
 
 ### 1. One user-scoped server function — `shortlistJobApplication`
 
 Source `bulk-shortlist-candidates` (service role) handles both single and bulk.
-This ticket ports the **single** path only (#21 covers bulk Reachout). The
+This ADR covers the **single** path only (ADR-0024 covers bulk Reachout). The
 handler lives in `src/server/fn/job-applications.ts` and delegates to
 `src/server/lib/reachout-send.ts`: personalize → optional Interview Session →
 Resend via `sendResendEmail` → insert `sent_reachout_emails` → update
@@ -48,5 +47,5 @@ remains a client UX gate (source); charge still happens at interview start.
 ## Consequences
 
 - Card Shortlist opens an editable confirm dialog (or template setup first).
-- Bulk Shortlist reuses `sendReachoutAndAdvance` in #21 (ADR-0024).
+- Bulk Shortlist reuses `sendReachoutAndAdvance` in ADR-0024.
 - `moveJobApplicationStage` remains for non-Reachout stage moves.

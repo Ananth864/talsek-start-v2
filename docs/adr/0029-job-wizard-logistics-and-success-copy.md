@@ -1,11 +1,10 @@
 # Job wizard logistics restorations + success / card copy actions
 
-Ticket #28 restored logistics fields, a post-create success dialog, and
-job-card copy actions. **Amended (layout-parity, Aug 2026):** the create
-dialog is restored to the source **4-step** wizard (screening → details →
-requirements → form setup). This supersedes the earlier “keep the 2-step
-dialog” decision. Amends ADR-0010 §7. Does not contradict 0001–0028 /
-0030. No schema changes.
+The Job create flow restores logistics fields, a post-create success dialog, and
+job-card copy actions. **Amended (layout-parity, Aug 2026):** the create dialog
+is the source **4-step** wizard (screening → details → requirements → form
+setup). This supersedes the earlier “keep the 2-step dialog” decision. Amends
+ADR-0010 §7. No schema changes.
 
 ## Decisions
 

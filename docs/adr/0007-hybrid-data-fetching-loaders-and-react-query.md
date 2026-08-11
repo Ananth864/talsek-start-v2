@@ -14,7 +14,7 @@ via Realtime subscriptions and Storage uploads.
   Realtime→React Query invalidation bridge, which keys only on query-key arrays
   and is therefore agnostic to where the data originated.
 - **Client React Query only.** Rejected — leaves the SPA waterfall in place,
-  which is precisely what the move to TanStack Start is meant to fix.
+  which SSR is meant to fix.
 - **Loaders only (no client cache).** Rejected — Realtime invalidation has
   nothing to invalidate; would reinvent client caching.
 

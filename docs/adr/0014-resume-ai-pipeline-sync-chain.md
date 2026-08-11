@@ -1,9 +1,9 @@
 # Resume AI pipeline: synchronous in-process chain
 
-Ticket #9 ports Resume Extraction → Job Match Analysis → optional Email
-Analysis. The source chained three fire-and-forget edge functions behind the
-service role. This record captures how the port collapses that chain and how
-it relates to RLS, stubs, and Realtime.
+Resume Extraction → Job Match Analysis → optional Email Analysis run as one
+synchronous in-process chain. The source chained three fire-and-forget edge
+functions behind the service role. This record captures how we collapse that
+chain and how it relates to RLS, stubs, and Realtime.
 
 ## Decisions
 

@@ -1,11 +1,9 @@
 # Pipeline actions + realtime invalidation
 
-Ticket #8 builds the **mutation layer** over the candidate board (#6/#7): Members
-star, reject, and advance Job Applications between Job Stages. The Realtime
-subscription already mounted in #6 is tightened to the source's event-type
-narrowing so local mutations do not double-fetch. This record captures the
-non-obvious decisions and the write-path RLS consequence; it does not contradict
-0001–0012.
+Members star, reject, and advance Job Applications between Job Stages on the
+candidate board. The Realtime subscription is tightened to the source's
+event-type narrowing so local mutations do not double-fetch. This record
+captures the non-obvious decisions and the write-path RLS consequence.
 
 ## Decisions
 
@@ -19,22 +17,25 @@ three writes behind server functions in `src/server/fn/job-applications.ts`
 composed through `authMiddleware` (ADR-0002/ADR-0004). The client never holds a
 direct write path to business tables.
 
-### 2. Shortlist advances stage only — Reachout send is deferred
+### 2. Shortlist advances stage only — Reachout deferred (completed in ADR-0023/0024)
+
+> **Completed in ADR-0023/0024:** Shortlist now sends Reachout then advances.
+> The paragraph below records what ADR-0013 shipped.
 
 In the source, **Shortlist** = send a Reachout (edge fn) **then** update
-`current_stage_id`. Ticket #8's acceptance criteria ask for move / star /
-reject; Reachout templates and bulk shortlist are separate tickets (#16 / #10).
-The card's Shortlist control therefore confirms a stage transition
-(current → next Job Stage via `nextStageForApplication`) and calls
+`current_stage_id`. ADR-0013 scoped move / star / reject only; Reachout
+templates and bulk shortlist landed separately (ADR-0021, ADR-0024). The
+card's Shortlist control therefore confirmed a stage transition
+(current → next Job Stage via `nextStageForApplication`) and called
 `moveJobApplicationStage`. The Reachout send + `sent_reachout_emails` /
-`interview_sessions` side effects are **not** ported here. The confirmation copy
-states the deferral so Members are not surprised.
+`interview_sessions` side effects were **not** wired here. The confirmation copy
+stated the deferral so Members were not surprised.
 
 ### 3. Realtime invalidation matches the source's event narrowing
 
-Issue #8 asks to port the invalidation bridge unchanged *with respect to query
-keys* ("it keys on query-key arrays"). #6 blanketed `event: '*'` as a temporary
-simplification before mutations existed. With mutations live, that double-fetches
+ADR-0013 scoped the invalidation bridge unchanged *with respect to query
+keys* ("it keys on query-key arrays"). ADR-0011 had blanketed `event: '*'` as a
+temporary simplification before mutations existed. With mutations live, that double-fetches
 against the mutation's own `invalidateQueries`. The bridge now matches the
 **source** `useJobApplicationsSubscription` and invalidates only on:
 
@@ -71,8 +72,8 @@ refetch (ADR-0010 pattern); Realtime also refreshes on status change.
 
 ## Consequences
 
-- Card actions are interactive; stage advance does not send email yet.
+- Card actions are interactive; Shortlist sends Reachout then advances (ADR-0023).
 - Starred toggles refresh via mutation invalidation only (Realtime skips them).
 - Non-admin UPDATE failures are expected under current RLS until a policy change.
-- Follow-up: wire Reachout send into Shortlist (#10/#16); optionally optimistic
-  star flip; revisit per-stage infinite query + stage-scoped invalidation.
+- Done — see ADR-0023/0024 (Reachout on Shortlist). Optionally revisit
+  optimistic star flip and per-stage infinite query + stage-scoped invalidation.

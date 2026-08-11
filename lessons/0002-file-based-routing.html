@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lesson 0002 — File-based routing &amp; the route tree</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+</head>
+<body>
+  <article class="lesson">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Lesson 0002 &middot; TanStack Start</p>
+      <h1 class="lesson__title">File-based routing &amp; the route tree</h1>
+      <p class="lesson__meta">
+        ~12 min &middot; Mapping your React Router instincts onto TanStack Router.
+        Cheat sheet: <a href="../reference/routing.html">Routing reference</a>.
+      </p>
+      <nav class="lesson__nav">
+        <a href="./0001-execution-model.html">&larr; 0001: Execution model</a>
+        <a href="../reference/routing.html">Cheat sheet &rarr;</a>
+      </nav>
+    </header>
+
+    <p class="lead">
+      You want to look at the Talsek Start <code>routes/</code> folder and
+      <em>know</em> the URLs it serves — well enough to spot it when AI files a
+      route in the wrong place or links to a URL that doesn't exist. That skill is
+      one convention table away, and you already know the underlying idea from
+      React Router.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The shift</span>Filename is the config</h2>
+
+    <p>
+      In React Router you declare routes as config — a tree of
+      <code>&lt;Route path="/about"&gt;</code> elements or a
+      <code>createBrowserRouter</code> object. In TanStack Router the
+      <strong>filename is the path</strong>, and a code generator turns your
+      <code>routes/</code> folder into the route tree for you.
+    </p>
+
+<pre><code><span class="tok-com">// React Router: you write the tree</span>
+&lt;Route path="/about" element={&lt;About /&gt;} /&gt;
+&lt;Route path="/posts/:postId" element={&lt;Post /&gt;} /&gt;
+
+<span class="tok-com">// TanStack Router: the files ARE the tree</span>
+<span class="tok-com">//   routes/about.tsx           -&gt; /about</span>
+<span class="tok-com">//   routes/posts/$postId.tsx   -&gt; /posts/:postId</span>
+<span class="tok-com">// (routeTree.gen.ts is generated from these — you never write it)</span></code></pre>
+
+    <p>
+      So there is no central routing file to edit. To add a route you add a file;
+      to move it you move the file; the tree regenerates. That generated file is
+      <a href="../src/routeTree.gen.ts" target="_blank" rel="noopener"><code>src/routeTree.gen.ts</code></a>
+      in this repo — open it and you'll see it's stamped &ldquo;automatically generated&hellip; do NOT edit.&rdquo;
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The convention</span>Filename &rarr; URL</h2>
+
+    <p>One table covers ~90% of what you'll see (every example here is from this repo):</p>
+
+    <table class="tbl">
+      <thead><tr><th>File</th><th>URL</th><th>Kind</th></tr></thead>
+      <tbody>
+        <tr><td><code>__root.tsx</code></td><td>— (wraps everything)</td><td>Root</td></tr>
+        <tr><td><code>_marketing/index.tsx</code></td><td><code>/</code></td><td>Index (under a pathless layout)</td></tr>
+        <tr><td><code>signin.tsx</code></td><td><code>/signin</code></td><td>Static</td></tr>
+        <tr><td><code>auth/callback.tsx</code></td><td><code>/auth/callback</code></td><td>Folder nesting</td></tr>
+        <tr><td><code>apply.$token.tsx</code></td><td><code>/apply/:token</code></td><td>Dynamic param</td></tr>
+        <tr><td><code>docs/$.tsx</code></td><td><code>/docs/*</code></td><td>Splat (catch-all)</td></tr>
+        <tr><td><code>_member.tsx</code></td><td><strong>none — pathless</strong></td><td>Pathless layout</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Two ways to nest: a <strong>folder</strong> (<code>auth/callback.tsx</code>) or
+      <strong>dot-notation</strong> (<code>apply.$token.tsx</code>) — same URL.
+      <a href="https://tanstack.com/router/latest/docs/routing/file-naming-conventions" target="_blank" rel="noopener">(File Naming Conventions)</a>
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">The one that trips people</span>Pathless routes</h2>
+
+    <p>
+      Files starting with <code>_</code> are <strong>pathless layout routes</strong>:
+      they wrap their children but add <em>no</em> segment to the URL. They exist to
+      share layout and logic — exactly like a parent layout route in React Router,
+      minus the URL.
+      <a href="https://tanstack.com/router/latest/docs/routing/routing-concepts" target="_blank" rel="noopener">(Routing Concepts)</a>
+    </p>
+
+    <p>
+      This repo uses <strong>two</strong>. <a href="../src/routes/_marketing.tsx" target="_blank" rel="noopener"><code>_marketing.tsx</code></a>
+      wraps the public site (home, pricing, contact); <a href="../src/routes/_member.tsx" target="_blank" rel="noopener"><code>_member.tsx</code></a>
+      wraps the signed-in app (dashboard, candidates, billing) and runs the auth
+      guard from Lesson 0001. Their children render inside the layout's
+      <code>&lt;Outlet/&gt;</code> and inherit that logic.
+    </p>
+
+    <div class="callout is-note">
+      <span class="callout__label">Route ID vs URL</span>
+      <p>
+        A pathless child has <strong>two different &ldquo;paths&rdquo;</strong>, and confusing them is the #1 routing bug:
+      </p>
+      <table class="tbl" style="margin-top:.5rem">
+        <thead><tr><th></th><th>Route ID (tree position)</th><th>URL users visit</th></tr></thead>
+        <tbody>
+          <tr><td><code>_member/dashboard.tsx</code></td><td><code>/_member/dashboard</code></td><td><code>/dashboard</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        The string you pass <code>createFileRoute('/_member/dashboard')</code> is the
+        <em>tree position</em> — pathless segments included. The URL is that with
+        pathless segments <em>stripped</em>.
+      </p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Codegen</span>You don't write the tree</h2>
+
+    <p>The generated <code>routeTree.gen.ts</code> wires parents to children from the folder structure. Look at it and you'll see the pathless trick in action:</p>
+<pre><code><span class="tok-key">const</span> MemberRoute = MemberRouteImport.<span class="tok-fn">update</span>({
+  id: <span class="tok-str">'/_member'</span>,                 <span class="tok-com">// no `path` field -&gt; pathless</span>
+  getParentRoute: () =&gt; rootRouteImport,
+} <span class="tok-key">as any</span>)
+<span class="tok-com">// MemberDashboardRoute gets path: '/dashboard' but parents onto MemberRoute</span></code></pre>
+
+    <p>
+      <code>_member</code> has an <code>id</code> but <strong>no <code>path</code></strong> — that's
+      literally how codegen marks it pathless. Its children get the real URL while
+      parenting onto the layout. Type-safety flows from this generated tree:
+      <code>Route.useParams()</code>, <code>&lt;Link to&gt;</code>, and <code>loader</code> returns
+      are all inferred from it — which is why you must never hand-edit it.
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Map</span>From React Router</h2>
+    <p>You already know these concepts; here's the rename:</p>
+    <table class="tbl">
+      <thead><tr><th>React Router</th><th>TanStack Router</th></tr></thead>
+      <tbody>
+        <tr><td><code>&lt;Route path="/about"&gt;</code> config</td><td><code>about.tsx</code> file</td></tr>
+        <tr><td>Router config / <code>createBrowserRouter</code></td><td>Generated <code>routeTree.gen.ts</code></td></tr>
+        <tr><td>Nested <code>&lt;Route&gt;</code> children</td><td>Folder or dot-notation</td></tr>
+        <tr><td>Layout / parent route</td><td>Pathless <code>_</code> route (<code>_member</code>, <code>_marketing</code>)</td></tr>
+        <tr><td><code>index: true</code></td><td><code>index.tsx</code></td></tr>
+        <tr><td><code>&lt;Outlet/&gt;</code></td><td><code>&lt;Outlet/&gt;</code> (unchanged)</td></tr>
+        <tr><td><code>useParams()</code></td><td><code>Route.useParams()</code> (typed)</td></tr>
+        <tr><td><code>loader</code> (client-only)</td><td><code>loader</code> — now <strong>isomorphic</strong> (Lesson 0001)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Practice</span>Predict the URL</h2>
+
+    <div class="quiz" data-quiz data-title="What URL does this route serve?">
+      <script type="application/json" data-questions>
+[
+  {
+    "q": "A file named _member.tsx (starts with an underscore):",
+    "options": ["/member", "/", "None - it is pathless"],
+    "answer": 2,
+    "explain": "A leading underscore makes it a pathless layout route. It has no URL of its own; it just wraps its children via <Outlet/> and runs shared logic like the auth guard. This repo also has _marketing for the public site."
+  },
+  {
+    "q": "_member/dashboard.tsx - what URL reaches it?",
+    "options": ["/dashboard", "/_member/dashboard", "/member/dashboard"],
+    "answer": 0,
+    "explain": "Its parent _member is pathless, so that segment is dropped from the URL -> /dashboard. (The route's tree ID is still /_member/dashboard - that's what you pass createFileRoute.)"
+  },
+  {
+    "q": "_marketing/index.tsx - what URL?",
+    "options": ["/index", "/", "/marketing"],
+    "answer": 1,
+    "explain": "index.tsx is the index route of its folder. Under the pathless _marketing layout, it serves '/'. (This is the public home page.)"
+  },
+  {
+    "q": "apply.$token.tsx - which real URL would it match?",
+    "options": ["/apply/$token", "/apply/abc123", "/apply/token"],
+    "answer": 1,
+    "explain": "$token is a dynamic param - it matches any value in that segment. /apply/abc123 matches, with params.token === 'abc123'. The $ name just labels the param; it is not literal."
+  },
+  {
+    "q": "AI proposes an edit inside src/routeTree.gen.ts. What do you do?",
+    "options": ["Apply it - that is the route config", "Reject it - that file is generated", "Move the change to __root.tsx"],
+    "answer": 1,
+    "explain": "routeTree.gen.ts is produced by codegen and overwritten on every change. You never edit it. To change routing, add/rename a file under routes/ and let it regenerate."
+  }
+]
+      </script>
+    </div>
+    <script src="../assets/quiz.js" defer></script>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Try it in your repo</span>Map the whole tree</h2>
+
+    <p>Open <a href="../src/routes" target="_blank" rel="noopener"><code>src/routes/</code></a> and fill in the URLs yourself, then check against the answers below:</p>
+<pre><code>routes/
+  __root.tsx                       -&gt;  ?                        <span class="tok-com">(wraps all)</span>
+  _marketing.tsx                   -&gt;  ?                        <span class="tok-com">(pathless - public layout)</span>
+  _marketing/index.tsx             -&gt;  ?
+  _marketing/pricing.tsx           -&gt;  ?
+  _member.tsx                      -&gt;  ?                        <span class="tok-com">(pathless - authed layout + guard)</span>
+  _member/dashboard.tsx            -&gt;  ?
+  _member/candidates.tsx           -&gt;  ?
+  _member/billing.tsx              -&gt;  ?
+  signin.tsx                       -&gt;  ?
+  apply.$token.tsx                 -&gt;  ?                        <span class="tok-com">(dynamic param)</span>
+  auth/callback.tsx                -&gt;  ?
+  docs.tsx + docs/index.tsx        -&gt;  ?                        <span class="tok-com">(layout + index)</span>
+  docs/$.tsx                       -&gt;  ?                        <span class="tok-com">(splat)</span>
+  api/webhooks/dodo.ts             -&gt;  ?                        <span class="tok-com">(API route, not a page)</span>
+  api/cron/billing-auto-refill.ts  -&gt;  ?                        <span class="tok-com">(API route)</span></code></pre>
+
+    <details>
+      <summary>Reveal the answers</summary>
+<pre><code>__root.tsx                       -&gt;  (no URL; wraps everything, holds &lt;html&gt;/providers)
+_marketing.tsx                   -&gt;  (pathless - no URL)
+_marketing/index.tsx             -&gt;  /
+_marketing/pricing.tsx           -&gt;  /pricing
+_member.tsx                      -&gt;  (pathless - no URL; runs the auth guard)
+_member/dashboard.tsx            -&gt;  /dashboard
+_member/candidates.tsx           -&gt;  /candidates
+_member/billing.tsx              -&gt;  /billing
+signin.tsx                       -&gt;  /signin
+apply.$token.tsx                 -&gt;  /apply/:token
+auth/callback.tsx                -&gt;  /auth/callback
+docs.tsx + docs/index.tsx        -&gt;  /docs       (layout wraps the index + splat)
+docs/$.tsx                       -&gt;  /docs/*     (splat catches any docs path)
+api/webhooks/dodo.ts             -&gt;  /api/webhooks/dodo      (server handler, no component)
+api/cron/billing-auto-refill.ts  -&gt;  /api/cron/billing-auto-refill  (cron endpoint)</code></pre>
+    </details>
+
+    <p>
+      Notice the connection to Lesson 0001: <code>_member</code> is
+      <strong>where the auth guard lives</strong>, so every child under it is
+      protected automatically. The pathless route isn't just layout — it's the
+      boundary for the whole signed-in surface. (And <code>api.*</code> files
+      are server endpoints, not pages — Lesson 0005.)
+    </p>
+
+    <!-- ==================================================================== -->
+    <h2><span class="num">Read this next</span>Primary source</h2>
+    <p>
+      Skim the official
+      <a href="https://tanstack.com/router/latest/docs/routing/file-naming-conventions" target="_blank" rel="noopener">File Naming Conventions</a>
+      and <a href="https://tanstack.com/router/latest/docs/routing/routing-concepts" target="_blank" rel="noopener">Routing Concepts</a>
+      pages — they're the source for the table above and cover the edge cases
+      (route groups, optional params, non-nested routes) we skimmed over.
+    </p>
+
+    <!-- ==================================================================== -->
+    <div class="callout is-note">
+      <span class="callout__label">Ask your teacher</span>
+      <p>
+        The route-ID-vs-URL gap is the bit most people want to push back on —
+        &ldquo;why does <code>createFileRoute</code> say <code>/_member/dashboard</code>
+        if the URL is <code>/dashboard</code>?&rdquo; Ask. Or ask anything about
+        the splat (<code>docs/$</code>), dynamic params, or how
+        <code>&lt;Link to&gt;</code> stays type-safe. I'll work it through before Lesson 0003.
+      </p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <footer class="lesson__footer">
+      <p>
+        <strong>Up next (lesson 0003):</strong> Server functions in depth —
+        <code>createServerFn</code>'s <code>validator</code> &rarr; <code>middleware</code>
+        &rarr; <code>handler</code> pipeline, with this repo's
+        <code>fetchJobs</code> + <code>authMiddleware</code> as the example.
+      </p>
+      <p>
+        <a href="./0001-execution-model.html">&larr; 0001</a>
+        &middot; <a href="./0003-server-functions.html">0003: Server functions &rarr;</a>
+        &middot; <a href="../reference/routing.html">Routing cheat sheet</a>
+        &middot; <a href="../reference/glossary.html">Glossary</a>
+        &middot; <a href="../MISSION.md">Mission</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

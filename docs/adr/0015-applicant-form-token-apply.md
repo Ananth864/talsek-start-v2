@@ -1,9 +1,9 @@
 # Applicant form apply by token
 
-Ticket #11 ports the public Applicant Form surface: open by token, upload a
-resume to Storage, submit a Job Application, and await the Resume AI pipeline.
-This record captures the auth, upload, and rate-limit seams that diverge from
-the source edge functions.
+The public Applicant Form surface opens by token, uploads a resume to Storage,
+submits a Job Application, and awaits the Resume AI pipeline. This record
+captures the auth, upload, and rate-limit seams that diverge from the source
+edge functions.
 
 ## Decisions
 
@@ -49,13 +49,12 @@ Submit still checks `get_company_service_cost` / `get_company_credit_balance`
 and `check_duplicate_application_email` before writing rows (source form-submit
 behaviour). Insufficient credits surface as a temporary-unavailable message.
 
-### 6. Apply route loader + form kit deferral
+### 6. Apply route loader; form kit deferred
 
 `/apply/$token` prefetches via a route `loader` + `ensureQueryData` (ADR-0007);
 invalid tokens leave the query in error state rather than failing the shell.
-The apply form uses controlled inputs for this ticket — the port has no
-`useAppForm` field kit yet (spec TanStack Form consolidation lands with a
-shared kit, not ad-hoc per surface).
+The apply form uses controlled inputs — a shared `useAppForm` field kit was not
+required for this surface (TanStack Form consolidation can land later).
 
 ## Consequences
 

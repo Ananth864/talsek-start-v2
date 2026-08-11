@@ -1,7 +1,7 @@
 # Layout-parity Playwright suite
 
-Separate seam for **source-faithful structure + interaction UX** (spec #34,
-ADR-0030). Does not replace behavioural `e2e/*.spec.ts` characterisation.
+Separate seam for **source-faithful structure + interaction UX** (ADR-0030).
+Does not replace behavioural `e2e/*.spec.ts` characterisation.
 
 ## Run independently
 
@@ -16,12 +16,12 @@ Desktop viewport is fixed at 1280×800. No screenshots.
 
 | Spec | Surface |
 |------|---------|
-| `member-shell.spec.ts` | Member shell (#36) |
-| `dashboard-jobs.spec.ts` | Dashboard / Jobs board (#37) |
-| `candidate-board.spec.ts` | Candidate board + adaptive card (#38) |
-| `candidates-setup.spec.ts` | Candidates page, Bulk Upload, Templates, Forms (#39) |
-| `team-billing-get-started.spec.ts` | Team/Users, Billing, Get Started (#40) |
-| `auth-pages.spec.ts` | Sign-in, sign-up, forgot/reset, confirm email (#41) |
-| `applicant-apply-interview.spec.ts` | Applicant apply + interview token flows (#42) |
+| `member-shell.spec.ts` | Member shell |
+| `dashboard-jobs.spec.ts` | Dashboard / Jobs board |
+| `candidate-board.spec.ts` | Candidate board + adaptive card |
+| `candidates-setup.spec.ts` | Candidates page, Bulk Upload, Templates, Forms |
+| `team-billing-get-started.spec.ts` | Team/Users, Billing, Get Started |
+| `auth-pages.spec.ts` | Sign-in, sign-up, forgot/reset, confirm email |
+| `applicant-apply-interview.spec.ts` | Applicant apply + interview token flows |
 
 Manual checklists (`*.checklist.md`) accompany each surface.

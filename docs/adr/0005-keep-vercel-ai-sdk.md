@@ -1,8 +1,7 @@
 # Keep the Vercel AI SDK; do not migrate to TanStack AI
 
-The AI layer ports to TanStack Start on the existing Vercel AI SDK (`ai` +
-`@ai-sdk/openai`, `-groq`, `-xai`, `-google`). The `@tanstack/ai` packages and
-the demo `api/resume-chat` route that the installer added are removed.
+We keep the Vercel AI SDK (`ai` + `@ai-sdk/openai`, `-groq`, `-xai`, `-google`)
+for all server-side AI work. We do not use `@tanstack/ai` or a demo chat route.
 
 ## Considered options
 

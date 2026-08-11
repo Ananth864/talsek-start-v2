@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TanStack Start — Glossary</title>
+  <link rel="stylesheet" href="../assets/lesson.css" />
+  <style>
+    /* two-column term list for scanability */
+    .glossary { margin-top: 1rem; }
+    .glossary section { margin-bottom: 2rem; }
+    .glossary h2 { margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <article class="lesson glossary">
+
+    <header class="lesson__header">
+      <p class="lesson__eyebrow">Reference &middot; Living glossary</p>
+      <h1 class="lesson__title">Glossary</h1>
+      <p class="lesson__meta">
+        The shared vocabulary of these lessons. Adhered to everywhere.
+        Seeded from lessons 0001&ndash;0002; grows each lesson.
+      </p>
+    </header>
+
+    <section>
+      <h2><span class="num">Lesson 1</span>Execution model</h2>
+      <dl class="dl-terms">
+        <dt>Isomorphic</dt>
+        <dd>Code that runs in (and is bundled for) both server and client. The Start default.</dd>
+        <dt>SSR (Server-Side Rendering)</dt>
+        <dd>The server produces the first HTML; the browser <em>hydrates</em> it into an interactive app.</dd>
+        <dt>Hydration</dt>
+        <dd>The browser attaching React's event handlers to server-rendered HTML.</dd>
+        <dt>RPC (Remote Procedure Call)</dt>
+        <dd>Calling a server function from the client looks like a local call but crosses the network. <code>createServerFn</code> is Start's RPC.</dd>
+        <dt>Server function</dt>
+        <dd>A <code>createServerFn</code> — runs on the server, callable from the client. Start's replacement for hand-rolled API endpoints.</dd>
+        <dt>Server-only function</dt>
+        <dd>A <code>createServerOnlyFn</code> — runs on the server, throws if called from the client. A simple wrapper (takes the fn directly).</dd>
+        <dt>Client-only function</dt>
+        <dd>A <code>createClientOnlyFn</code> — runs in the browser, throws during SSR.</dd>
+        <dt>Import protection</dt>
+        <dd>Mechanism that keeps code out of the wrong bundle: <code>*.server.ts</code> / <code>*.client.ts</code> suffixes, or <code>server-only</code> / <code>client-only</code> side-effect imports.</dd>
+        <dt>Loader (isomorphic)</dt>
+        <dd>A route's data-fetch hook. In Start it runs on the server (SSR) <em>and</em> the client (navigation) — not server-only.</dd>
+        <dt>Module scope</dt>
+        <dd>Code at the top level of a file, run once at import/build time. Reading <code>process.env</code> here leaks to the client bundle.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2><span class="num">Lesson 2</span>Routing</h2>
+      <dl class="dl-terms">
+        <dt>Route tree</dt>
+        <dd>The nested structure of all routes. Built by codegen into <code>routeTree.gen.ts</code> — never hand-written.</dd>
+        <dt>Codegen</dt>
+        <dd>The Vite plugin (or <code>tsr generate</code>) that scans <code>routes/</code> and emits <code>routeTree.gen.ts</code>.</dd>
+        <dt>File-based routing</dt>
+        <dd>Routing where the <em>filename</em> declares the path — no central config object.</dd>
+        <dt>Root route (<code>__root.tsx</code>)</dt>
+        <dd>The top-level route that wraps every page; holds the document shell, providers, global <code>head()</code>.</dd>
+        <dt>Index route (<code>index.tsx</code>)</td>
+        <dd>The route for a folder's root URL. At <code>routes/</code> it's <code>/</code>; at <code>routes/posts/</code> it's <code>/posts</code>.</dd>
+        <dt>Static route</dt>
+        <dd>A fixed URL segment, e.g. <code>about.tsx</code> &rarr; <code>/about</code>.</dd>
+        <dt>Dynamic route / param (<code>$id.tsx</code>)</dt>
+        <dd>A URL segment that matches any value, exposed as <code>params.id</code>.</dd>
+        <dt>Splat route (<code>$.tsx</code>)</dt>
+        <dd>A catch-all matching multiple trailing segments (<code>/*</code>).</dd>
+        <dt>Pathless layout route (<code>_foo.tsx</code>)</dt>
+        <dd>A route prefixed with <code>_</code> that adds <strong>no</strong> URL segment. Wraps its children via <code>&lt;Outlet/&gt;</code>; used for shared layout / guards.</dd>
+        <dt>Layout route (pathed, <code>posts.tsx</code>)</dt>
+        <dd>A route file that shares layout/logic with its children <em>and</em> contributes its segment to the URL. Inside a folder, the layout file is <code>route.tsx</code>. Distinct from a pathless layout (no URL) and a plain folder (no logic).</dd>
+        <dt>Plain folder (<code>posts/</code>)</dt>
+        <dd>Structures the URL and organises files. Does <strong>not</strong> share layout/logic by itself — that needs a layout route.</dd>
+        <dt>Route group (<code>(app)/</code>)</dt>
+        <dd>A parenthesised folder: pure organisation. No URL segment, no layout, no effect on the tree.</dd>
+        <dt>Excluded file (<code>-foo.tsx</code>)</dt>
+        <dd>A <code>-</code>-prefixed file/folder ignored by codegen — for colocating non-route modules inside <code>routes/</code>.</dd>
+        <dt>API route (<code>api.x.ts</code>)</dt>
+        <dd>A route that is a server endpoint, not a page — declared with <code>server.handlers</code> instead of <code>component</code>. Runs on the server.</dd>
+        <dt>getParentRoute</dt>
+        <dd>The codegen-wired link from a child to its parent. Along it flow: rendering (<code>&lt;Outlet&gt;</code>), loader data, <code>beforeLoad</code> context, search-param schemas, and accumulated types. Users rarely write it; parentage comes from file structure.</dd>
+        <dt>Gen file (<code>routeTree.gen.ts</code>)</dt>
+        <dd>Auto-generated route tree. Carries <code>// @ts-nocheck</code> + <code>as any</code> on its wiring; the real types live in each <code>createFileRoute</code> path string and the <code>Register</code> declaration. Never hand-edit or import types from it.</dd>
+        <dt>Route ID (vs URL path)</dt>
+        <dd>The route's identity in the tree, including pathless segments — e.g. <code>/_member/dashboard</code>. The URL (<code>/dashboard</code>) strips the pathless segment.</dd>
+        <dt>Outlet</dt>
+        <dd>Where a parent/layout route renders its matched child. Same name as React Router.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2><span class="num">Lesson 3</span>Server functions</h2>
+      <dl class="dl-terms">
+        <dt>Server function pipeline</dt>
+        <dd>The ordered stages of a <code>createServerFn</code>: <code>{ method }</code> &rarr; <code>.validator()</code> &rarr; <code>.middleware()</code> &rarr; <code>.handler()</code>. Only the handler is required.</dd>
+        <dt>Validator (<code>.validator(fn)</code>)</dt>
+        <dd>Parses + validates the caller's input; its return becomes the typed <code>data</code> downstream stages see. No validator &rarr; no <code>data</code>.</dd>
+        <dt>Server-function middleware (<code>.middleware([...])</code>)</dt>
+        <dd>Runs before the handler and merges values into <code>context</code> (e.g. a session). Built with <code>createMiddleware({ type: 'function' }).client().server()</code>.</dd>
+        <dt>Handler (<code>.handler(({ data, context }) =&gt; ...)</code>)</dt>
+        <dd>The server-only logic. Returns a serialisable value across the RPC.</dd>
+        <dt>Method (<code>{ method: 'GET' | 'POST' }</code>)</dt>
+        <dd><code>GET</code> for cacheable reads; <code>POST</code> (the default) for mutations.</dd>
+        <dt>API route (vs server function)</dt>
+        <dd>A server endpoint with a real URL + HTTP method (<code>server.handlers</code>). Pick it when an external caller needs a URL; pick a server function for typed app-to-server calls.</dd>
+      </dl>
+    </section>
+
+    <footer class="lesson__footer">
+      <p>
+        <a href="../lessons/0001-execution-model.html">Lesson 0001</a>
+        &middot; <a href="../lessons/0002-file-based-routing.html">Lesson 0002</a>
+        &middot; <a href="../lessons/0003-server-functions.html">Lesson 0003</a>
+        &middot; <a href="./execution-model.html">Execution model ref</a>
+        &middot; <a href="./routing.html">Routing ref</a>
+        &middot; <a href="./server-functions.html">Server functions ref</a>
+      </p>
+    </footer>
+
+  </article>
+</body>
+</html>

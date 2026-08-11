@@ -9,13 +9,8 @@ try {
 }
 
 /**
- * Target-agnostic harness. The SAME specs run against either:
- *   - the SOURCE app   (E2E_TARGET=source)  — to capture current behaviour
- *   - the NEW app       (E2E_TARGET=new, default) — to verify parity
- *
- * Examples:
- *   E2E_TARGET=source E2E_EMAIL=a@b.c E2E_PASSWORD=secret bun e2e:install && bun e2e
- *   E2E_TARGET=new    E2E_EMAIL=a@b.c E2E_PASSWORD=secret bun e2e
+ * Default base URL is the Start app on :3000.
+ * Override with E2E_BASE_URL, or set E2E_TARGET=source to hit a Vite SPA on :5173.
  */
 const target = (process.env.E2E_TARGET ?? 'new').toLowerCase()
 const baseURL =

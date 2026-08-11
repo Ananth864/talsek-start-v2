@@ -1,12 +1,10 @@
 # Candidate board: SSR read path, Realtime, RLS audit
 
-Ticket #6 builds the read path for the candidate pipeline — the second Core ATS
-domain on top of the auth/Jobs seams. The dashboard's right pane becomes the
-selected Job's candidate board: a server-rendered, stage-tabbed list of Job
-Applications showing parsed candidate data, match score, and Processing Status
-on first paint, kept fresh by the port's first Realtime subscription. This
-record captures the non-obvious decisions and the domain's RLS audit
-(ADR-0004 is incremental per-domain); it does not contradict 0001–0010.
+The dashboard's right pane is the selected Job's candidate board: a
+server-rendered, stage-tabbed list of Job Applications showing parsed candidate
+data, match score, and Processing Status on first paint, kept fresh by a
+Realtime subscription. This record captures the non-obvious decisions and the
+domain's RLS audit (ADR-0004 is incremental per-domain).
 
 ## Decisions
 
@@ -130,12 +128,6 @@ layer:
   compose `authMiddleware`, so every read is user-scoped. The `job_applications`
   Realtime channel authorises with the user JWT; RLS filters the payloads.
 
-Follow-ups (non-blocking): the candidate write-path tickets (stage move,
-reject, shortlist) will use the admin-only UPDATE policy
-(`"Admins can update job applications for their company jobs"`,
-`user_is_company_admin`) — the same admin-only INSERT consequence noted in
-ADR-0010 applies to UPDATE/DELETE, and must be honoured (a non-admin Member
-moving a candidate is an RLS policy change, not a revert to the admin client).
-The `get_job_stage_counts` RPC (SECURITY DEFINER, takes `p_company_id`) is not
-used by the read path; if a later ticket adopts it, its SECURITY DEFINER
-scoping should be re-checked against the user-scoped caller.
+Done — see ADR-0013 (stage move, star, reject) and ADR-0023/0024 (Reachout on
+Shortlist). The admin-only UPDATE RLS note below remains relevant if non-admin
+Members need pipeline actions.

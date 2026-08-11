@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * Documentation section smoke (#33). Playwright suite is paused for the
- * port-completion batch — keep this ready for when E2E is re-enabled.
+ * Documentation section smoke.
  */
 
 test('docs index redirects to get-started', async ({ page }) => {

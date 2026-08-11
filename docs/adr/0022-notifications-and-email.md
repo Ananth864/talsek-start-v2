@@ -1,15 +1,15 @@
 # Notifications & email (Resend, prefs, cron, webhooks)
 
-Ticket #17 ports the cross-cutting email/notification layer: deepen the Resend
-seam for digests and Cal.com booking confirmations, Member notification
-preferences, a secret-guarded daily-digest Vercel Cron, and a signed inbound
-email webhook that runs Email Analysis via the existing pipeline.
+The cross-cutting email/notification layer deepens the Resend seam for digests
+and Cal.com booking confirmations, Member notification preferences, a
+secret-guarded daily-digest Vercel Cron, and a signed inbound email webhook
+that runs Email Analysis via the existing pipeline.
 
 ## Decisions
 
 ### 1. One Resend module — deepen `src/server/lib/email.ts`
 
-Invite (#15), daily digest, and Cal booking confirmation all go through
+Invite (ADR-0020), daily digest, and Cal booking confirmation all go through
 `sendResendEmail` / `isEmailStub()`. No second Resend client path.
 `EMAIL_STUB=1` (or missing `RESEND_API_KEY`) no-ops all kinds for E2E.
 

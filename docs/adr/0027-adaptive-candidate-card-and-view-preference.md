@@ -1,9 +1,8 @@
 # Adaptive candidate card + Profile view preference
 
-Ticket #26 consolidates the source's three stage-specific candidate card
-families into one adaptive card that honours the Member's persisted
-grid/list preference. This record captures the non-obvious decisions; it
-does not contradict 0001–0026.
+One adaptive candidate card consolidates the source's three stage-specific card
+families and honours the Member's persisted grid/list preference. This record
+captures the non-obvious decisions.
 
 ## Decisions
 

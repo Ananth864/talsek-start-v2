@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * Marketing static pages smoke (#32). Playwright suite is paused for the
- * port-completion batch — keep this ready for when E2E is re-enabled.
+ * Marketing static pages smoke.
  */
 
 const pages = [

@@ -1,10 +1,9 @@
 # Candidate profile detail: dialog, ai_analysis narrowing, client-side PDF
 
-Ticket #7 extends the candidate board's card (#6) into the full profile
-detail: the `CandidateProfileDialog` (scores, AI recommendation,
-per-requirement evidence, parsed resume data, email source) and the
-`CandidateProfilePDFRenderer` with a client-side PDF download. This record
-captures the non-obvious decisions; it does not contradict 0001–0011.
+The candidate board card opens into the full profile detail:
+`CandidateProfileDialog` (scores, AI recommendation, per-requirement evidence,
+parsed resume data, email source) and `CandidateProfilePDFRenderer` with a
+client-side PDF download. This record captures the non-obvious decisions.
 
 ## Decisions
 
@@ -50,7 +49,8 @@ Job's requirements were edited after scoring. So:
   x/weight, "Reduced by 50%" note). On the read path — requirements not
   edited — the components sum to `final_score`, matching the source exactly.
 
-The write-path recompute-on-edit behaviour still ports with #8+.
+The write-path recompute-on-edit behaviour is covered by ADR-0013 and
+ADR-0026.
 
 ### 3. One derived read model; the dialog is client-only state on the cached row
 
@@ -81,9 +81,9 @@ the application date keeps the header consistent with the board card and the
 PDF), and the header badge variant mapping is centralised as
 `matchBadgeVariant` (70/40, source thresholds) beside `scoreBand`.
 
-Deferred tab content, empty-stated not omitted: **Interview** (Interview
-Sessions port with #12) and the **form-answers** section of Requirement
-Analysis (forms domain). The Email tab is fully ported, including the
+Deferred tab content, empty-stated not omitted: **Interview** (completed —
+ADR-0025) and the **form-answers** section of Requirement Analysis (completed —
+ADR-0025). The Email tab is fully ported, including the
 source's `renderEmailContent` header extraction (Subject/From/To/Date →
 "Email Details" card; `parseEmailBody` in the model module).
 
@@ -115,14 +115,13 @@ service-role access; no auth-touching awaits (no `flushCookies` concern).
 
 ## Follow-ups (non-blocking)
 
-- The #7 E2E (`candidates-board.spec.ts`, dialog + PDF download) asserts
-  conditionally, like #6's board spec: the E2E account has no applications
-  until #9/#11 seed real data — then drop the `cardCount === 0` early-return
-  and hard-assert the dialog + download path.
-- When #8 ports mutations and requirement editing, revisit whether the dialog
-  should adopt the live recompute (source behaviour) over the persisted
-  `final_score` (decision §2).
+- Done — see ADR-0025 (Interview tab, form-answers section).
+- Done — see ADR-0013 and ADR-0026 (mutations and requirement editing; dialog
+  keeps persisted `final_score` per §2).
+- E2E (`candidates-board.spec.ts`, dialog + PDF download) asserts conditionally
+  when the E2E account has no applications — hard-assert when seeded data is
+  available.
 - Review judgement call declined: `CandidateProfilePDFRenderer`'s
   `candidates` prop names Job Applications (CONTEXT.md ambiguity), kept
-  verbatim for source parity — the bulk ZIP export ports against it (same
-  rationale as #6's declined `application` rename).
+  verbatim for source parity — the bulk ZIP export reuses it (same rationale
+  as ADR-0011's declined `application` rename).

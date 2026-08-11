@@ -1,11 +1,9 @@
 # Jobs read path: SSR list, search-param selection, RLS audit
 
-Ticket #4 builds the read path for Jobs — the first **Core ATS** domain on top of
-the auth seam from #2/#3. The dashboard renders a server-rendered list of the
-Member's company Jobs on first paint, a Job can be selected, and company scoping
-comes from RLS with no manual `company_id` filters. This record captures the
-non-obvious decisions and the domain's RLS audit (ADR-0004 is incremental
-per-domain); it does not contradict 0001–0008.
+The Jobs read path renders a server-rendered list of the Member's company Jobs
+on first paint, supports Job selection, and relies on RLS for company scoping
+with no manual `company_id` filters. This record captures the non-obvious
+decisions and the domain's RLS audit (ADR-0004 is incremental per-domain).
 
 ## Decisions
 
@@ -83,7 +81,4 @@ layer:
 - No service-role (`adminClient`) access is used on this domain — both functions
   compose `authMiddleware`, so every read is user-scoped.
 
-Follow-up (non-blocking): when the Jobs write paths land (#5 create/update), the
-`canCreateJob` capability check must live inside the server function, and the
-`job_form_configs` embed should be re-checked for a row-level policy that matches
-the `jobs` policy's company scoping (it is read here only via the job's own RLS).
+Done — see ADR-0010 (`createJob`, `canCreateJob`, JSON column narrowing).

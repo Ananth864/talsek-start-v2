@@ -2,9 +2,7 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 /**
- * Adaptive candidate card + grid/list preference (#26).
- * Playwright suite is paused for the port-completion batch — this spec is
- * written for when E2E is re-enabled.
+ * Adaptive candidate card + grid/list preference.
  */
 
 async function signIn(page: Page) {

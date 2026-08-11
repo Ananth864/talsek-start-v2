@@ -1,7 +1,7 @@
 # Tailwind v4 sidebar widths must use `var()`
 
-Parent: layout/UX parity (#34 / ADR-0030). Discovered while locking Member
-shell width/collapse in ticket #36.
+Parent: ADR-0030 (layout/UX parity). Discovered while locking Member shell
+width/collapse.
 
 ## Context
 
