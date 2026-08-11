@@ -563,6 +563,7 @@ export function CandidateCard({
     <Card
       data-testid="candidate-card"
       data-application-id={application.id}
+      data-job-id={job.id}
       data-layout={layout}
       data-stage-kind={stageKind}
       data-status={application.status}

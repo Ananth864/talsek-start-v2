@@ -48,6 +48,7 @@ export const DEFAULT_INTERVIEW_COST = 40
  */
 export const SHORTLIST_COPY = {
   applicationMissingBoard: 'Candidate is no longer on the board.',
+  jobMissing: 'Could not resolve this candidate\u2019s Job.',
   noPermission:
     'You do not have permission to shortlist candidates. Ask a company admin to grant Send Reachouts.',
   rejected: 'Rejected candidates cannot be shortlisted',
@@ -82,7 +83,13 @@ export type ShortlistJobInput = Pick<
 /** Inputs to the preparation gate. All fields are read-only snapshots. */
 export type ShortlistPreparationInput = {
   application: JobApplicationRow | null
-  job: ShortlistJobInput
+  /**
+   * The Job used for Reachout personalization. The Candidate board always
+   * passes a resolved Job; the cross-Job Candidates page resolves the Job per
+   * application and passes `null` when the Job is not in the visible cache,
+   * which the gate surfaces as `job-missing`.
+   */
+  job: ShortlistJobInput | null
   stages: JobStageRow[]
   canSendReachout: boolean
   /** Reachout Templates snapshot; `null` while the query has not loaded. */
@@ -100,6 +107,7 @@ export type ShortlistPreparationInput = {
  */
 export type ShortlistDecision =
   | { kind: 'application-missing'; message: string }
+  | { kind: 'job-missing'; message: string }
   | { kind: 'block-permission'; message: string }
   | { kind: 'block-rejected'; message: string }
   | { kind: 'block-final-stage'; message: string }
@@ -124,8 +132,8 @@ export type ShortlistDecision =
  * Resolve the Member-facing Shortlist decision for one Job Application.
  *
  * Gate order (source parity):
- *   application present → permission → stage/rejected → credits (interview
- *   only) → template readiness → personalization.
+ *   application present → Job resolved (cross-Job) → permission → stage/rejected
+ *   → credits (interview only) → template readiness → personalization.
  *
  * Returns `templates-not-loaded` when the Templates query has not loaded yet
  * so the caller can refetch and re-resolve. This keeps the credits gate ahead
@@ -152,6 +160,12 @@ export function prepareShortlist(
       kind: 'application-missing',
       message: SHORTLIST_COPY.applicationMissingBoard,
     }
+  }
+
+  // Cross-Job surfaces resolve the Job per application; an unresolved Job means
+  // personalization is impossible. The board always passes a resolved Job.
+  if (!job) {
+    return { kind: 'job-missing', message: SHORTLIST_COPY.jobMissing }
   }
 
   if (!canSendReachout) {

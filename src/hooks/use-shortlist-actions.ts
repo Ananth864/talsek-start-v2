@@ -158,6 +158,7 @@ export function useShortlistActions({
           setIsInsufficientCreditsModalOpen(true)
           break
         case 'application-missing':
+        case 'job-missing':
         case 'block-permission':
         case 'block-rejected':
         case 'block-final-stage':
