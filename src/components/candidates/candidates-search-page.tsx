@@ -21,8 +21,7 @@ import { useCandidateSearch } from '#/hooks/use-candidate-search'
 import { useCrossJobShortlistActions } from '#/hooks/use-cross-job-shortlist-actions'
 import { useCandidateListView } from '#/hooks/use-candidate-list-view'
 import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
-import { fetchJobs } from '#/server/fn/jobs'
-import { jobsQueryKey } from '#/lib/jobs-shared'
+import { jobsQueryOptions } from '#/hooks/use-jobs'
 import {
   CANDIDATE_SEARCH_STAGE_OPTIONS,
   hasCandidateSearchFilters,
@@ -156,8 +155,7 @@ export function CandidatesSearchPage({
   )
 
   const { data: jobs = [], isLoading: isJobsLoading } = useQuery({
-    queryKey: jobsQueryKey(companyId),
-    queryFn: () => fetchJobs(),
+    ...jobsQueryOptions(companyId),
     enabled: Boolean(companyId),
   })
 

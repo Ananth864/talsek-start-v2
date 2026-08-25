@@ -14,6 +14,21 @@ import type { FormQuestion } from '#/integrations/supabase/types'
 import { Button } from '#/components/ui/button'
 
 export const Route = createFileRoute('/_member/form-settings')({
+  // Prefetch + dehydrate for SSR first paint (ADR-0007 pattern — the fetch
+  // used to start only after hydration, which showed "Loading form template…").
+  // Server-only with lazy imports: the client route chunk stays lean and the
+  // mounted hook fetches exactly as before on client-side navigation.
+  loader: async ({ context }) => {
+    if (!context.companyId || typeof document !== 'undefined') return
+    const { formTemplateQueryOptions } = await import('#/hooks/use-form-template')
+    try {
+      await context.queryClient.ensureQueryData(
+        formTemplateQueryOptions(context.companyId),
+      )
+    } catch {
+      // Surface via useQuery error UI — do not fail the whole route shell.
+    }
+  },
   component: FormSettingsPage,
 })
 

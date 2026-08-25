@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Trash2, UploadCloud } from 'lucide-react'
-import { fetchJobs } from '#/server/fn/jobs'
 import {
   prepareBulkResumeUpload,
   processBulkResumeUpload,
 } from '#/server/fn/bulk'
 import type { BulkResumeUploadResult } from '#/server/fn/bulk'
-import { jobsQueryKey } from '#/lib/jobs-shared'
+import { jobsQueryOptions } from '#/hooks/use-jobs'
 import { JOB_APPLICATIONS_QUERY_KEY_PREFIX } from '#/lib/job-applications-shared'
 import { supabaseBrowser } from '#/lib/supabase'
 import { Badge } from '#/components/ui/badge'
@@ -108,10 +107,9 @@ type BulkUploadPageProps = {
  */
 export function BulkUploadPage({ companyId }: BulkUploadPageProps) {
   const queryClient = useQueryClient()
-  const { data: jobs = [], isLoading: isJobsLoading } = useQuery({
-    queryKey: jobsQueryKey(companyId),
-    queryFn: () => fetchJobs(),
-  })
+  const { data: jobs = [], isLoading: isJobsLoading } = useQuery(
+    jobsQueryOptions(companyId),
+  )
   const [selectedJobId, setSelectedJobId] = useState('')
   const [rows, setRows] = useState<BulkFileRow[]>([])
   const [isProcessing, setIsProcessing] = useState(false)

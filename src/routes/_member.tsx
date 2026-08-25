@@ -40,11 +40,26 @@ export const Route = createFileRoute('/_member')({
     // must await a refetch of a stale profile. ensureQueryData returns stale
     // cache immediately and only refetches in the background, which leaves the
     // company guard stuck open with company_id: null.
-    const profile = await context.queryClient.fetchQuery({
+    //
+    // The sidebar's candidate list-view preference rides the same wave so it
+    // dehydrates instead of fetching post-hydration on every Member page.
+    // Server-only (lazy import keeps it off the client layout chunk); on the
+    // client the sidebar hook fetches as before — the profile fetch must
+    // remain the only blocking hop.
+    const profilePromise = context.queryClient.fetchQuery({
       queryKey: ['member-profile', user.id],
       queryFn: () => fetchMemberProfile(),
       staleTime: MEMBER_AUTH_STALE_MS,
     })
+    if (typeof document === 'undefined') {
+      const { candidateListViewQueryOptions } = await import(
+        '#/hooks/use-candidate-list-view'
+      )
+      await context.queryClient
+        .ensureQueryData(candidateListViewQueryOptions(user.id))
+        .catch(() => undefined)
+    }
+    const profile = await profilePromise
     const firstName = profile?.first_name.trim() ?? ''
     const lastName = profile?.last_name.trim() ?? ''
     const userName = `${firstName} ${lastName}`.trim() || null

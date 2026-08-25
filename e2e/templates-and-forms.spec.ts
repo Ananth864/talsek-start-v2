@@ -17,6 +17,20 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard/)
 }
 
+/**
+ * SSR pages paint interactive UI before React attaches listeners, so an early
+ * click can be swallowed during hydration. Retry click+effect until it lands.
+ */
+async function clickUntilEffect(
+  clickTarget: () => ReturnType<Page['getByTestId']>,
+  effect: () => ReturnType<Page['getByTestId']> | ReturnType<Page['getByRole']>,
+) {
+  await expect(async () => {
+    await clickTarget().click()
+    await expect(effect()).toBeVisible({ timeout: 2_000 })
+  }).toPass({ timeout: 20_000 })
+}
+
 function adminClient() {
   const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -84,7 +98,10 @@ test.describe('reachout templates + form customization', () => {
       page.getByRole('heading', { name: 'Reachout Templates' }),
     ).toBeVisible()
 
-    await page.getByRole('tab', { name: /final reachout/i }).click()
+    await clickUntilEffect(
+      () => page.getByRole('tab', { name: /final reachout/i }),
+      () => page.getByTestId('save-template-final'),
+    )
     await page.getByTestId('field-subject').fill(`Opportunity ${marker}`)
     await page.getByTestId('field-reply_to_email').fill(process.env.E2E_EMAIL!)
     // Ensure body is non-empty (defaults load from server).
@@ -114,7 +131,10 @@ test.describe('reachout templates + form customization', () => {
 
     const addGithub = page.getByTestId('add-question-github')
     if (await addGithub.isVisible()) {
-      await addGithub.click()
+      await clickUntilEffect(
+        () => page.getByTestId('add-question-github'),
+        () => page.getByTestId('remove-question-github'),
+      )
     }
     await page.getByTestId('form-settings-save').click()
     await expect(page.getByTestId('form-settings-banner')).toContainText(
