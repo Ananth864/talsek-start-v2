@@ -25,11 +25,11 @@ export function DocumentationPage({
   return (
     <DocumentationWrapper title={title}>
       <DocumentationContent>
-        <div className="flex gap-12 xl:gap-20">
-          <div className="min-w-0 max-w-3xl flex-1">
-            <div className="rounded-xl border border-border/40 bg-card/30 p-8 shadow-sm">
+        <div className="flex gap-8 xl:gap-12">
+          <div className="min-w-0 flex-1">
+            <div className="rounded-xl border border-border/40 bg-card/30 p-5 shadow-sm sm:p-8">
               <div
-                className="prose prose-slate prose-docs dark:prose-invert"
+                className="prose prose-docs prose-slate dark:prose-invert"
                 data-testid="docs-content"
               >
                 {children}
