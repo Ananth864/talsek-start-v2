@@ -1,3 +1,8 @@
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -99,6 +104,74 @@
   --chart-3: hsl(216 92% 60%);
   --chart-4: hsl(210 98% 78%);
   --chart-5: hsl(202 100% 75%);
+}
+
+/*
+ * Screening-desk marketing theme (see ADR-0032): the public marketing surface
+ * uses its own token palette + type system, ported from the redesigned source
+ * landing. Scoped to [data-marketing-theme] on <html> (set by the _marketing
+ * layout) so portaled dialogs and the gated app keep the product theme.
+ * Values are HSL component sets, same convention as above.
+ */
+[data-marketing-theme] {
+  --background: hsl(225 33% 98%);
+  --foreground: hsl(220 54% 10%);
+
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(220 54% 10%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(220 54% 10%);
+
+  --primary: hsl(225 66% 49%);
+  --primary-foreground: hsl(210 40% 98%);
+
+  --secondary: hsl(225 40% 94%);
+  --secondary-foreground: hsl(225 50% 30%);
+
+  --muted: hsl(225 20% 94%);
+  --muted-foreground: hsl(220 12% 42%);
+
+  --accent: hsl(225 40% 94%);
+  --accent-foreground: hsl(225 50% 30%);
+
+  --border: hsl(222 20% 90%);
+  --input: hsl(222 20% 90%);
+  --ring: hsl(225 66% 49%);
+
+  /* Type roles: display / body / mono micro-labels */
+  --font-sans: 'Instrument Sans Variable', system-ui, -apple-system, sans-serif;
+  --font-display:
+    'Bricolage Grotesque Variable', 'Instrument Sans Variable', system-ui,
+    sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+.dark[data-marketing-theme] {
+  --background: hsl(224 50% 8%);
+  --foreground: hsl(222 44% 94%);
+
+  --card: hsl(222 50% 12%);
+  --card-foreground: hsl(222 44% 94%);
+
+  --popover: hsl(222 50% 12%);
+  --popover-foreground: hsl(222 44% 94%);
+
+  --primary: hsl(224 76% 64%);
+  --primary-foreground: hsl(224 50% 10%);
+
+  --secondary: hsl(222 35% 18%);
+  --secondary-foreground: hsl(222 44% 90%);
+
+  --muted: hsl(222 35% 16%);
+  --muted-foreground: hsl(222 15% 65%);
+
+  --accent: hsl(222 35% 20%);
+  --accent-foreground: hsl(222 44% 92%);
+
+  --border: hsl(222 30% 20%);
+  --input: hsl(222 30% 20%);
+  --ring: hsl(224 76% 64%);
 }
 
 @theme inline {
@@ -260,6 +333,14 @@
     @apply bg-background text-foreground;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+
   /* Premium scrollbar (ported from source) */
   *::-webkit-scrollbar {
     height: 6px;
@@ -284,6 +365,14 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  /* Mono micro-label — the screening-report annotation voice (ADR-0032) */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 }
 

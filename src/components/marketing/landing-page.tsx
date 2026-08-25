@@ -17,8 +17,11 @@ export function LandingPage() {
         Skip to main content
       </a>
       <main id="main-content" data-testid="landing-page">
-        <Hero />
-        <CompanyLogos />
+        {/* Hero fills the first viewport; the logo strip sits at its bottom edge */}
+        <div className="flex min-h-svh flex-col">
+          <Hero />
+          <CompanyLogos />
+        </div>
         <HowItWorks />
         <WhatSetsUsApart />
         <Testimonials />

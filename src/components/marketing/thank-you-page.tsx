@@ -41,12 +41,12 @@ export function ThankYouPage() {
       <div className="container mx-auto px-4 py-12 md:py-16 lg:py-20">
         <div className="mx-auto mb-16 max-w-3xl text-center">
           <div className="mb-6 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/30">
-              <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-12 w-12 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
 
-          <h1 className="mb-4 text-4xl font-bold text-foreground md:text-5xl lg:text-6xl">
+          <h1 className="mb-4 font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
             Thank You!
           </h1>
 
@@ -65,7 +65,8 @@ export function ThankYouPage() {
 
         <div className="mx-auto mb-20 max-w-5xl">
           <div className="mb-8 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-foreground md:text-4xl">
+            <p className="label-mono mb-4 text-primary">Platform walkthrough</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
               Get a Preview: Platform Walkthrough
             </h2>
             <p className="text-lg text-muted-foreground">
@@ -75,7 +76,7 @@ export function ThankYouPage() {
           </div>
 
           <div
-            className="relative w-full overflow-hidden rounded-xl bg-gray-900 shadow-2xl"
+            className="relative w-full overflow-hidden rounded-xl bg-foreground shadow-2xl"
             style={{ paddingBottom: '56.25%' }}
           >
             <iframe
@@ -95,7 +96,8 @@ export function ThankYouPage() {
 
         <div className="mx-auto mb-16 max-w-6xl">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
+            <p className="label-mono mb-4 text-primary">Why Talsek</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
               Why Talsek?
             </h2>
             <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
@@ -127,7 +129,7 @@ export function ThankYouPage() {
 
         <div className="mx-auto mb-16 max-w-4xl">
           <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-8 md:p-10">
-            <h3 className="mb-6 text-center text-2xl font-bold text-foreground md:text-3xl">
+            <h3 className="mb-6 text-center font-display text-2xl font-bold tracking-tight md:text-3xl">
               What to Expect
             </h3>
             <div className="space-y-4">

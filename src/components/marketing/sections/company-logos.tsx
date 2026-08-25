@@ -26,42 +26,40 @@ const logos = [
   },
 ]
 
+/** Logo marquee pinned to the bottom of the hero viewport. */
 export function CompanyLogos() {
-  const track = [...logos, ...logos]
-
   return (
-    <div
-      className="w-full bg-muted/30 pt-2 pb-10"
+    <section
+      aria-label="Companies using Talsek"
       data-testid="landing-company-logos"
+      className="border-y bg-card/50"
     >
-      <section className="relative mx-auto max-w-3xl">
-        <h2 className="mb-5 text-center text-xl font-medium tracking-tight text-foreground md:text-3xl">
-          <span className="text-muted-foreground">Trusted by experts.</span>
-          <br />
-          <span className="font-semibold text-primary">Used by the Leaders.</span>
-        </h2>
-
+      <div className="mx-auto max-w-5xl px-4 pt-6 pb-10">
+        <p className="label-mono mb-8 text-center text-muted-foreground">
+          Trusted by startups
+        </p>
         <div className="overflow-hidden py-4 [mask-image:linear-gradient(to_right,transparent,black,transparent)]">
-          <div className="animate-marketing-marquee flex w-max gap-16">
-            {track.map((logo, index) => (
+          <div className="flex w-max animate-marketing-marquee items-center gap-[60px] hover:[animation-play-state:paused]">
+            {[...logos, ...logos].map((logo, i) => (
               <div
-                key={`${logo.alt}-${index}`}
-                className="flex select-none items-center gap-3"
+                key={`${logo.alt}-${i}`}
+                aria-hidden={i >= logos.length}
+                className="flex shrink-0 items-center gap-3 select-none"
               >
                 <img
-                  alt={logo.alt}
-                  className="pointer-events-none h-10 w-auto object-contain md:h-12"
-                  loading="lazy"
                   src={logo.src}
+                  alt={logo.alt}
+                  loading="lazy"
+                  className="pointer-events-none h-10 w-auto object-contain md:h-12"
                 />
-                <span className="whitespace-nowrap text-xl font-semibold text-foreground/80">
+                <span className="text-xl font-semibold whitespace-nowrap text-foreground/80">
                   {logo.name}
                 </span>
               </div>
             ))}
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   )
 }

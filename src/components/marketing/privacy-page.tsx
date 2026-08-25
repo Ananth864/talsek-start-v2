@@ -13,10 +13,10 @@ export function PrivacyPage() {
     >
       <div className="mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground md:text-4xl">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             Privacy Policy
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="label-mono mt-3 text-[10px] text-muted-foreground">
             Last updated: {LAST_UPDATED}
           </p>
         </div>
@@ -42,9 +42,7 @@ export function PrivacyPage() {
                   Data Sharing and Disclosure
                 </TocLink>
                 <TocLink href="#your-rights">Your Rights and Choices</TocLink>
-                <TocLink href="#security">
-                  Data Security and Retention
-                </TocLink>
+                <TocLink href="#security">Data Security and Retention</TocLink>
                 <TocLink href="#international-transfers">
                   International Data Transfers
                 </TocLink>
@@ -107,7 +105,9 @@ export function PrivacyPage() {
               <h3 className="text-xl font-semibold text-foreground">
                 2.2 Google OAuth Integration
               </h3>
-              <p>When you sign up or sign in using Google OAuth, we may collect:</p>
+              <p>
+                When you sign up or sign in using Google OAuth, we may collect:
+              </p>
               <ul>
                 <li>
                   <strong>Google Profile Information:</strong> Name, email
@@ -227,9 +227,7 @@ export function PrivacyPage() {
               <ul>
                 <li>Sending job application updates and notifications</li>
                 <li>Providing customer support and responding to inquiries</li>
-                <li>
-                  Sharing important service announcements and updates
-                </li>
+                <li>Sharing important service announcements and updates</li>
                 <li>
                   Facilitating communication between employers and candidates
                 </li>
@@ -239,16 +237,10 @@ export function PrivacyPage() {
                 3.3 Platform Improvement
               </h3>
               <ul>
-                <li>
-                  Analyzing usage patterns to improve our AI algorithms
-                </li>
-                <li>
-                  Enhancing user experience and platform performance
-                </li>
+                <li>Analyzing usage patterns to improve our AI algorithms</li>
+                <li>Enhancing user experience and platform performance</li>
                 <li>Developing new features and functionality</li>
-                <li>
-                  Conducting research to advance hiring technology
-                </li>
+                <li>Conducting research to advance hiring technology</li>
               </ul>
 
               <h3 className="text-xl font-semibold text-foreground">
@@ -258,15 +250,9 @@ export function PrivacyPage() {
                 <li>
                   Complying with legal obligations and regulatory requirements
                 </li>
-                <li>
-                  Protecting against fraud, abuse, and security threats
-                </li>
-                <li>
-                  Enforcing our Terms of Service and platform policies
-                </li>
-                <li>
-                  Maintaining audit trails for compliance purposes
-                </li>
+                <li>Protecting against fraud, abuse, and security threats</li>
+                <li>Enforcing our Terms of Service and platform policies</li>
+                <li>Maintaining audit trails for compliance purposes</li>
               </ul>
             </section>
 
@@ -666,19 +652,13 @@ export function PrivacyPage() {
 
 function SectionHeading({ children }: { children: string }) {
   return (
-    <h2 className="mb-4 border-b-2 border-primary/20 pb-3 text-3xl font-bold text-foreground">
+    <h2 className="mb-4 border-b border-border pb-3 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
       {children}
     </h2>
   )
 }
 
-function TocLink({
-  href,
-  children,
-}: {
-  href: string
-  children: string
-}) {
+function TocLink({ href, children }: { href: string; children: string }) {
   return (
     <li>
       <a href={href} className="text-primary hover:text-primary/80">

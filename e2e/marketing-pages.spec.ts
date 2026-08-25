@@ -38,7 +38,9 @@ for (const pageDef of pages) {
     await page.waitForLoadState('networkidle')
 
     await expect(page.getByTestId(pageDef.testId)).toBeVisible()
-    await expect(page.getByRole('heading', { name: pageDef.heading })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: pageDef.heading }),
+    ).toBeVisible()
     await expect(page.getByTestId('marketing-header')).toBeVisible()
     await expect(page.getByTestId('marketing-footer')).toBeVisible()
   })
@@ -97,4 +99,15 @@ test('header contact and pricing links resolve', async ({ page }) => {
     .click()
   await expect(page).toHaveURL(/\/contact/)
   await expect(page.getByTestId('contact-page')).toBeVisible()
+})
+
+test('header docs link resolves', async ({ page }) => {
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+
+  await page
+    .getByTestId('marketing-header')
+    .getByRole('link', { name: 'Docs' })
+    .click()
+  await expect(page).toHaveURL(/\/docs/)
 })

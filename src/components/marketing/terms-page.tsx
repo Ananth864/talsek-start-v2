@@ -13,10 +13,10 @@ export function TermsPage() {
     >
       <div className="mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground md:text-4xl">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             Terms of Service
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="label-mono mt-3 text-[10px] text-muted-foreground">
             Last updated: {LAST_UPDATED}
           </p>
         </div>
@@ -51,12 +51,8 @@ export function TermsPage() {
                   Limitation of Liability
                 </TocLink>
                 <TocLink href="#termination">Termination</TocLink>
-                <TocLink href="#dispute-resolution">
-                  Dispute Resolution
-                </TocLink>
-                <TocLink href="#general-provisions">
-                  General Provisions
-                </TocLink>
+                <TocLink href="#dispute-resolution">Dispute Resolution</TocLink>
+                <TocLink href="#general-provisions">General Provisions</TocLink>
               </ol>
             </nav>
 
@@ -106,9 +102,7 @@ export function TermsPage() {
                   Match candidates to job requirements using machine learning
                   algorithms
                 </li>
-                <li>
-                  Manage hiring workflows and candidate communication
-                </li>
+                <li>Manage hiring workflows and candidate communication</li>
                 <li>Track hiring metrics and generate insights</li>
               </ul>
 
@@ -125,9 +119,7 @@ export function TermsPage() {
                   Score candidate-job compatibility based on requirements
                   matching
                 </li>
-                <li>
-                  Identify skills, experience levels, and competencies
-                </li>
+                <li>Identify skills, experience levels, and competencies</li>
                 <li>Provide recommendations for hiring decisions</li>
                 <li>
                   Generate insights on hiring patterns and candidate quality
@@ -234,9 +226,7 @@ export function TermsPage() {
               <p>You may use our platform to:</p>
               <ul>
                 <li>Post legitimate job opportunities and requirements</li>
-                <li>
-                  Review and evaluate job applications in good faith
-                </li>
+                <li>Review and evaluate job applications in good faith</li>
                 <li>
                   Communicate with candidates regarding employment opportunities
                 </li>
@@ -291,14 +281,10 @@ export function TermsPage() {
               </p>
               <ul>
                 <li>Equal Employment Opportunity (EEO) requirements</li>
-                <li>
-                  Americans with Disabilities Act (ADA) compliance
-                </li>
+                <li>Americans with Disabilities Act (ADA) compliance</li>
                 <li>Fair Labor Standards Act (FLSA) provisions</li>
                 <li>State and local employment regulations</li>
-                <li>
-                  International employment laws in your jurisdiction
-                </li>
+                <li>International employment laws in your jurisdiction</li>
               </ul>
 
               <h3 className="text-xl font-semibold text-foreground">
@@ -344,9 +330,7 @@ export function TermsPage() {
                   Display content within the platform for authorized users
                 </li>
                 <li>Create backups and ensure data redundancy</li>
-                <li>
-                  Provide customer support and technical assistance
-                </li>
+                <li>Provide customer support and technical assistance</li>
               </ul>
               <p>
                 This license does not grant us ownership of your content and
@@ -361,15 +345,9 @@ export function TermsPage() {
                 of the respective candidates. You agree to:
               </p>
               <ul>
-                <li>
-                  Use candidate data only for legitimate hiring purposes
-                </li>
-                <li>
-                  Respect candidate privacy and data protection rights
-                </li>
-                <li>
-                  Comply with data retention and deletion requirements
-                </li>
+                <li>Use candidate data only for legitimate hiring purposes</li>
+                <li>Respect candidate privacy and data protection rights</li>
+                <li>Comply with data retention and deletion requirements</li>
                 <li>
                   Not share candidate information with unauthorized parties
                 </li>
@@ -386,9 +364,7 @@ export function TermsPage() {
             </section>
 
             <section id="payment-terms" className="space-y-4">
-              <SectionHeading>
-                6. Payment and Subscription Terms
-              </SectionHeading>
+              <SectionHeading>6. Payment and Subscription Terms</SectionHeading>
 
               <h3 className="text-xl font-semibold text-foreground">
                 6.1 Subscription Plans
@@ -589,18 +565,14 @@ export function TermsPage() {
               </h3>
               <p>We make no representations or warranties regarding:</p>
               <ul>
-                <li>
-                  The accuracy or completeness of AI-generated analysis
-                </li>
+                <li>The accuracy or completeness of AI-generated analysis</li>
                 <li>
                   The suitability of AI recommendations for your specific needs
                 </li>
                 <li>
                   The absence of bias or discrimination in algorithmic decisions
                 </li>
-                <li>
-                  The prediction of candidate success or performance
-                </li>
+                <li>The prediction of candidate success or performance</li>
               </ul>
 
               <h3 className="text-xl font-semibold text-foreground">
@@ -611,15 +583,11 @@ export function TermsPage() {
                 liable for:
               </p>
               <ul>
-                <li>
-                  Indirect, incidental, special, or consequential damages
-                </li>
+                <li>Indirect, incidental, special, or consequential damages</li>
                 <li>
                   Loss of profits, revenue, data, or business opportunities
                 </li>
-                <li>
-                  Hiring decisions made based on platform recommendations
-                </li>
+                <li>Hiring decisions made based on platform recommendations</li>
                 <li>Third-party actions or content</li>
               </ul>
               <p>
@@ -637,9 +605,7 @@ export function TermsPage() {
                 responsible for:
               </p>
               <ul>
-                <li>
-                  Compliance with employment laws and regulations
-                </li>
+                <li>Compliance with employment laws and regulations</li>
                 <li>Fair and non-discriminatory hiring practices</li>
                 <li>
                   Verification of candidate information and qualifications
@@ -656,15 +622,9 @@ export function TermsPage() {
               </h3>
               <p>You may terminate your account at any time by:</p>
               <ul>
-                <li>
-                  Cancelling your subscription through account settings
-                </li>
-                <li>
-                  Contacting our support team to close your account
-                </li>
-                <li>
-                  Following the account deletion process in your settings
-                </li>
+                <li>Cancelling your subscription through account settings</li>
+                <li>Contacting our support team to close your account</li>
+                <li>Following the account deletion process in your settings</li>
               </ul>
 
               <h3 className="text-xl font-semibold text-foreground">
@@ -675,9 +635,7 @@ export function TermsPage() {
                 <li>You violate these Terms of Service</li>
                 <li>Your account becomes delinquent on payments</li>
                 <li>You engage in illegal or harmful activities</li>
-                <li>
-                  We discontinue the service (with reasonable notice)
-                </li>
+                <li>We discontinue the service (with reasonable notice)</li>
               </ul>
 
               <h3 className="text-xl font-semibold text-foreground">
@@ -843,19 +801,13 @@ export function TermsPage() {
 
 function SectionHeading({ children }: { children: string }) {
   return (
-    <h2 className="mb-4 border-b-2 border-primary/20 pb-3 text-3xl font-bold text-foreground">
+    <h2 className="mb-4 border-b border-border pb-3 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
       {children}
     </h2>
   )
 }
 
-function TocLink({
-  href,
-  children,
-}: {
-  href: string
-  children: string
-}) {
+function TocLink({ href, children }: { href: string; children: string }) {
   return (
     <li>
       <a href={href} className="text-primary hover:text-primary/80">

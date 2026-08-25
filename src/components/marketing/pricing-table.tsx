@@ -48,38 +48,44 @@ export function PricingTable({
   className,
 }: PricingTableProps) {
   return (
-    <div className={cn('w-full bg-background px-4 py-16 text-foreground', className)}>
+    <div
+      className={cn(
+        'w-full bg-background px-4 py-16 text-foreground md:py-24',
+        className,
+      )}
+    >
       <div className="mx-auto max-w-6xl">
-        <div className="mb-12 text-center">
-          {icon ? <div className="mb-4 flex justify-center">{icon}</div> : null}
-          <h1 className="mb-4 text-balance text-4xl font-bold text-foreground md:text-5xl">
+        <div className="mb-14 text-center">
+          {icon ? <div className="mb-6 flex justify-center">{icon}</div> : null}
+          <p className="label-mono mb-4 text-primary">Pricing</p>
+          <h1 className="mb-4 font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl md:text-5xl">
             {title}
           </h1>
-          <p className="mx-auto max-w-2xl text-balance text-lg text-muted-foreground">
+          <p className="mx-auto max-w-2xl text-lg text-balance text-muted-foreground">
             {subtitle}
           </p>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 items-start gap-6 md:grid-cols-3">
           {tiers.map((tier) => (
             <Card
               key={tier.name}
               data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
               className={cn(
-                'relative flex flex-col overflow-hidden border-border bg-card p-6 transition-all duration-300 hover:shadow-xl',
-                tier.isPrimary && 'scale-[1.02] shadow-lg ring-2 ring-primary',
+                'relative flex flex-col overflow-hidden border-border bg-card p-6 shadow-sm transition-shadow duration-300 hover:shadow-md',
+                tier.isPrimary && 'ring-2 ring-primary',
               )}
             >
               {tier.badge || tier.isPrimary ? (
                 <div className="absolute top-0 right-0">
-                  <div className="rounded-bl-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                  <div className="rounded-bl-lg bg-primary px-3 py-1 label-mono text-[10px] text-primary-foreground">
                     {tier.badge || 'Most Popular'}
                   </div>
                 </div>
               ) : null}
 
               <div className="mb-6">
-                <h2 className="mb-2 text-2xl font-bold text-foreground">
+                <h2 className="mb-2 font-display text-xl font-bold tracking-tight text-foreground">
                   {tier.name}
                 </h2>
                 <p className="text-sm leading-relaxed text-muted-foreground">
@@ -90,7 +96,7 @@ export function PricingTable({
               <div className="mb-6">
                 {tier.price !== undefined ? (
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">
+                    <span className="font-display text-4xl font-bold tracking-tight text-foreground">
                       ${tier.price}
                     </span>
                     <span className="text-muted-foreground">
@@ -98,7 +104,7 @@ export function PricingTable({
                     </span>
                   </div>
                 ) : (
-                  <div className="text-xl font-semibold text-foreground">
+                  <div className="font-display text-xl font-semibold tracking-tight text-foreground">
                     {tier.priceLabel}
                   </div>
                 )}
@@ -106,10 +112,9 @@ export function PricingTable({
 
               <Button
                 className={cn(
-                  'mb-6 w-full font-semibold transition-all duration-300',
-                  tier.isPrimary
-                    ? 'shadow-lg hover:shadow-xl'
-                    : 'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
+                  'mb-6 w-full rounded-xl font-semibold',
+                  tier.isPrimary &&
+                    'shadow-lg shadow-primary/20 transition-shadow hover:shadow-xl hover:shadow-primary/25',
                 )}
                 variant={tier.isPrimary ? 'default' : 'secondary'}
                 onClick={tier.onButtonClick}
@@ -118,7 +123,7 @@ export function PricingTable({
               </Button>
 
               {tier.featuresTitle ? (
-                <div className="mb-4 text-sm font-semibold text-foreground">
+                <div className="label-mono mb-4 text-[10px] text-muted-foreground">
                   {tier.featuresTitle}
                 </div>
               ) : null}
@@ -126,7 +131,7 @@ export function PricingTable({
               <div className="flex-1 space-y-3">
                 {tier.features.map((feature) => (
                   <div key={feature.text} className="flex items-start gap-3">
-                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span className="flex-1 text-sm leading-relaxed text-muted-foreground">
                       {feature.text}
                     </span>
@@ -141,9 +146,9 @@ export function PricingTable({
         </div>
 
         {footerTitle ? (
-          <Card className="flex flex-col items-center justify-between gap-4 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-8 md:flex-row">
+          <Card className="relative flex flex-col items-center justify-between gap-4 overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-8 md:flex-row">
             <div>
-              <h3 className="mb-2 text-xl font-bold text-foreground">
+              <h3 className="mb-2 font-display text-xl font-bold tracking-tight text-foreground">
                 {footerTitle}
               </h3>
               {footerDescription ? (
@@ -154,9 +159,9 @@ export function PricingTable({
             </div>
             {footerButtonText ? (
               <Button
-                className="whitespace-nowrap font-semibold shadow-lg hover:shadow-xl"
-                onClick={onFooterButtonClick}
                 data-testid="pricing-book-demo"
+                className="group gap-2 rounded-xl whitespace-nowrap font-semibold shadow-lg shadow-primary/20 transition-shadow hover:shadow-xl"
+                onClick={onFooterButtonClick}
               >
                 {footerButtonText}
               </Button>

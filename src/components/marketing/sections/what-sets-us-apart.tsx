@@ -1,404 +1,336 @@
-import { useState } from 'react'
+import { motion } from 'motion/react'
+import { Button } from '#/components/ui/button'
 import {
   Brain,
   Check,
-  Clock,
   Crown,
-  DollarSign,
-  Target,
-  TrendingUp,
+  FileSearch,
+  Link2,
   Users,
   X,
   Zap,
 } from 'lucide-react'
-import { Badge } from '#/components/ui/badge'
-import { Button } from '#/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { useCalBooking } from '#/components/marketing/cal-booking-context'
-import { cn } from '#/lib/utils'
 
-const featuresWithMedia = [
+const fadeUp = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+}
+
+/* ------------------------------------------------------------------ */
+/* Feature mini-visuals                                                */
+/* ------------------------------------------------------------------ */
+
+function MatchingVisual() {
+  return (
+    <div className="space-y-2.5">
+      <div className="flex flex-wrap gap-1.5">
+        {['5+ yrs React', 'TypeScript'].map((r) => (
+          <span
+            key={r}
+            className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+          >
+            {r}
+          </span>
+        ))}
+      </div>
+      <div className="rounded-lg border px-3 py-2.5">
+        <p className="label-mono mb-1 text-[9px] text-emerald-600 dark:text-emerald-400">
+          Evidence · resume, p.2
+        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          "Led migration of 40+ components to React 18 with TypeScript…"
+        </p>
+      </div>
+      <div className="flex items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2">
+        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          Requirement met · verified
+        </span>
+        <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+      </div>
+    </div>
+  )
+}
+
+function ScreeningVisual() {
+  return (
+    <div className="space-y-2.5">
+      <div className="max-w-[90%] rounded-xl rounded-tl-sm border px-3 py-2">
+        <p className="label-mono mb-0.5 text-[9px] text-muted-foreground">
+          Talsek
+        </p>
+        <p className="text-xs leading-relaxed">
+          "You list scaling a design system — what broke first?"
+        </p>
+      </div>
+      <div className="ml-auto max-w-[90%] rounded-xl rounded-tr-sm bg-primary px-3 py-2 text-primary-foreground">
+        <p className="text-xs leading-relaxed">
+          "Token collisions. We split primitives from semantics…"
+        </p>
+      </div>
+      <div className="rounded-lg border px-3 py-2">
+        <p className="label-mono mb-1 text-[9px] text-muted-foreground">
+          Fit insight
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <span className="block h-full w-[91%] rounded-full bg-emerald-500" />
+          </span>
+          <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            91
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OutreachVisual() {
+  return (
+    <div className="space-y-2.5">
+      <div className="rounded-lg border px-3 py-2.5">
+        <div className="mb-1.5 flex items-center gap-2">
+          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="label-mono text-[9px] text-muted-foreground">
+            To · 34 shortlisted candidates
+          </span>
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          "Hi Priya — your write-up on design-token migrations caught our eye.
+          We're building exactly that at Talsek…"
+        </p>
+      </div>
+      <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2">
+        <span className="flex items-center gap-2 text-xs font-medium text-primary">
+          <Link2 className="h-3.5 w-3.5" />
+          Personalised at scale
+        </span>
+        <span className="font-mono text-xs text-muted-foreground">34/34</span>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Section                                                             */
+/* ------------------------------------------------------------------ */
+
+const features = [
   {
+    id: 'resume-matching',
     icon: Brain,
     title: 'Context-Aware AI Matching',
-    desc: "Based on Evidence from the Candidate's Profile",
-    mediaSrc: '/context-aware-ai-matching.png',
-    alt: 'Context-aware AI matching illustration showing job requirements and candidate profile analysis',
-    anchorId: 'resume-matching',
+    desc: "Every match is backed by evidence from the candidate's actual profile — not keyword density.",
+    Visual: MatchingVisual,
   },
   {
+    id: 'screening-interview',
     icon: Zap,
     title: 'Automated Screening Interviews',
-    desc: 'Real-Time Candidate screening and filtering',
-    mediaSrc: '/automated-screening-interviews.png',
-    alt: 'Automated screening interviews illustration showing AI-powered candidate evaluation process',
-    anchorId: 'screening-interview',
+    desc: 'Talsek interviews candidates in real time, asks your questions, and returns transcripts with fit insights.',
+    Visual: ScreeningVisual,
   },
   {
+    id: 'smart-outreach',
     icon: Users,
     title: 'Smart Outreach',
-    desc: 'Personalized messaging at scale',
-    mediaSrc: '/smart-outreach.png',
-    alt: 'Smart outreach illustration showing personalized automated candidate communication',
+    desc: 'Personalised messaging to every shortlisted candidate, referencing their actual work.',
+    Visual: OutreachVisual,
   },
 ]
 
-const competitiveBenchmarkData = [
+const stats = [
+  { value: '7 days', label: 'Time-to-hire, not 90' },
+  { value: '5 min', label: 'Setup, not 40 hours' },
+  { value: '3', label: 'Interviews, not 20' },
+]
+
+const benchmark = [
+  { feature: 'Setup', talsek: '5 minutes', traditional: '40 hrs per hire' },
+  { feature: 'Time-to-hire', talsek: '7 days', traditional: '90 days' },
   {
-    feature: 'Time to Setup',
-    talsek: '5 min setup',
-    traditional: '40 hrs/hire',
+    feature: 'Interviews required',
+    talsek: '3 candidates',
+    traditional: '20 candidates',
   },
   {
-    feature: 'Time-to-Hire',
-    talsek: '7 days time-to-hire',
-    traditional: '90 days time-to-hire',
+    feature: 'Matching',
+    talsek: 'Context-aware, evidence-based',
+    traditional: 'Keyword matching',
   },
   {
-    feature: 'Interviews Required',
-    talsek: 'Interview 3 candidates',
-    traditional: 'Interview 20 candidates',
-  },
-  {
-    feature: 'AI-Powered Matching',
-    talsek: 'Context-aware analysis beyond keywords',
-    traditional: 'Basic keyword matching only',
-  },
-  {
-    feature: 'Resume Processing',
-    talsek: 'Unlimited resume screening in real-time',
+    feature: 'Resume processing',
+    talsek: 'Unlimited, real-time',
     traditional: 'Manual review bottlenecks',
   },
   {
-    feature: 'Screening Accuracy',
-    talsek: 'AI-powered consistent evaluation',
-    traditional: 'Manual inconsistent reviews',
+    feature: 'Screening accuracy',
+    talsek: 'Consistent AI evaluation',
+    traditional: 'Inconsistent manual reviews',
   },
   {
-    feature: 'Candidate Outreach',
-    talsek: 'AI-personalized messages at scale',
-    traditional: 'Generic templates or manual writing',
+    feature: 'Candidate outreach',
+    talsek: 'Personalised at scale',
+    traditional: 'Generic templates',
   },
   {
-    feature: 'Pricing Model',
-    talsek: 'Need-based flexible pricing',
-    traditional: '$100-$500+ per user/month',
-  },
-  {
-    feature: 'Work-Life Balance',
-    talsek: 'Set & forget automation',
-    traditional: 'Nights/weekends work',
-  },
-]
-
-const benefits = [
-  {
-    icon: Clock,
-    stat: 'Real-time Results',
-    desc: 'Reduce time-to-hire from weeks to days',
-  },
-  {
-    icon: DollarSign,
-    stat: 'Need-Based Pricing',
-    desc: 'Cost Reduction versus traditional enterprise ATS',
-  },
-  {
-    icon: TrendingUp,
-    stat: 'Better Match Quality',
-    desc: 'AI-Powered Evidence based Analysis',
+    feature: 'Pricing',
+    talsek: 'Need-based, flexible',
+    traditional: '$100–$500+ per user/month',
   },
 ]
 
 export function WhatSetsUsApart() {
   const { openBooking } = useCalBooking()
-  const [activeMediaIndex, setActiveMediaIndex] = useState(0)
 
   return (
     <section
-      className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/20 py-20 md:py-28 lg:py-32"
+      id="why-talsek"
+      aria-label="Why Talsek"
       data-testid="landing-differentiators"
+      className="border-b py-20 md:py-28"
     >
-      <div className="absolute inset-0 opacity-30" aria-hidden="true">
-        <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute right-1/4 bottom-1/4 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-      </div>
-
-      <div className="relative mx-auto max-w-[120rem] px-4">
-        <div className="mx-auto mb-12 max-w-4xl text-center">
-          <Badge
-            variant="outline"
-            className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary"
-          >
-            <Crown className="h-4 w-4" />
-            Talsek Advantage
-          </Badge>
-          <h2 className="mb-6 text-3xl leading-tight font-bold text-foreground sm:text-4xl md:text-6xl">
-            What Sets <span className="text-primary">Us Apart</span>
+      <div className="container mx-auto px-4">
+        {/* Header */}
+        <motion.div
+          {...fadeUp}
+          transition={{ duration: 0.5 }}
+          className="mx-auto mb-14 max-w-3xl text-center"
+        >
+          <p className="label-mono mb-4 text-primary">Why Talsek</p>
+          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            What sets us apart
           </h2>
-          <p className="text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
-            Discover how AI-powered recruitment transforms your hiring process
-            with cutting-edge features, proven benefits, and unmatched
-            competitive advantages.
+          <p className="mt-4 text-lg text-muted-foreground">
+            Context-aware matching, intelligent screening, and automated
+            outreach — the first 80% of hiring, handled.
           </p>
+        </motion.div>
+
+        {/* Feature cards */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {features.map((feature, index) => (
+            <motion.article
+              key={feature.id}
+              id={feature.id}
+              {...fadeUp}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="flex scroll-mt-24 flex-col rounded-2xl border bg-card p-6 shadow-sm"
+            >
+              <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <feature.icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-display text-xl font-bold tracking-tight">
+                {feature.title}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                {feature.desc}
+              </p>
+              <div className="mt-6 rounded-xl border bg-muted/30 p-4">
+                <feature.Visual />
+              </div>
+            </motion.article>
+          ))}
         </div>
 
-        <Tabs defaultValue="features" className="mt-8 flex flex-col items-center">
-          <TabsList className="inline-flex h-auto w-auto flex-wrap items-center justify-center gap-2 rounded-2xl border border-border bg-card/50 p-2 backdrop-blur-sm md:gap-6">
-            <TabsTrigger
-              value="features"
-              className="rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:px-5 md:py-3.5 md:text-sm"
-            >
-              <Brain className="mr-1.5 hidden h-4 w-4 sm:inline-flex" />
-              Features
-            </TabsTrigger>
-            <TabsTrigger
-              value="benefits"
-              className="rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:px-5 md:py-3.5 md:text-sm"
-            >
-              <Target className="mr-1.5 hidden h-4 w-4 sm:inline-flex" />
-              Benefits
-            </TabsTrigger>
-            <TabsTrigger
-              value="competitive"
-              className="rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:px-5 md:py-3.5 md:text-sm"
-            >
-              <Crown className="mr-1.5 hidden h-4 w-4 sm:inline-flex" />
-              Competitive Benchmark
-            </TabsTrigger>
-          </TabsList>
+        {/* Stat band */}
+        <motion.div
+          {...fadeUp}
+          transition={{ duration: 0.5 }}
+          className="mt-16 grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-3"
+        >
+          {stats.map((stat) => (
+            <div key={stat.label} className="bg-card px-6 py-8 text-center">
+              <p className="font-display text-4xl font-bold tracking-tight text-primary">
+                {stat.value}
+              </p>
+              <p className="label-mono mt-2 text-[10px] text-muted-foreground">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </motion.div>
 
-          <div className="mt-8 w-full max-w-[95rem] rounded-3xl border border-border/50 bg-card/70 p-6 shadow-2xl backdrop-blur-sm md:p-8 lg:p-16">
-            <TabsContent
-              value="features"
-              className="grid place-items-center gap-16 lg:grid-cols-2 lg:gap-12"
-            >
-              <div className="flex flex-col gap-6">
-                <Badge
-                  variant="outline"
-                  className="w-fit border-primary/30 bg-background text-xs sm:text-sm"
-                >
-                  AI-Powered Technology
-                </Badge>
-                <h3 className="text-2xl font-semibold text-foreground sm:text-3xl lg:text-5xl">
-                  Advanced Features That Drive Results
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground sm:text-base lg:text-lg">
-                  Our AI-powered platform goes beyond traditional recruitment
-                  with context-aware matching, intelligent screening, and
-                  automated workflows that save time while improving quality.
-                </p>
-
-                <div className="mt-4 grid gap-4">
-                  {featuresWithMedia.map((feature, index) => (
-                    <button
-                      key={feature.title}
-                      type="button"
-                      id={feature.anchorId}
-                      className={cn(
-                        'flex items-start gap-3 rounded-lg p-3 text-left transition-all duration-200',
-                        activeMediaIndex === index
-                          ? 'border border-primary/30 bg-primary/10 shadow-sm'
-                          : 'hover:bg-primary/5',
-                      )}
-                      onClick={() => setActiveMediaIndex(index)}
-                    >
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary">
-                        <feature.icon className="h-4 w-4 text-primary-foreground" />
-                      </div>
-                      <div>
-                        <h4
-                          className={cn(
-                            'font-medium transition-colors duration-200',
-                            activeMediaIndex === index
-                              ? 'text-primary'
-                              : 'text-foreground',
-                          )}
-                        >
-                          {feature.title}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {feature.desc}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <Button
-                  className="mt-4 w-fit gap-2"
-                  size="lg"
-                  onClick={openBooking}
-                >
-                  Get in Touch Now!
-                </Button>
-              </div>
-
-              <div className="relative w-full">
-                <div className="h-[500px] w-full overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-secondary">
-                  <img
-                    src={featuresWithMedia[activeMediaIndex]?.mediaSrc ?? ''}
-                    alt={featuresWithMedia[activeMediaIndex]?.alt ?? ''}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent
-              value="benefits"
-              className="grid place-items-center gap-16 lg:grid-cols-2 lg:gap-12"
-            >
-              <div className="flex flex-col gap-6">
-                <Badge
-                  variant="outline"
-                  className="w-fit border-primary/30 bg-background text-xs sm:text-sm"
-                >
-                  Proven Results
-                </Badge>
-                <h3 className="text-2xl font-semibold text-foreground sm:text-3xl lg:text-5xl">
-                  Measurable Benefits for Your Business
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground sm:text-base lg:text-lg">
-                  Transform your hiring process with quantifiable improvements
-                  in speed, cost-efficiency, and candidate quality that directly
-                  impact your bottom line.
-                </p>
-
-                <div className="mt-4 grid gap-6 text-sm sm:text-base">
-                  {benefits.map((benefit) => (
-                    <div
-                      key={benefit.stat}
-                      className="flex items-center gap-4 rounded-xl border border-border/50 bg-background/50 p-3 sm:p-4"
-                    >
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary sm:h-12 sm:w-12">
-                        <benefit.icon className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-bold text-foreground">
-                          {benefit.stat}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {benefit.desc}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <h4 className="mt-6 text-left text-xl font-bold text-foreground sm:text-2xl">
-                  We Analyze, You Decide!
-                </h4>
-
-                <Button
-                  className="mt-4 w-fit gap-2"
-                  size="lg"
-                  onClick={openBooking}
-                >
-                  Get in Touch Now!
-                </Button>
-              </div>
-
-              <div className="relative h-full">
-                <div className="h-full overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-secondary">
-                  <img
-                    src="/benefits-illustration.png"
-                    alt="Benefits and measurable results dashboard showing improved hiring metrics and ROI"
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="competitive" className="w-full">
-              <div className="mb-8 flex flex-col gap-6">
-                <Badge
-                  variant="outline"
-                  className="mx-auto w-fit border-primary/30 bg-background text-xs sm:text-sm"
-                >
-                  Competitive Analysis
-                </Badge>
-                <h3 className="text-center text-2xl font-semibold text-foreground sm:text-3xl lg:text-5xl">
-                  Why Choose Talsek?
-                </h3>
-                <p className="mx-auto max-w-3xl text-center text-sm leading-relaxed text-muted-foreground sm:text-base lg:text-lg">
-                  See how Talsek outperforms traditional hiring methods across
-                  key metrics that matter most to growing businesses.
-                </p>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-                <div className="grid grid-cols-3 border-b border-border bg-muted/40">
-                  <div className="p-4 text-center">
-                    <h4 className="text-xs font-semibold text-muted-foreground sm:text-sm">
-                      Features
-                    </h4>
-                  </div>
-                  <div className="border-x border-border bg-primary/5 p-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-                        <Crown className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                      <h4 className="text-sm font-bold text-primary sm:text-lg">
-                        Talsek
-                      </h4>
-                    </div>
-                  </div>
-                  <div className="p-4 text-center">
-                    <h4 className="text-xs font-semibold text-muted-foreground sm:text-sm">
-                      Traditional Hiring
-                    </h4>
-                  </div>
-                </div>
-
-                {competitiveBenchmarkData.map((item, index) => (
-                  <div
-                    key={item.feature}
-                    className={cn(
-                      'grid grid-cols-3 border-b border-border transition-colors hover:bg-muted/40',
-                      index % 2 === 0 ? 'bg-card' : 'bg-muted/20',
-                    )}
-                  >
-                    <div className="flex items-center p-4">
-                      <span className="text-xs font-medium text-foreground sm:text-sm">
-                        {item.feature}
-                      </span>
-                    </div>
-                    <div className="border-x border-border bg-primary/5 p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary">
-                          <Check className="h-3 w-3 text-primary-foreground" />
-                        </div>
-                        <span className="text-xs font-medium text-foreground sm:text-sm">
-                          {item.talsek}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-destructive">
-                          <X className="h-3 w-3 text-destructive-foreground" />
-                        </div>
-                        <span className="text-xs text-muted-foreground sm:text-sm">
-                          {item.traditional}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 text-center">
-                <Button
-                  className="gap-2 px-8 py-3 text-lg"
-                  size="lg"
-                  onClick={openBooking}
-                >
-                  Get in Touch Now!
-                </Button>
-              </div>
-            </TabsContent>
+        {/* Benchmark */}
+        <motion.div
+          {...fadeUp}
+          transition={{ duration: 0.5 }}
+          className="mt-20"
+        >
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <p className="label-mono mb-4 text-primary">The benchmark</p>
+            <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              Talsek vs traditional hiring
+            </h3>
           </div>
-        </Tabs>
+
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl border bg-card shadow-sm">
+            {/* Table header */}
+            <div className="grid grid-cols-[1.2fr_1.4fr_1.4fr] border-b bg-muted/40 max-sm:grid-cols-[1fr_1fr]">
+              <div className="hidden items-center px-5 py-3.5 sm:flex">
+                <span className="label-mono text-[10px] text-muted-foreground">
+                  Feature
+                </span>
+              </div>
+              <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.06] px-5 py-3.5 max-sm:col-span-2 max-sm:border-l-0">
+                <Crown className="h-3.5 w-3.5 text-primary" />
+                <span className="text-sm font-bold text-primary">Talsek</span>
+              </div>
+              <div className="flex items-center border-l border-border/60 px-5 py-3.5 max-sm:hidden">
+                <span className="label-mono text-[10px] text-muted-foreground">
+                  Traditional hiring
+                </span>
+              </div>
+            </div>
+
+            {/* Rows — on mobile, traditional value renders under talsek value */}
+            {benchmark.map((item) => (
+              <div
+                key={item.feature}
+                className="grid border-b border-border/60 last:border-b-0 sm:grid-cols-[1.2fr_1.4fr_1.4fr] max-sm:grid-cols-[1fr_1fr]"
+              >
+                <div className="flex items-center px-5 py-3.5 max-sm:col-span-2 max-sm:bg-muted/30 max-sm:py-2">
+                  <span className="text-sm font-medium max-sm:text-xs max-sm:font-semibold max-sm:tracking-wide max-sm:uppercase max-sm:text-muted-foreground">
+                    {item.feature}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.04] px-5 py-3.5 max-sm:col-span-2 max-sm:border-l-0">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-sm max-sm:text-xs">{item.talsek}</span>
+                </div>
+                <div className="flex items-start gap-2 border-l border-border/60 px-5 py-3.5 max-sm:hidden">
+                  <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                  <span className="text-sm text-muted-foreground">
+                    {item.traditional}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mx-auto mt-4 flex max-w-4xl items-center gap-2 text-xs text-muted-foreground sm:hidden">
+            <X className="h-3 w-3 shrink-0" />
+            Traditional hiring loses on every row above — see the full
+            comparison on a larger screen.
+          </p>
+        </motion.div>
+
+        {/* CTA */}
+        <motion.div
+          {...fadeUp}
+          transition={{ duration: 0.5 }}
+          className="mt-14 text-center"
+        >
+          <Button
+            size="lg"
+            data-testid="differentiators-book-demo"
+            className="group gap-2 rounded-xl px-7 font-semibold shadow-lg shadow-primary/20"
+            onClick={openBooking}
+          >
+            <FileSearch className="h-4 w-4" />
+            Book a demo
+          </Button>
+        </motion.div>
       </div>
     </section>
   )
