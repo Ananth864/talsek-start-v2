@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { Testimonials } from '#/components/marketing/sections/testimonials'
 import {
   Accordion,
   AccordionContent,
@@ -43,32 +44,42 @@ export function FAQs() {
   return (
     <section
       id="faq"
-      aria-label="Frequently asked questions"
+      aria-labelledby="getting-started-title"
       data-testid="landing-faqs"
-      className="border-b py-20 md:py-28"
+      className="landing-scene border-b"
     >
       <div className="container mx-auto px-4">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.6fr] lg:gap-20">
-          {/* Header column */}
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="label-mono mb-4 text-primary">FAQ</p>
-            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              Frequently asked questions
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Everything you need to know about Talsek. Still curious?{' '}
-              <Link
-                to="/contact"
-                className="font-medium text-primary hover:underline"
-              >
-                Talk to us
-              </Link>
-              .
+            <p className="label-mono mb-3 text-primary">
+              A customer story & your questions
             </p>
+            <h2
+              id="getting-started-title"
+              className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
+            >
+              Before you get started
+            </h2>
           </div>
-
-          {/* Accordion column */}
-          <Accordion type="single" collapsible className="w-full">
+          <p className="text-sm text-muted-foreground">
+            Have another question?{' '}
+            <Link
+              to="/contact"
+              className="font-medium text-primary hover:underline"
+            >
+              Talk to us
+            </Link>
+            .
+          </p>
+        </div>
+        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16">
+          <Testimonials />
+          <Accordion
+            type="single"
+            collapsible
+            defaultValue="setup"
+            className="w-full min-w-0 border-t"
+          >
             {faqs.map((faq) => (
               <AccordionItem
                 key={faq.id}

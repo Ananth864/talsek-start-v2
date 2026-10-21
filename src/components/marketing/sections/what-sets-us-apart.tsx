@@ -185,153 +185,158 @@ export function WhatSetsUsApart() {
   const { openBooking } = useCalBooking()
 
   return (
-    <section
-      id="why-talsek"
-      aria-label="Why Talsek"
-      data-testid="landing-differentiators"
-      className="border-b py-20 md:py-28"
-    >
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.5 }}
-          className="mx-auto mb-14 max-w-3xl text-center"
-        >
-          <p className="label-mono mb-4 text-primary">Why Talsek</p>
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            What sets us apart
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Context-aware matching, intelligent screening, and automated
-            outreach — the first 80% of hiring, handled.
-          </p>
-        </motion.div>
+    <>
+      <section
+        id="why-talsek"
+        aria-label="Why Talsek"
+        data-testid="landing-differentiators"
+        className="landing-scene landing-features border-b"
+      >
+        <div className="container mx-auto px-4">
+          {/* Header */}
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-6 text-center"
+          >
+            <p className="label-mono mb-3 text-primary">Why Talsek</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              What sets us apart
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Context-aware matching, intelligent screening, and automated
+              outreach — the first 80% of hiring, handled.
+            </p>
+          </motion.div>
 
-        {/* Feature cards */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {features.map((feature, index) => (
-            <motion.article
-              key={feature.id}
-              id={feature.id}
-              {...fadeUp}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="flex scroll-mt-24 flex-col rounded-2xl border bg-card p-6 shadow-sm"
-            >
-              <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <feature.icon className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-display text-xl font-bold tracking-tight">
-                {feature.title}
-              </h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-                {feature.desc}
-              </p>
-              <div className="mt-6 rounded-xl border bg-muted/30 p-4">
-                <feature.Visual />
-              </div>
-            </motion.article>
-          ))}
-        </div>
-
-        {/* Stat band */}
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.5 }}
-          className="mt-16 grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-3"
-        >
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-card px-6 py-8 text-center">
-              <p className="font-display text-4xl font-bold tracking-tight text-primary">
-                {stat.value}
-              </p>
-              <p className="label-mono mt-2 text-[10px] text-muted-foreground">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </motion.div>
-
-        {/* Benchmark */}
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.5 }}
-          className="mt-20"
-        >
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="label-mono mb-4 text-primary">The benchmark</p>
-            <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Talsek vs traditional hiring
-            </h3>
-          </div>
-
-          <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl border bg-card shadow-sm">
-            {/* Table header */}
-            <div className="grid grid-cols-[1.2fr_1.4fr_1.4fr] border-b bg-muted/40 max-sm:grid-cols-[1fr_1fr]">
-              <div className="hidden items-center px-5 py-3.5 sm:flex">
-                <span className="label-mono text-[10px] text-muted-foreground">
-                  Feature
-                </span>
-              </div>
-              <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.06] px-5 py-3.5 max-sm:col-span-2 max-sm:border-l-0">
-                <Crown className="h-3.5 w-3.5 text-primary" />
-                <span className="text-sm font-bold text-primary">Talsek</span>
-              </div>
-              <div className="flex items-center border-l border-border/60 px-5 py-3.5 max-sm:hidden">
-                <span className="label-mono text-[10px] text-muted-foreground">
-                  Traditional hiring
-                </span>
-              </div>
-            </div>
-
-            {/* Rows — on mobile, traditional value renders under talsek value */}
-            {benchmark.map((item) => (
-              <div
-                key={item.feature}
-                className="grid border-b border-border/60 last:border-b-0 sm:grid-cols-[1.2fr_1.4fr_1.4fr] max-sm:grid-cols-[1fr_1fr]"
+          {/* Feature cards */}
+          <div className="grid gap-6 md:grid-cols-3">
+            {features.map((feature, index) => (
+              <motion.article
+                key={feature.id}
+                id={feature.id}
+                {...fadeUp}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="flex scroll-mt-24 flex-col rounded-2xl border bg-card p-5 shadow-sm"
               >
-                <div className="flex items-center px-5 py-3.5 max-sm:col-span-2 max-sm:bg-muted/30 max-sm:py-2">
-                  <span className="text-sm font-medium max-sm:text-xs max-sm:font-semibold max-sm:tracking-wide max-sm:uppercase max-sm:text-muted-foreground">
-                    {item.feature}
-                  </span>
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <feature.icon className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.04] px-5 py-3.5 max-sm:col-span-2 max-sm:border-l-0">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-sm max-sm:text-xs">{item.talsek}</span>
+                <h3 className="font-display text-xl font-bold tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {feature.desc}
+                </p>
+                <div className="mt-4 rounded-xl border bg-muted/30 p-3">
+                  <feature.Visual />
                 </div>
-                <div className="flex items-start gap-2 border-l border-border/60 px-5 py-3.5 max-sm:hidden">
-                  <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                  <span className="text-sm text-muted-foreground">
-                    {item.traditional}
-                  </span>
-                </div>
-              </div>
+              </motion.article>
             ))}
           </div>
-          <p className="mx-auto mt-4 flex max-w-4xl items-center gap-2 text-xs text-muted-foreground sm:hidden">
-            <X className="h-3 w-3 shrink-0" />
-            Traditional hiring loses on every row above — see the full
-            comparison on a larger screen.
-          </p>
-        </motion.div>
 
-        {/* CTA */}
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.5 }}
-          className="mt-14 text-center"
-        >
-          <Button
-            size="lg"
-            data-testid="differentiators-book-demo"
-            className="group gap-2 rounded-xl px-7 font-semibold shadow-lg shadow-primary/20"
-            onClick={openBooking}
+          {/* Stat band */}
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="mt-6 grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-3"
           >
-            <FileSearch className="h-4 w-4" />
-            Book a demo
-          </Button>
-        </motion.div>
-      </div>
-    </section>
+            {stats.map((stat) => (
+              <div key={stat.label} className="bg-card px-6 py-3 text-center">
+                <p className="font-display text-3xl font-bold tracking-tight text-primary">
+                  {stat.value}
+                </p>
+                <p className="label-mono mt-2 text-[10px] text-muted-foreground">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+      <section
+        aria-labelledby="benchmark-title"
+        data-testid="landing-benchmark"
+        className="landing-scene border-b"
+      >
+        <div className="container mx-auto px-4">
+          {/* Benchmark */}
+          <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
+            <div className="mx-auto mb-6 max-w-2xl text-center">
+              <p className="label-mono mb-3 text-primary">The benchmark</p>
+              <h2
+                id="benchmark-title"
+                className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
+              >
+                Talsek vs traditional hiring
+              </h2>
+            </div>
+
+            <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl border bg-card shadow-sm">
+              {/* Table header */}
+              <div className="grid grid-cols-[1.2fr_1.4fr_1.4fr] border-b bg-muted/40 max-sm:grid-cols-[1fr_1fr]">
+                <div className="hidden items-center px-5 py-3.5 sm:flex">
+                  <span className="label-mono text-[10px] text-muted-foreground">
+                    Feature
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.06] px-5 py-3.5 max-sm:border-l-0">
+                  <Crown className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-bold text-primary">Talsek</span>
+                </div>
+                <div className="flex items-center border-l border-border/60 px-5 py-3.5">
+                  <span className="label-mono text-[10px] text-muted-foreground">
+                    Traditional hiring
+                  </span>
+                </div>
+              </div>
+
+              {/* Both alternatives stay visible on small screens. */}
+              {benchmark.map((item) => (
+                <div
+                  key={item.feature}
+                  className="grid border-b border-border/60 last:border-b-0 sm:grid-cols-[1.2fr_1.4fr_1.4fr] max-sm:grid-cols-[1fr_1fr]"
+                >
+                  <div className="flex items-center px-5 py-3.5 max-sm:col-span-2 max-sm:bg-muted/30 max-sm:py-2">
+                    <span className="text-sm font-medium max-sm:text-xs max-sm:font-semibold max-sm:tracking-wide max-sm:uppercase max-sm:text-muted-foreground">
+                      {item.feature}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.04] px-5 py-3.5 max-sm:border-l-0">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-sm max-sm:text-xs">
+                      {item.talsek}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 border-l border-border/60 px-5 py-3.5">
+                    <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                    <span className="text-sm text-muted-foreground">
+                      {item.traditional}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* CTA */}
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="mt-6 text-center"
+          >
+            <Button
+              size="lg"
+              data-testid="differentiators-book-demo"
+              className="group gap-2 rounded-xl px-7 font-semibold shadow-lg shadow-primary/20"
+              onClick={openBooking}
+            >
+              <FileSearch className="h-4 w-4" />
+              Book a demo
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+    </>
   )
 }

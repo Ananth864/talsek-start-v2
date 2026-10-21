@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+import { useReducedMotion } from 'motion/react'
 import { Button } from '#/components/ui/button'
 import { Check, Copy, FileText, Link2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
-import { useCalBooking } from '#/components/marketing/cal-booking-context'
 
 /* ------------------------------------------------------------------ */
 /* Code-built step visuals                                             */
@@ -18,10 +17,10 @@ function PanelShell({
 }) {
   return (
     <div className="w-full overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="border-b bg-muted/40 px-4 py-2.5">
-        <p className="label-mono text-[10px] text-muted-foreground">{label}</p>
+      <div className="border-b bg-muted/40 px-5 py-4">
+        <p className="label-mono text-xs text-muted-foreground">{label}</p>
       </div>
-      <div className="p-4 sm:p-5">{children}</div>
+      <div className="p-5 sm:p-8">{children}</div>
     </div>
   )
 }
@@ -46,7 +45,7 @@ function SetupVisual() {
         ))}
       </div>
       <div className="mt-4 space-y-2">
-        <p className="label-mono text-[10px] text-muted-foreground">
+        <p className="label-mono text-xs text-muted-foreground">
           Screening questions
         </p>
         {[
@@ -62,9 +61,9 @@ function SetupVisual() {
         ))}
       </div>
       <div className="mt-4 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2">
-        <span className="flex items-center gap-2 font-mono text-xs text-primary">
+        <span className="flex min-w-0 items-center gap-2 font-mono text-xs text-primary">
           <Link2 className="h-3.5 w-3.5" />
-          talsek.ai/apply/senior-fe
+          <span className="truncate">talsek.ai/apply/senior-fe</span>
         </span>
         <Copy className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
@@ -108,6 +107,17 @@ function ScreeningVisual() {
           </li>
         ))}
       </ul>
+      <div className="mt-6 border-t pt-5">
+        <p className="label-mono text-xs text-primary">
+          Priya S. · Resume evidence
+        </p>
+        <p className="mt-3 text-sm leading-relaxed">
+          “Led migration of 40+ components to React 18 with TypeScript.”
+        </p>
+        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">
+          Requirement met · verified
+        </p>
+      </div>
     </PanelShell>
   )
 }
@@ -117,16 +127,16 @@ function InterviewVisual() {
     <PanelShell label="AI interview · Priya S.">
       <div className="space-y-3">
         <div className="max-w-[85%] rounded-xl rounded-tl-sm border px-3.5 py-2.5">
-          <p className="label-mono mb-1 text-[9px] text-muted-foreground">
+          <p className="label-mono mb-1 text-xs text-muted-foreground">
             Talsek
           </p>
-          <p className="text-xs leading-relaxed">
+          <p className="text-sm leading-relaxed">
             Walk me through the React 18 migration mentioned in your resume.
           </p>
         </div>
         <div className="ml-auto max-w-[85%] rounded-xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-primary-foreground">
-          <p className="label-mono mb-1 text-[9px] opacity-70">Candidate</p>
-          <p className="text-xs leading-relaxed">
+          <p className="label-mono mb-1 text-xs opacity-70">Candidate</p>
+          <p className="text-sm leading-relaxed">
             I led a team of 4 off class components. We cut bundle size 22%…
           </p>
         </div>
@@ -159,7 +169,7 @@ function ShortlistVisual() {
               #{i + 1}
             </span>
             <span className="flex-1 text-sm font-medium">{p.name}</span>
-            <span className="rounded-md border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <span className="rounded-md border px-2 py-0.5 text-xs font-medium text-muted-foreground">
               View transcript
             </span>
             <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -176,265 +186,221 @@ function ShortlistVisual() {
 /* Section                                                             */
 /* ------------------------------------------------------------------ */
 
-type WorkflowStep = {
-  id: number
-  title: string
-  subtitle: string
-  description: string[]
-  Visual: React.ComponentType
-}
+const workflowSteps = [
+  {
+    label: 'Post a role',
+    title: 'Start with the role.',
+    description:
+      'Define your requirements in plain language. Add screening questions and share your application link.',
+    outcome: 'Your role is ready in 5 minutes.',
+    Visual: SetupVisual,
+  },
+  {
+    label: 'Screen resumes',
+    title: 'Find the relevant experience.',
+    description:
+      'Every resume is reviewed against your requirements. See the experience behind each match, with candidates ranked as they apply.',
+    outcome: 'Unlimited screening, around the clock.',
+    Visual: ScreeningVisual,
+  },
+  {
+    label: 'AI interviews',
+    title: 'Go beyond the resume.',
+    description:
+      'Talsek asks role-specific screening questions. Read the conversation and fit insights before you decide who moves forward.',
+    outcome: 'Your questions. Full transcripts. Clear evidence.',
+    Visual: InterviewVisual,
+  },
+  {
+    label: 'Review shortlist',
+    title: 'Make the hiring decision.',
+    description:
+      'Compare your strongest candidates in one shortlist. Review their evidence and transcripts, then meet the people you want to hire.',
+    outcome: 'We analyse. You decide.',
+    Visual: ShortlistVisual,
+  },
+]
 
 export function HowItWorks() {
+  const reducedMotion = useReducedMotion()
   const [activeStep, setActiveStep] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-  const { openBooking } = useCalBooking()
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [canPin, setCanPin] = useState(false)
+  const sectionRef = useRef<HTMLElement>(null)
+  const frameRef = useRef<HTMLDivElement>(null)
+  const targetRef = useRef<number | null>(null)
 
-  const workflowSteps: WorkflowStep[] = useMemo(
-    () => [
-      {
-        id: 1,
-        title: 'Post a role in 5 minutes',
-        subtitle:
-          'Create your job, define requirements in plain language, share the apply links.',
-        description: [
-          'Define role requirements in plain language',
-          'Add custom screening questions',
-          'Get a shareable link instantly',
-        ],
-        Visual: SetupVisual,
-      },
-      {
-        id: 2,
-        title: 'Every resume screened, 24/7',
-        subtitle:
-          'Unlimited resume processing with context-aware analysis, not keyword matching.',
-        description: [
-          'Unlimited resume screening in real time',
-          'Context-aware analysis beyond keywords',
-          'Instant candidate ranking against your requirements',
-        ],
-        Visual: ScreeningVisual,
-      },
-      {
-        id: 3,
-        title: 'AI interviews top candidates',
-        subtitle:
-          'Automated screening interviews customised to your exact needs.',
-        description: [
-          'Conducts screening interviews automatically',
-          'Asks questions tuned to your role',
-          'Provides transcripts and fit insights',
-        ],
-        Visual: InterviewVisual,
-      },
-      {
-        id: 4,
-        title: 'Review the shortlist, hire',
-        subtitle:
-          'Get ranked candidates with evidence. Interview only the best.',
-        description: [
-          'See the top of the funnel with insights and full transcripts',
-          'Interview pre-screened candidates only',
-          'Make confident hiring decisions faster',
-        ],
-        Visual: ShortlistVisual,
-      },
-    ],
-    [],
-  )
-
-  // Auto-advance steps (paused on hover/focus)
   useEffect(() => {
-    if (!isPaused) {
-      intervalRef.current = setInterval(() => {
-        setActiveStep((prev) => (prev + 1) % workflowSteps.length)
-      }, 6000)
+    const section = sectionRef.current
+    const frame = frameRef.current
+    if (!section || !frame) return
+    let raf = 0
+    const measure = () => {
+      const rootSize = parseFloat(
+        getComputedStyle(document.documentElement).fontSize,
+      )
+      const content = frame.firstElementChild
+      setCanPin(
+        window.innerWidth >= 1024 &&
+          window.innerHeight >= 800 &&
+          rootSize <= 18 &&
+          !reducedMotion &&
+          !!content &&
+          content.getBoundingClientRect().height <
+            window.innerHeight - rootSize * 8.5,
+      )
     }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+    const update = () => {
+      raf = 0
+      const articles = [
+        ...section.querySelectorAll<HTMLElement>('.workflow-chapter'),
+      ]
+      const offset =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) * 8.5
+      const target = targetRef.current
+      if (target !== null) {
+        if (
+          Math.abs(
+            (articles[target]?.getBoundingClientRect().top ?? 0) - offset,
+          ) > 3
+        )
+          return
+        targetRef.current = null
       }
+      let index = 0
+      articles.forEach((article, i) => {
+        if (article.getBoundingClientRect().top <= offset + 8) index = i
+      })
+      setActiveStep(index)
     }
-  }, [isPaused, workflowSteps.length])
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(update)
+    }
+    const cancel = () => {
+      targetRef.current = null
+      schedule()
+    }
+    const resize = () => {
+      measure()
+      schedule()
+    }
+    const observer = new ResizeObserver(resize)
+    observer.observe(frame)
+    if (frame.firstElementChild) observer.observe(frame.firstElementChild)
+    window.addEventListener('resize', resize)
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('scrollend', cancel)
+    window.addEventListener('wheel', cancel, { passive: true })
+    window.addEventListener('touchstart', cancel, { passive: true })
+    window.addEventListener('keydown', cancel)
+    resize()
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+      window.removeEventListener('resize', resize)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('scrollend', cancel)
+      window.removeEventListener('wheel', cancel)
+      window.removeEventListener('touchstart', cancel)
+      window.removeEventListener('keydown', cancel)
+    }
+  }, [reducedMotion])
 
   const goToStep = (index: number) => {
+    const article =
+      sectionRef.current?.querySelectorAll<HTMLElement>('.workflow-chapter')[
+        index
+      ]
+    if (!article) return
+    targetRef.current = index
     setActiveStep(index)
-    setIsPaused(true)
+    article.scrollIntoView({
+      behavior: reducedMotion ? 'instant' : 'smooth',
+      block: 'start',
+    })
   }
-
-  const activeWorkflowStep = workflowSteps[activeStep] ?? workflowSteps[0]
+  const ActiveVisual = workflowSteps[activeStep].Visual
 
   return (
     <section
       id="how-it-works"
-      aria-labelledby="how-it-works-title"
+      aria-label="How it works"
       data-testid="landing-how-it-works"
-      className="border-b py-20 md:py-28"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onFocus={() => setIsPaused(true)}
-      onBlur={() => setIsPaused(false)}
+      ref={sectionRef}
+      data-scroll-pinned={canPin}
+      className="landing-workflow border-b"
     >
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="label-mono mb-4 text-primary">How it works</p>
-          <h2
-            id="how-it-works-title"
-            className="font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl"
-          >
-            Hiring that runs on autopilot
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            We analyse, you decide.
-          </p>
-        </div>
-
-        <div className="flex items-start gap-6 lg:grid lg:grid-cols-[1fr_1.4fr] lg:gap-12">
-          {/* Step navigation */}
-          <nav
-            className="relative flex w-16 shrink-0 flex-col gap-6 lg:w-auto lg:shrink lg:gap-8"
-            aria-label="Process steps"
-          >
-            <div
-              className="absolute top-3 left-1/2 h-[calc(100%-12px)] w-px -translate-x-1/2 bg-border lg:left-6 lg:translate-x-0"
-              aria-hidden="true"
-            />
-            {workflowSteps.map((step, index) => (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => goToStep(index)}
-                className={cn(
-                  'group relative flex items-center justify-center gap-4 rounded-md text-left transition-opacity duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:items-start',
-                  activeStep === index
-                    ? 'opacity-100'
-                    : 'opacity-50 hover:opacity-80',
-                )}
-                aria-current={activeStep === index ? 'step' : undefined}
+      <div className="workflow-nav border-y bg-background/95 backdrop-blur-sm">
+        <nav
+          className="container mx-auto grid max-w-6xl grid-cols-4 px-4"
+          aria-label="Process steps"
+        >
+          {workflowSteps.map((step, index) => (
+            <Button
+              key={step.label}
+              variant="ghost"
+              onClick={() => goToStep(index)}
+              aria-current={activeStep === index ? 'step' : undefined}
+              aria-controls={`workflow-step-${index}`}
+              className={cn(
+                'h-16 justify-start gap-3 rounded-none border-b-2 px-1 text-xs whitespace-normal sm:text-sm',
+                activeStep === index
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground',
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className="hidden font-mono text-xs sm:inline"
               >
-                <span
-                  className={cn(
-                    'relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 font-mono text-sm font-semibold transition-colors duration-300',
-                    activeStep === index
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground group-hover:border-primary/60',
-                  )}
-                  aria-hidden="true"
+                0{index + 1}
+              </span>
+              {step.label}
+            </Button>
+          ))}
+        </nav>
+      </div>
+      <div className="workflow-composition container mx-auto max-w-6xl px-4">
+        <div className="workflow-copy">
+          {workflowSteps.map((step, index) => (
+            <article
+              id={`workflow-step-${index}`}
+              key={step.label}
+              className="workflow-chapter"
+              aria-labelledby={`step-title-${index}`}
+            >
+              <div className="max-w-md">
+                <p className="label-mono mb-5 text-primary">
+                  How it works · 0{index + 1} / 04
+                </p>
+                <h2
+                  id={`step-title-${index}`}
+                  className="font-display text-4xl font-bold leading-[1.08] tracking-tight lg:text-5xl"
                 >
-                  {step.id}
-                </span>
-                <span className="hidden pt-1.5 lg:block">
-                  <span
-                    className={cn(
-                      'block text-lg font-semibold transition-colors duration-300',
-                      activeStep === index
-                        ? 'text-foreground'
-                        : 'text-muted-foreground',
-                    )}
-                  >
-                    {step.title}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Content panel */}
-          <div className="relative min-w-0 flex-1">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeWorkflowStep.id}
-                className="grid items-center gap-8 md:grid-cols-2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                aria-labelledby={`step-title-${activeWorkflowStep.id}`}
-              >
-                <div className="flex flex-col">
-                  <h3
-                    id={`step-title-${activeWorkflowStep.id}`}
-                    className="font-display text-2xl font-bold tracking-tight"
-                  >
-                    {activeWorkflowStep.title}
-                  </h3>
-                  <p className="mt-3 leading-relaxed text-muted-foreground">
-                    {activeWorkflowStep.subtitle}
-                  </p>
-                  <ul className="mt-6 space-y-3">
-                    {activeWorkflowStep.description.map((item) => (
-                      <li key={item} className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                          <Check className="h-3 w-3 text-primary" />
-                        </span>
-                        <span className="text-sm leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <activeWorkflowStep.Visual />
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Mobile dot indicators */}
-            <div className="mt-6 flex justify-center gap-2 lg:hidden">
-              {workflowSteps.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => goToStep(index)}
-                  className={cn(
-                    'h-2 rounded-full transition-all',
-                    activeStep === index
-                      ? 'w-6 bg-primary'
-                      : 'w-2 bg-muted hover:bg-primary/50',
-                  )}
-                  aria-label={`Go to step ${index + 1}`}
-                  aria-current={activeStep === index ? 'step' : undefined}
-                />
-              ))}
-            </div>
+                  {step.title}
+                </h2>
+                <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+                  {step.description}
+                </p>
+                <p className="mt-8 border-l-2 border-primary pl-4 text-sm font-medium">
+                  {step.outcome}
+                </p>
+              </div>
+              <div className="workflow-inline-visual mt-8 w-full">
+                <step.Visual />
+              </div>
+            </article>
+          ))}
+        </div>
+        <div
+          ref={frameRef}
+          data-testid="landing-workflow-frame"
+          className="workflow-product"
+        >
+          <div className="w-full">
+            <ActiveVisual />
           </div>
         </div>
-
-        {/* Result band */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="mt-16 flex flex-col items-center gap-8 border-t pt-12 text-center md:mt-20"
-        >
-          <p className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Hire in <span className="text-primary">7 days</span> instead of{' '}
-            <span className="line-through decoration-2 text-muted-foreground/60">
-              90
-            </span>
-          </p>
-          <Button
-            size="lg"
-            data-testid="how-it-works-book-demo"
-            className="group gap-2 rounded-xl px-7 font-semibold shadow-lg shadow-primary/20 transition-shadow hover:shadow-xl hover:shadow-primary/25"
-            onClick={openBooking}
-          >
-            Book a demo
-            <ArrowRightIcon />
-          </Button>
-        </motion.div>
       </div>
     </section>
-  )
-}
-
-function ArrowRightIcon() {
-  return (
-    <span
-      className="transition-transform duration-300 group-hover:translate-x-1"
-      aria-hidden="true"
-    >
-      →
-    </span>
   )
 }
