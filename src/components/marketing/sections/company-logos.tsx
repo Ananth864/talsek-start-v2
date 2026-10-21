@@ -34,11 +34,11 @@ export function CompanyLogos() {
       data-testid="landing-company-logos"
       className="border-y bg-card/50"
     >
-      <div className="mx-auto max-w-5xl px-4 pt-6 pb-10">
-        <p className="label-mono mb-8 text-center text-muted-foreground">
+      <div className="mx-auto max-w-5xl px-4 py-4">
+        <p className="label-mono mb-3 text-center text-muted-foreground">
           Trusted by startups
         </p>
-        <div className="overflow-hidden py-4 [mask-image:linear-gradient(to_right,transparent,black,transparent)]">
+        <div className="overflow-hidden py-2 [mask-image:linear-gradient(to_right,transparent,black,transparent)]">
           <div className="flex w-max animate-marketing-marquee items-center gap-[60px] hover:[animation-play-state:paused]">
             {[...logos, ...logos].map((logo, i) => (
               <div
@@ -50,9 +50,9 @@ export function CompanyLogos() {
                   src={logo.src}
                   alt={logo.alt}
                   loading="lazy"
-                  className="pointer-events-none h-10 w-auto object-contain md:h-12"
+                  className="pointer-events-none h-8 w-auto rounded-sm object-contain dark:bg-white dark:p-1"
                 />
-                <span className="text-xl font-semibold whitespace-nowrap text-foreground/80">
+                <span className="text-base font-semibold whitespace-nowrap text-foreground/80">
                   {logo.name}
                 </span>
               </div>

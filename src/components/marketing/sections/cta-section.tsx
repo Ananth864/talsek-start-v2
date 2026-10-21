@@ -12,7 +12,7 @@ export function CTASection() {
       id="contact"
       aria-label="Book a demo"
       data-testid="landing-cta"
-      className="py-20 md:py-28"
+      className="landing-scene"
     >
       <div className="container mx-auto px-4">
         <motion.div
@@ -20,7 +20,7 @@ export function CTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
-          className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-foreground px-6 py-16 text-center text-background sm:px-12 md:py-20"
+          className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl border border-transparent bg-foreground px-6 py-16 text-center text-background sm:px-12 md:py-20 dark:border-border dark:bg-card dark:text-foreground"
         >
           {/* Cobalt edge accent */}
           <div
@@ -32,13 +32,13 @@ export function CTASection() {
             aria-hidden="true"
           />
 
-          <p className="label-mono relative mb-5 text-background/60">
+          <p className="label-mono relative mb-5 text-background/60 dark:text-muted-foreground">
             Start your journey
           </p>
           <h2 className="relative mx-auto max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             Ready to transform your hiring?
           </h2>
-          <p className="relative mx-auto mt-5 max-w-xl text-lg text-background/70">
+          <p className="relative mx-auto mt-5 max-w-xl text-lg text-background/70 dark:text-muted-foreground">
             Find interview-ready candidates in days, not months.
           </p>
           <div className="relative mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -54,7 +54,7 @@ export function CTASection() {
             <Button
               size="lg"
               variant="ghost"
-              className="rounded-xl font-semibold text-background/70 hover:bg-background/10 hover:text-background"
+              className="rounded-xl font-semibold text-background/70 dark:text-muted-foreground hover:bg-background/10 hover:text-background dark:hover:bg-accent dark:hover:text-foreground"
               asChild
             >
               <Link to="/contact">Contact us</Link>

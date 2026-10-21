@@ -15,7 +15,7 @@ export function Testimonials() {
     <section
       aria-label="Customer testimonials"
       data-testid="landing-testimonials"
-      className="border-b py-20 md:py-28"
+      className="landing-scene border-b bg-card/40"
     >
       <div className="container mx-auto px-4">
         <motion.figure

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Button } from '#/components/ui/button'
 import { Check, Copy, FileText, Link2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
@@ -62,9 +62,9 @@ function SetupVisual() {
         ))}
       </div>
       <div className="mt-4 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2">
-        <span className="flex items-center gap-2 font-mono text-xs text-primary">
+        <span className="flex min-w-0 items-center gap-2 font-mono text-xs text-primary">
           <Link2 className="h-3.5 w-3.5" />
-          talsek.ai/apply/senior-fe
+          <span className="truncate">talsek.ai/apply/senior-fe</span>
         </span>
         <Copy className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
@@ -179,22 +179,25 @@ function ShortlistVisual() {
 type WorkflowStep = {
   id: number
   title: string
+  label: string
   subtitle: string
   description: string[]
   Visual: React.ComponentType
 }
 
 export function HowItWorks() {
+  const reducedMotion = useReducedMotion()
   const [activeStep, setActiveStep] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
   const { openBooking } = useCalBooking()
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sectionRef = useRef<HTMLElement>(null)
+  const frameRef = useRef<HTMLDivElement>(null)
 
   const workflowSteps: WorkflowStep[] = useMemo(
     () => [
       {
         id: 1,
         title: 'Post a role in 5 minutes',
+        label: 'Post a role',
         subtitle:
           'Create your job, define requirements in plain language, share the apply links.',
         description: [
@@ -207,6 +210,7 @@ export function HowItWorks() {
       {
         id: 2,
         title: 'Every resume screened, 24/7',
+        label: 'Screen resumes',
         subtitle:
           'Unlimited resume processing with context-aware analysis, not keyword matching.',
         description: [
@@ -219,6 +223,7 @@ export function HowItWorks() {
       {
         id: 3,
         title: 'AI interviews top candidates',
+        label: 'AI interviews',
         subtitle:
           'Automated screening interviews customised to your exact needs.',
         description: [
@@ -231,6 +236,7 @@ export function HowItWorks() {
       {
         id: 4,
         title: 'Review the shortlist, hire',
+        label: 'Review shortlist',
         subtitle:
           'Get ranked candidates with evidence. Interview only the best.',
         description: [
@@ -244,23 +250,49 @@ export function HowItWorks() {
     [],
   )
 
-  // Auto-advance steps (paused on hover/focus)
+  // The document keeps scrolling while the desktop panel stays in view.
   useEffect(() => {
-    if (!isPaused) {
-      intervalRef.current = setInterval(() => {
-        setActiveStep((prev) => (prev + 1) % workflowSteps.length)
-      }, 6000)
+    const media = window.matchMedia(
+      '(min-width: 1024px) and (min-height: 800px) and (prefers-reduced-motion: no-preference)',
+    )
+    let frame = 0
+    const update = () => {
+      frame = 0
+      if (!media.matches || !sectionRef.current || !frameRef.current) return
+      const top = sectionRef.current.getBoundingClientRect().top - 72
+      const height = frameRef.current.getBoundingClientRect().height
+      const index = Math.round(-top / height)
+      setActiveStep(Math.max(0, Math.min(workflowSteps.length - 1, index)))
     }
+    const scheduleUpdate = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    update()
+    window.addEventListener('scroll', scheduleUpdate, { passive: true })
+    window.addEventListener('resize', scheduleUpdate)
+    media.addEventListener('change', scheduleUpdate)
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', scheduleUpdate)
+      window.removeEventListener('resize', scheduleUpdate)
+      media.removeEventListener('change', scheduleUpdate)
     }
-  }, [isPaused, workflowSteps.length])
+  }, [workflowSteps.length])
 
   const goToStep = (index: number) => {
     setActiveStep(index)
-    setIsPaused(true)
+    if (
+      sectionRef.current &&
+      frameRef.current &&
+      getComputedStyle(frameRef.current).position === 'sticky'
+    ) {
+      const top =
+        window.scrollY + sectionRef.current.getBoundingClientRect().top
+      window.scrollTo({
+        top: top - 72 + index * frameRef.current.getBoundingClientRect().height,
+        behavior: reducedMotion ? 'instant' : 'smooth',
+      })
+    }
   }
 
   const activeWorkflowStep = workflowSteps[activeStep] ?? workflowSteps[0]
@@ -270,159 +302,138 @@ export function HowItWorks() {
       id="how-it-works"
       aria-labelledby="how-it-works-title"
       data-testid="landing-how-it-works"
-      className="border-b py-20 md:py-28"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onFocus={() => setIsPaused(true)}
-      onBlur={() => setIsPaused(false)}
+      ref={sectionRef}
+      className="landing-workflow relative"
     >
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="label-mono mb-4 text-primary">How it works</p>
-          <h2
-            id="how-it-works-title"
-            className="font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl"
-          >
-            Hiring that runs on autopilot
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            We analyse, you decide.
-          </p>
-        </div>
-
-        <div className="flex items-start gap-6 lg:grid lg:grid-cols-[1fr_1.4fr] lg:gap-12">
-          {/* Step navigation */}
-          <nav
-            className="relative flex w-16 shrink-0 flex-col gap-6 lg:w-auto lg:shrink lg:gap-8"
-            aria-label="Process steps"
-          >
-            <div
-              className="absolute top-3 left-1/2 h-[calc(100%-12px)] w-px -translate-x-1/2 bg-border lg:left-6 lg:translate-x-0"
-              aria-hidden="true"
-            />
-            {workflowSteps.map((step, index) => (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => goToStep(index)}
-                className={cn(
-                  'group relative flex items-center justify-center gap-4 rounded-md text-left transition-opacity duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:items-start',
-                  activeStep === index
-                    ? 'opacity-100'
-                    : 'opacity-50 hover:opacity-80',
-                )}
-                aria-current={activeStep === index ? 'step' : undefined}
+      {workflowSteps.map((step, index) => (
+        <div
+          key={step.id}
+          className="workflow-scroll-stop"
+          style={{ top: `${index * 25}%` }}
+          aria-hidden="true"
+        />
+      ))}
+      <div
+        ref={frameRef}
+        data-testid="landing-workflow-frame"
+        className="landing-scene border-b bg-background"
+      >
+        <div className="container mx-auto px-4">
+          {/* Header */}
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="label-mono mb-3 text-primary">How it works</p>
+              <h2
+                id="how-it-works-title"
+                className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
               >
-                <span
-                  className={cn(
-                    'relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 font-mono text-sm font-semibold transition-colors duration-300',
-                    activeStep === index
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground group-hover:border-primary/60',
-                  )}
-                  aria-hidden="true"
-                >
-                  {step.id}
-                </span>
-                <span className="hidden pt-1.5 lg:block">
-                  <span
-                    className={cn(
-                      'block text-lg font-semibold transition-colors duration-300',
-                      activeStep === index
-                        ? 'text-foreground'
-                        : 'text-muted-foreground',
-                    )}
-                  >
-                    {step.title}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </nav>
+                Hiring that runs on autopilot
+              </h2>
+            </div>
+            <p className="text-base text-muted-foreground">
+              We analyse, you decide.
+            </p>
+          </div>
 
-          {/* Content panel */}
-          <div className="relative min-w-0 flex-1">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeWorkflowStep.id}
-                className="grid items-center gap-8 md:grid-cols-2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                aria-labelledby={`step-title-${activeWorkflowStep.id}`}
-              >
-                <div className="flex flex-col">
-                  <h3
-                    id={`step-title-${activeWorkflowStep.id}`}
-                    className="font-display text-2xl font-bold tracking-tight"
-                  >
-                    {activeWorkflowStep.title}
-                  </h3>
-                  <p className="mt-3 leading-relaxed text-muted-foreground">
-                    {activeWorkflowStep.subtitle}
-                  </p>
-                  <ul className="mt-6 space-y-3">
-                    {activeWorkflowStep.description.map((item) => (
-                      <li key={item} className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                          <Check className="h-3 w-3 text-primary" />
-                        </span>
-                        <span className="text-sm leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <activeWorkflowStep.Visual />
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Mobile dot indicators */}
-            <div className="mt-6 flex justify-center gap-2 lg:hidden">
-              {workflowSteps.map((_, index) => (
-                <button
-                  key={index}
+          <div className="overflow-hidden rounded-2xl border bg-card">
+            <nav
+              className="grid grid-cols-2 gap-2 border-b bg-muted/30 p-3 sm:grid-cols-4"
+              aria-label="Process steps"
+            >
+              {workflowSteps.map((step, index) => (
+                <Button
+                  key={step.id}
                   type="button"
+                  variant="ghost"
                   onClick={() => goToStep(index)}
                   className={cn(
-                    'h-2 rounded-full transition-all',
+                    'h-auto justify-start gap-2.5 rounded-lg px-3 py-3 text-left whitespace-normal',
                     activeStep === index
-                      ? 'w-6 bg-primary'
-                      : 'w-2 bg-muted hover:bg-primary/50',
+                      ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                      : 'text-muted-foreground hover:text-foreground',
                   )}
-                  aria-label={`Go to step ${index + 1}`}
                   aria-current={activeStep === index ? 'step' : undefined}
-                />
+                  aria-controls="workflow-panel"
+                >
+                  <span
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border font-mono text-xs',
+                      activeStep === index
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background',
+                    )}
+                    aria-hidden="true"
+                  >
+                    {step.id}
+                  </span>
+                  {step.label}
+                </Button>
               ))}
+            </nav>
+
+            {/* Content panel */}
+            <div id="workflow-panel" className="relative min-w-0 p-5 sm:p-6">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeWorkflowStep.id}
+                  className="grid items-center gap-8 md:min-h-72 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12"
+                  initial={{ opacity: 0, y: reducedMotion ? 0 : 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: reducedMotion ? 0 : -10 }}
+                  transition={{ duration: reducedMotion ? 0 : 0.2 }}
+                  aria-labelledby={`step-title-${activeWorkflowStep.id}`}
+                >
+                  <div className="flex flex-col">
+                    <h3
+                      id={`step-title-${activeWorkflowStep.id}`}
+                      className="font-display text-2xl font-bold tracking-tight"
+                    >
+                      {activeWorkflowStep.title}
+                    </h3>
+                    <p className="mt-3 leading-relaxed text-muted-foreground">
+                      {activeWorkflowStep.subtitle}
+                    </p>
+                    <ul className="mt-6 space-y-3">
+                      {activeWorkflowStep.description.map((item) => (
+                        <li key={item} className="flex items-start gap-3">
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                            <Check className="h-3 w-3 text-primary" />
+                          </span>
+                          <span className="text-sm leading-relaxed">
+                            {item}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <activeWorkflowStep.Visual />
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
-        </div>
 
-        {/* Result band */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="mt-16 flex flex-col items-center gap-8 border-t pt-12 text-center md:mt-20"
-        >
-          <p className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Hire in <span className="text-primary">7 days</span> instead of{' '}
-            <span className="line-through decoration-2 text-muted-foreground/60">
-              90
-            </span>
-          </p>
-          <Button
-            size="lg"
-            data-testid="how-it-works-book-demo"
-            className="group gap-2 rounded-xl px-7 font-semibold shadow-lg shadow-primary/20 transition-shadow hover:shadow-xl hover:shadow-primary/25"
-            onClick={openBooking}
-          >
-            Book a demo
-            <ArrowRightIcon />
-          </Button>
-        </motion.div>
+          {/* Result band */}
+          <div className="mt-6 flex flex-col items-start gap-6 rounded-2xl border border-primary/15 bg-primary/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
+            <div className="min-w-0">
+              <p className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+                Hire in <span className="text-primary">7 days</span> instead of
+                90.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Let Talsek handle the screening. You choose who moves forward.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              data-testid="how-it-works-book-demo"
+              className="group shrink-0 gap-2 rounded-xl px-6 font-semibold"
+              onClick={openBooking}
+            >
+              Book a demo
+              <ArrowRightIcon />
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   )

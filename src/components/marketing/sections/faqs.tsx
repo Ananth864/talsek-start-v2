@@ -45,7 +45,7 @@ export function FAQs() {
       id="faq"
       aria-label="Frequently asked questions"
       data-testid="landing-faqs"
-      className="border-b py-20 md:py-28"
+      className="landing-scene border-b"
     >
       <div className="container mx-auto px-4">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.6fr] lg:gap-20">
