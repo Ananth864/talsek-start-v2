@@ -22,6 +22,23 @@ import { Button } from '#/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 
 export const Route = createFileRoute('/_member/reachout-templates')({
+  // Prefetch + dehydrate for SSR first paint (ADR-0007 pattern — the fetch
+  // used to start only after hydration, which showed "Loading templates…").
+  // Server-only with lazy imports: the client route chunk stays lean and the
+  // mounted hook fetches exactly as before on client-side navigation.
+  loader: async ({ context }) => {
+    if (!context.companyId || typeof document !== 'undefined') return
+    const { reachoutTemplatesQueryOptions } = await import(
+      '#/hooks/use-reachout-templates'
+    )
+    try {
+      await context.queryClient.ensureQueryData(
+        reachoutTemplatesQueryOptions(context.companyId),
+      )
+    } catch {
+      // Surface via useQuery error UI — do not fail the whole route shell.
+    }
+  },
   component: ReachoutTemplatesPage,
 })
 

@@ -29,6 +29,26 @@ export const Route = createFileRoute('/_member/candidates')({
         ? true
         : undefined,
   }),
+  // Prefetch + dehydrate the shell data (Jobs list + board view preference)
+  // for SSR first paint (ADR-0007). The candidate search itself is
+  // user-action-gated in the component and stays client-side.
+  // Client-side: no prefetch — the page's first render is the empty-prompt
+  // shell, and the mounted hooks fetch what the filters need (keeping cold
+  // first-navigation free of extra module/requests contention).
+  // Lazy imports keep these off the client route chunk entirely.
+  loader: async ({ context }) => {
+    if (!context.companyId || typeof document !== 'undefined') return
+    const settle = (p: Promise<unknown>) => p.catch(() => undefined)
+    const [{ jobsQueryOptions }, { candidateListViewQueryOptions }] =
+      await Promise.all([
+        import('#/hooks/use-jobs'),
+        import('#/hooks/use-candidate-list-view'),
+      ])
+    await Promise.all([
+      settle(context.queryClient.ensureQueryData(jobsQueryOptions(context.companyId))),
+      settle(context.queryClient.ensureQueryData(candidateListViewQueryOptions(context.userId))),
+    ])
+  },
   component: CandidatesRoute,
 })
 

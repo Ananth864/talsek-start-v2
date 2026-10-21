@@ -20,8 +20,13 @@ async function signIn(page: Page) {
 async function openCandidatesPage(page: Page) {
   await page.getByTestId('candidates-nav').click()
   await expect(page).toHaveURL(/\/candidates/)
-  await expect(page.getByTestId('candidates-page')).toBeVisible()
-  await expect(page.getByTestId('candidates-filters')).toBeVisible()
+  // Generous budget: cold dev-server compiles the route chunk on first visit.
+  await expect(page.getByTestId('candidates-page')).toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(page.getByTestId('candidates-filters')).toBeVisible({
+    timeout: 30_000,
+  })
 }
 
 async function expectDownload(

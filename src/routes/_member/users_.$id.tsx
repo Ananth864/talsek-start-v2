@@ -5,7 +5,10 @@ import {
   resendInvite,
   updateMemberPermissions,
 } from '#/server/fn/team'
-import { useInvalidateTeam, useTeamMember } from '#/hooks/use-team'
+import {
+  useInvalidateTeam,
+  useTeamMember,
+} from '#/hooks/use-team'
 import {
   MEMBER_PERMISSIONS_DEFAULT,
   MEMBER_PERMISSIONS_META,
@@ -32,6 +35,16 @@ export const Route = createFileRoute('/_member/users_/$id')({
     if (!context.isAdmin) {
       throw redirect({ to: '/dashboard' })
     }
+  },
+  // Prefetch + dehydrate for SSR first paint (ADR-0007 pattern).
+  // Server-only with lazy imports: the client route chunk stays lean and the
+  // mounted hook fetches exactly as before on client-side navigation.
+  loader: async ({ context, params }) => {
+    if (!context.companyId || typeof document !== 'undefined') return
+    const { teamMemberQueryOptions } = await import('#/hooks/use-team')
+    await context.queryClient
+      .ensureQueryData(teamMemberQueryOptions(context.companyId, params.id))
+      .catch(() => undefined)
   },
   component: TeamMemberDetailPage,
 })

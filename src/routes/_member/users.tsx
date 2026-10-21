@@ -24,6 +24,17 @@ export const Route = createFileRoute('/_member/users')({
       throw redirect({ to: '/dashboard' })
     }
   },
+  // Prefetch + dehydrate for SSR first paint (ADR-0007 pattern — the fetch
+  // used to start only after hydration, which showed "Loading team members…").
+  // Server-only with lazy imports: the client route chunk stays lean and the
+  // mounted hook fetches exactly as before on client-side navigation.
+  loader: async ({ context }) => {
+    if (!context.companyId || typeof document !== 'undefined') return
+    const { teamMembersQueryOptions } = await import('#/hooks/use-team')
+    await context.queryClient
+      .ensureQueryData(teamMembersQueryOptions(context.companyId))
+      .catch(() => undefined)
+  },
   component: TeamPage,
 })
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery, queryOptions } from '@tanstack/react-query'
-import { fetchJobs } from '#/server/fn/jobs'
-import { jobsQueryKey, filterJobsBySearch } from '#/lib/jobs-shared'
+import { useQuery } from '@tanstack/react-query'
+import { filterJobsBySearch } from '#/lib/jobs-shared'
+import { jobsQueryOptions } from '#/hooks/use-jobs'
 import { jobApplicationsQueryOptions } from '#/hooks/use-job-applications'
 import { jobStagesQueryOptions } from '#/hooks/use-job-stages'
 import { useJobApplicationsSubscription } from '#/hooks/use-job-applications-subscription'
@@ -79,12 +79,6 @@ export const Route = createFileRoute('/_member/dashboard')({
   },
   component: DashboardPage,
 })
-
-const jobsQueryOptions = (companyId: string | null) =>
-  queryOptions({
-    queryKey: jobsQueryKey(companyId),
-    queryFn: () => fetchJobs(),
-  })
 
 function DashboardPage() {
   const {

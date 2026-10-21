@@ -14,7 +14,8 @@ function docsSplat(path: string): string {
   return path.startsWith('/docs/') ? path.slice('/docs/'.length) : path
 }
 
-export function DocumentationSidebar() {
+/** Logo + section nav — shared by the desktop aside and the mobile sheet. */
+export function DocumentationSidebarNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   const isActive = (path: string) => pathname === path
@@ -27,10 +28,7 @@ export function DocumentationSidebar() {
   }
 
   return (
-    <aside
-      className="sticky top-0 z-30 flex h-screen w-72 flex-col border-r border-border/40 transition-all duration-300"
-      data-testid="docs-sidebar"
-    >
+    <>
       <div className="px-4 py-4">
         <Link
           to="/docs/$"
@@ -168,6 +166,18 @@ export function DocumentationSidebar() {
           </Accordion>
         </nav>
       </ScrollArea>
+    </>
+  )
+}
+
+/** Desktop-only fixed sidebar. On mobile the nav lives in a sheet instead. */
+export function DocumentationSidebar() {
+  return (
+    <aside
+      className="sticky top-0 z-30 hidden h-screen w-72 shrink-0 flex-col border-r border-border/40 transition-all duration-300 lg:flex"
+      data-testid="docs-sidebar"
+    >
+      <DocumentationSidebarNav />
     </aside>
   )
 }

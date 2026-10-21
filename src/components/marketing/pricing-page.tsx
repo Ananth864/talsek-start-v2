@@ -16,8 +16,8 @@ export function PricingPage() {
     <main data-testid="pricing-page" className="pt-24 pb-16">
       <PricingTable
         icon={
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-            <Zap className="h-7 w-7 text-primary-foreground" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+            <Zap className="h-7 w-7 text-primary" />
           </div>
         }
         title="Simple, Credit-Based Pricing"
@@ -88,18 +88,24 @@ export function PricingPage() {
         onFooterButtonClick={openBooking}
       />
 
-      <div className="mx-auto mt-16 max-w-6xl px-4" data-testid="credits-explainer">
-        <div className="rounded-2xl border border-border bg-card p-8 shadow-lg md:p-12">
-          <h2 className="mb-10 text-center text-3xl font-bold text-foreground">
-            How Credits Work
-          </h2>
+      <div
+        className="mx-auto mt-16 max-w-6xl px-4"
+        data-testid="credits-explainer"
+      >
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm md:p-12">
+          <div className="mb-10 text-center">
+            <p className="label-mono mb-4 text-primary">Credits</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              How Credits Work
+            </h2>
+          </div>
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2">
-            <div className="group flex items-start gap-6 rounded-2xl border bg-card p-6 shadow-sm transition-all duration-200 hover:bg-accent/50">
+            <div className="group flex items-start gap-6 rounded-2xl border bg-muted/30 p-6 transition-colors hover:bg-accent/50">
               <div className="rounded-xl bg-primary/10 p-4 text-primary transition-colors group-hover:bg-primary/20">
                 <FileText className="h-8 w-8" />
               </div>
               <div className="flex-1 space-y-2">
-                <h3 className="text-xl font-bold text-foreground">
+                <h3 className="font-display text-xl font-bold tracking-tight text-foreground">
                   Resume Screening
                 </h3>
                 <p className="text-base text-muted-foreground">
@@ -117,12 +123,12 @@ export function PricingPage() {
               </div>
             </div>
 
-            <div className="group flex items-start gap-6 rounded-2xl border bg-card p-6 shadow-sm transition-all duration-200 hover:bg-accent/50">
-              <div className="rounded-xl bg-sky-500/10 p-4 text-sky-500 transition-colors group-hover:bg-sky-500/20">
+            <div className="group flex items-start gap-6 rounded-2xl border bg-muted/30 p-6 transition-colors hover:bg-accent/50">
+              <div className="rounded-xl bg-primary/10 p-4 text-primary transition-colors group-hover:bg-primary/20">
                 <Video className="h-8 w-8" />
               </div>
               <div className="flex-1 space-y-2">
-                <h3 className="text-xl font-bold text-foreground">
+                <h3 className="font-display text-xl font-bold tracking-tight text-foreground">
                   Screening Interview
                 </h3>
                 <p className="text-base text-muted-foreground">

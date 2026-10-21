@@ -20,7 +20,10 @@ type CalBookingDialogProps = {
  * Shared Cal.com demo-booking dialog for marketing CTAs.
  * Embed mounts only while open so SSR stays clean.
  */
-export function CalBookingDialog({ open, onOpenChange }: CalBookingDialogProps) {
+export function CalBookingDialog({
+  open,
+  onOpenChange,
+}: CalBookingDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent

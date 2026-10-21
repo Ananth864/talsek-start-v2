@@ -33,3 +33,9 @@ discarded because they would silently change the product's appearance.
 - Large custom components (`CandidateProfileDialog`, `JobCreationDialog`,
   `CandidateProfilePDFRenderer`, `what-sets-us-apart`, `DashboardSidebar`, …)
   port as application code with minimal React 19 / token patches — no redesign.
+
+## Amendment (2026-08-25, ADR-0032)
+
+The public marketing surface now overrides this token set with the
+screening-desk palette under `[data-marketing-theme]` (see ADR-0032). The
+product/gated theme described here is unchanged.

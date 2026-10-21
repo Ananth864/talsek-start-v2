@@ -1,4 +1,5 @@
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
 import { useCalBooking } from '#/components/marketing/cal-booking-context'
 
@@ -8,43 +9,39 @@ export function CTASection() {
   return (
     <section
       id="contact"
-      aria-label="Contact and call-to-action"
+      aria-labelledby="closing-title"
       data-testid="landing-cta"
-      className="relative overflow-hidden bg-background py-16 md:py-20 lg:py-24"
+      className="landing-scene"
     >
-      <div className="absolute inset-0 opacity-30" aria-hidden="true">
-        <div className="absolute top-1/2 left-1/4 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute top-1/2 right-1/4 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-      </div>
-
-      <div className="relative container mx-auto px-4">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-            <Sparkles className="h-4 w-4" />
-            Start Your Journey
-          </div>
-
-          <h2 className="mb-8 text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            Ready to transform your{' '}
-            <span className="text-primary">hiring?</span>
-          </h2>
-
-          <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Find interview-ready candidates for your team in{' '}
-            <span className="font-bold text-foreground">days</span>, not{' '}
-            <span className="text-muted-foreground/60 line-through">months</span>
-            .
-          </p>
-
-          <Button
-            size="lg"
-            className="group gap-2 font-semibold shadow-lg"
-            onClick={openBooking}
-            data-testid="cta-book-demo"
+      <div className="container mx-auto px-4">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="label-mono mb-6 text-primary">Your next hire</p>
+          <h2
+            id="closing-title"
+            className="font-display text-4xl leading-[1.08] font-bold tracking-tight sm:text-5xl lg:text-6xl"
           >
-            Book a Demo Now
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </Button>
+            Spend your time with
+            <br className="hidden sm:block" />{' '}
+            <span className="text-primary">the right candidates.</span>
+          </h2>
+          <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
+            See how Talsek screens resumes, runs interviews, and brings your
+            strongest candidates together. You make the hiring decision.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              size="lg"
+              data-testid="cta-book-demo"
+              className="group gap-2 rounded-xl px-7 font-semibold"
+              onClick={openBooking}
+            >
+              Book a demo
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+            <Button size="lg" variant="ghost" className="rounded-xl" asChild>
+              <Link to="/contact">Contact us</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </section>

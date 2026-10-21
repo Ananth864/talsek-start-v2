@@ -76,6 +76,24 @@ export const Route = createFileRoute('/_member/billing')({
   }),
   // Sidebar entry is admin-only; route stays open for deep links (source
   // parity — Billing had no route guard).
+  // Prefetch + dehydrate every billing query for SSR first paint in parallel
+  // (ADR-0007 pattern) — the fetches used to start only after hydration.
+  // Server-only with lazy imports: the client route chunk stays lean and the
+  // mounted hooks fetch exactly as before on client-side navigation.
+  loader: async ({ context }) => {
+    if (!context.companyId || typeof document !== 'undefined') return
+    const billing = await import('#/hooks/use-billing')
+    const { queryClient } = context
+    const settle = (p: Promise<unknown>) => p.catch(() => undefined)
+    await Promise.all([
+      settle(queryClient.ensureQueryData(billing.creditBalanceQueryOptions(context.companyId))),
+      settle(queryClient.ensureQueryData(billing.activeSubscriptionsQueryOptions(context.companyId))),
+      settle(queryClient.ensureQueryData(billing.serviceRatesQueryOptions(context.companyId))),
+      settle(queryClient.ensureQueryData(billing.companyPaymentsQueryOptions(context.companyId))),
+      settle(queryClient.ensureQueryData(billing.usageStatsQueryOptions(context.companyId))),
+      settle(queryClient.ensureQueryData(billing.billingSettingsQueryOptions(context.companyId))),
+    ])
+  },
   component: BillingPage,
 })
 

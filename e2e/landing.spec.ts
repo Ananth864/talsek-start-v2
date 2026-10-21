@@ -36,7 +36,7 @@ test('landing renders, nav works, and booking dialog opens', async ({
   await page.waitForLoadState('networkidle')
   await page
     .getByTestId('marketing-header')
-    .getByRole('button', { name: 'Products' })
+    .getByRole('button', { name: 'Product' })
     .click()
   await page.getByRole('link', { name: /Resume Matching/i }).click()
   await expect(page).toHaveURL(/#resume-matching/)
