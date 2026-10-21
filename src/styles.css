@@ -426,6 +426,18 @@
 }
 
 @media (min-width: 1024px) and (min-height: 800px) and (prefers-reduced-motion: no-preference) {
+  .workflow-composition {
+    position: relative;
+  }
+  /* Keep the overflow probe measurable even when the visible examples flow inline. */
+  .workflow-product {
+    display: flex;
+    position: absolute;
+    visibility: hidden;
+    width: calc(62% - 3.72rem);
+    right: 1rem;
+    top: 0;
+  }
   .landing-workflow[data-scroll-pinned='true'] .workflow-nav {
     position: sticky;
     top: 4.5rem;
@@ -449,6 +461,9 @@
     display: none;
   }
   .landing-workflow[data-scroll-pinned='true'] .workflow-product {
+    visibility: visible;
+    width: auto;
+    right: auto;
     display: flex;
     align-items: center;
     position: sticky;

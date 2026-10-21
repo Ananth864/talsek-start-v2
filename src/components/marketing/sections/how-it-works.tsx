@@ -314,6 +314,7 @@ export function HowItWorks() {
     let lastWheel = -Infinity
     let handled = false
     let accumulated = 0
+    let lastDirection = 0
     const onWheel = (event: WheelEvent) => {
       if (
         event.ctrlKey ||
@@ -343,11 +344,17 @@ export function HowItWorks() {
             : 1)
       const direction = Math.sign(delta)
       const now = performance.now()
-      if (now - lastWheel > 180) {
+      const reversed = lastDirection !== 0 && direction !== lastDirection
+      if (reversed) {
+        targetRef.current = null
+        window.scrollTo({ top: y, behavior: 'instant' })
+      }
+      if (now - lastWheel > 180 || reversed) {
         handled = false
         accumulated = 0
       }
       lastWheel = now
+      lastDirection = direction
       const entering = y < stops[0] - 3 && y + delta >= stops[0]
       const returning = y > stops[3] + 3 && y + delta <= stops[3]
       const inside = y >= stops[0] - 3 && y <= stops[3] + 3

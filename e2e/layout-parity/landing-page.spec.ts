@@ -161,3 +161,60 @@ test('strong wheel input stops at the first real workflow chapter', async ({
     workflow.getByRole('button', { name: labels[0], exact: true }),
   ).toHaveAttribute('aria-current', 'step')
 })
+
+test('reversing the wheel during a transition returns to the previous chapter', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  const workflow = page.getByTestId('landing-how-it-works')
+  await expect(workflow).toHaveAttribute('data-scroll-pinned', 'true')
+  await page
+    .locator('#workflow-step-0')
+    .evaluate((el) =>
+      el.scrollIntoView({ behavior: 'instant', block: 'start' }),
+    )
+  await page.mouse.move(700, 500)
+  await page.mouse.wheel(0, 1500)
+  await page.waitForTimeout(100)
+  await page.mouse.wheel(0, -1500)
+  await expect
+    .poll(async () =>
+      Math.round((await page.locator('#workflow-step-0').boundingBox())!.y),
+    )
+    .toBe(136)
+  await expect(
+    workflow.getByRole('button', { name: labels[0], exact: true }),
+  ).toHaveAttribute('aria-current', 'step')
+})
+
+test('product text overflow keeps a stable natural-flow fallback', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 800 })
+  await page.goto('/')
+  const workflow = page.getByTestId('landing-how-it-works')
+  await expect(workflow).toHaveAttribute('data-scroll-pinned', 'true')
+  await page.addStyleTag({
+    content:
+      '.workflow-product p, .workflow-product span { font-size: 32px !important; line-height: 1.5 !important; }',
+  })
+  await expect(workflow).toHaveAttribute('data-scroll-pinned', 'false')
+  const changes = await workflow.evaluate(async (el) => {
+    let count = 0
+    const observer = new MutationObserver(() => {
+      count += 1
+    })
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ['data-scroll-pinned'],
+    })
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    observer.disconnect()
+    return count
+  })
+  expect(changes).toBe(0)
+  await expect(
+    workflow.locator('.workflow-inline-visual').first(),
+  ).toBeVisible()
+})

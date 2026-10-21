@@ -24,14 +24,17 @@ small product examples, and disconnected quote, FAQ, and closing sections.
   The handler cancels input before movement and consumes residual events until
   180ms of wheel inactivity. A fresh outward gesture exits the first/last chapter.
   It never corrects overshoot by pulling the document backward. Horizontal input
-  and browser zoom gestures are preserved.
+  and browser zoom gestures are preserved. Reversing direction cancels the
+  current transition and selects the adjacent chapter in the new direction.
 - Select the step when its article crosses the reading position below the
   header and navigation. Explicit step navigation scrolls smoothly to that
   article and keeps the selected product view stable during transit. Manual
   input cancels that selection guard.
 - On mobile, short windows, enlarged text, or reduced motion, show all four
   articles and their product examples in normal document flow. A resize observer
-  checks the product frame before enabling sticky presentation. No timed
+  checks the product frame before enabling sticky presentation. The desktop
+  measurement frame remains rendered but invisible during fallback, so hiding
+  it cannot make the measurement zero and repeatedly re-enable pinning. No timed
   auto-advance is used. Reduced motion disables snapping and smooth scrolling.
 - Use one candidate story across workflow, evidence, and closing examples.
   Replace equal feature cards with a larger resume-evidence composition.
