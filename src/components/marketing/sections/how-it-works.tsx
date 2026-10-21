@@ -82,10 +82,10 @@ function ScreeningVisual() {
     <PanelShell label="Screening · 128 resumes">
       <ul className="space-y-2.5">
         {rows.map((r) => (
-          <li key={r.name} className="flex items-center gap-3">
+          <li key={r.name} className="flex flex-wrap items-center gap-3">
             <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="w-20 shrink-0 text-sm font-medium">{r.name}</span>
-            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <span className="h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-muted">
               <span
                 className={cn(
                   'block h-full rounded-full',
@@ -96,7 +96,7 @@ function ScreeningVisual() {
             </span>
             <span
               className={cn(
-                'w-9 text-right font-mono text-xs font-semibold',
+                'w-9 shrink-0 text-right font-mono text-xs font-semibold',
                 r.match >= 80
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : 'text-muted-foreground',

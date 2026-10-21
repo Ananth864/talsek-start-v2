@@ -118,7 +118,9 @@ test('all workflow content stays in natural flow on mobile, reduced motion and l
     workflow.locator('.workflow-inline-visual').first(),
   ).toBeVisible()
   await page.setViewportSize({ width: 320, height: 844 })
-  const shortlist = page.locator('#workflow-step-3 .workflow-inline-visual')
+  const shortlist = page.locator(
+    '#workflow-step-1 .workflow-inline-visual, #workflow-step-3 .workflow-inline-visual',
+  )
   const rowsFit = await shortlist.locator('li').evaluateAll((rows) =>
     rows.every((row) => {
       const bounds = row.getBoundingClientRect()
@@ -129,6 +131,14 @@ test('all workflow content stays in natural flow on mobile, reduced motion and l
     }),
   )
   expect(rowsFit).toBe(true)
+  expect(
+    await page.locator('body').evaluate((el) => el.scrollWidth),
+  ).toBeLessThanOrEqual(320)
+  const bars = page.locator(
+    '#workflow-step-1 .workflow-inline-visual li > span:nth-of-type(2)',
+  )
+  for (const bar of await bars.all())
+    expect((await bar.boundingBox())!.width).toBeGreaterThan(0)
 })
 
 test('dark theme persists, merged FAQ expands and booking stays available', async ({

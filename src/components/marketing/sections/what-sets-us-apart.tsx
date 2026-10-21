@@ -101,7 +101,7 @@ function OutreachVisual() {
           We're building exactly that at Talsek…"
         </p>
       </div>
-      <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-medium text-primary">
           <Link2 className="h-3.5 w-3.5" />
           Personalised at scale
@@ -217,7 +217,7 @@ export function WhatSetsUsApart() {
                 id={feature.id}
                 {...fadeUp}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex scroll-mt-24 flex-col rounded-2xl border bg-card p-5 shadow-sm"
+                className="flex min-w-0 scroll-mt-24 flex-col rounded-2xl border bg-card p-5 shadow-sm"
               >
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                   <feature.icon className="h-5 w-5 text-primary" />
