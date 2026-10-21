@@ -14,18 +14,24 @@ const CAL_LINK = 'romit-shrivastava/talsek-demo'
 type CalBookingDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onCloseAutoFocus?: (event: Event) => void
 }
 
 /**
  * Shared Cal.com demo-booking dialog for marketing CTAs.
  * Embed mounts only while open so SSR stays clean.
  */
-export function CalBookingDialog({ open, onOpenChange }: CalBookingDialogProps) {
+export function CalBookingDialog({
+  open,
+  onOpenChange,
+  onCloseAutoFocus,
+}: CalBookingDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-h-[90vh] w-full max-w-4xl gap-0 overflow-hidden p-0"
         data-testid="cal-booking-dialog"
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <DialogHeader className="border-b border-border p-6 text-left">
           <DialogTitle>Book a Call</DialogTitle>
