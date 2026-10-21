@@ -163,12 +163,14 @@ function ShortlistVisual() {
         {picks.map((p, i) => (
           <li
             key={p.name}
-            className="flex items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2.5"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2.5"
           >
             <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               #{i + 1}
             </span>
-            <span className="flex-1 text-sm font-medium">{p.name}</span>
+            <span className="min-w-0 flex-1 basis-24 text-sm font-medium">
+              {p.name}
+            </span>
             <span className="rounded-md border px-2 py-0.5 text-xs font-medium text-muted-foreground">
               View transcript
             </span>

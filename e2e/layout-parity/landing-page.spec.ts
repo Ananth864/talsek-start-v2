@@ -117,6 +117,18 @@ test('all workflow content stays in natural flow on mobile, reduced motion and l
   await expect(
     workflow.locator('.workflow-inline-visual').first(),
   ).toBeVisible()
+  await page.setViewportSize({ width: 320, height: 844 })
+  const shortlist = page.locator('#workflow-step-3 .workflow-inline-visual')
+  const rowsFit = await shortlist.locator('li').evaluateAll((rows) =>
+    rows.every((row) => {
+      const bounds = row.getBoundingClientRect()
+      return [...row.children].every((child) => {
+        const box = child.getBoundingClientRect()
+        return box.left >= bounds.left && box.right <= bounds.right
+      })
+    }),
+  )
+  expect(rowsFit).toBe(true)
 })
 
 test('dark theme persists, merged FAQ expands and booking stays available', async ({
