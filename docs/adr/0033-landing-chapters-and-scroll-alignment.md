@@ -17,15 +17,11 @@ small product examples, and disconnected quote, FAQ, and closing sections.
   minimum viewport height below the rem-based header. Content may grow freely.
 - Give the workflow four real articles in document flow. On suitable desktop
   viewports, keep a slim step navigation and one product frame sticky beside
-  the copy. Each article is a snap destination with `scroll-snap-stop: always`.
-  This replaces invisible snap markers. Browser verification showed that native
-  snap alone still allowed large wheel input to skip articles. On sticky desktop
-  presentation, wheel gestures therefore move smoothly to one adjacent chapter.
-  The handler cancels input before movement and consumes residual events until
-  180ms of wheel inactivity. A fresh outward gesture exits the first/last chapter.
-  It never corrects overshoot by pulling the document backward. Horizontal input
-  and browser zoom gestures are preserved. Reversing direction cancels the
-  current transition and selects the adjacent chapter in the new direction.
+  the copy. Articles are proximity-snap destinations. Keep wheel, trackpad,
+  touch, and keyboard input native. Do not cancel wheel input, impose gesture
+  thresholds, consume momentum, or force one step per gesture. A bounded wheel
+  safeguard was tried to prevent skipped steps, but user testing found it hard
+  to scroll. Direct response to input takes precedence over forcing every stop.
 - Select the step when its article crosses the reading position below the
   header and navigation. Explicit step navigation scrolls smoothly to that
   article and keeps the selected product view stable during transit. Manual
@@ -46,10 +42,10 @@ small product examples, and disconnected quote, FAQ, and closing sections.
 
 ## Consequences
 
-Native proximity snapping preserves reading and footer access. The desktop gesture safeguard
-prevents a large tested wheel input from passing the opening workflow article,
-but do not establish a physical-trackpad guarantee across browsers. Expanded
-answers and larger text can make a chapter taller than one screen.
+Native proximity snapping preserves reading and footer access. Large gestures
+can pass multiple chapters. Explicit navigation remains available for each step.
+Expanded answers and larger text can make a chapter taller than one screen.
+Physical trackpad feel still needs user verification.
 
 Layout checks cover desktop navigation, forward/reverse wheel input, mobile
 content, reduced motion, enlarged text, booking, anchors, and route cleanup.

@@ -291,7 +291,7 @@ export function HowItWorks() {
     window.addEventListener('resize', resize)
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('scrollend', cancel)
-
+    window.addEventListener('wheel', cancel, { passive: true })
     window.addEventListener('touchstart', cancel, { passive: true })
     window.addEventListener('keydown', cancel)
     resize()
@@ -301,96 +301,11 @@ export function HowItWorks() {
       window.removeEventListener('resize', resize)
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('scrollend', cancel)
-
+      window.removeEventListener('wheel', cancel)
       window.removeEventListener('touchstart', cancel)
       window.removeEventListener('keydown', cancel)
     }
   }, [reducedMotion])
-
-  // Bound each wheel gesture before it moves the document, so momentum cannot
-  // skip the opening chapter or cause a corrective backward jump afterward.
-  useEffect(() => {
-    if (!canPin) return
-    let lastWheel = -Infinity
-    let handled = false
-    let accumulated = 0
-    let lastDirection = 0
-    const onWheel = (event: WheelEvent) => {
-      if (
-        event.ctrlKey ||
-        !event.deltaY ||
-        Math.abs(event.deltaX) > Math.abs(event.deltaY)
-      )
-        return
-      const articles = [
-        ...(sectionRef.current?.querySelectorAll<HTMLElement>(
-          '.workflow-chapter',
-        ) ?? []),
-      ]
-      if (!articles.length) return
-      const offset =
-        parseFloat(getComputedStyle(document.documentElement).fontSize) * 8.5
-      const stops = articles.map(
-        (article) =>
-          window.scrollY + article.getBoundingClientRect().top - offset,
-      )
-      const y = window.scrollY
-      const delta =
-        event.deltaY *
-        (event.deltaMode === 1
-          ? 16
-          : event.deltaMode === 2
-            ? window.innerHeight
-            : 1)
-      const direction = Math.sign(delta)
-      const now = performance.now()
-      const reversed = lastDirection !== 0 && direction !== lastDirection
-      if (reversed) {
-        targetRef.current = null
-        window.scrollTo({ top: y, behavior: 'instant' })
-      }
-      if (now - lastWheel > 180 || reversed) {
-        handled = false
-        accumulated = 0
-      }
-      lastWheel = now
-      lastDirection = direction
-      const entering = y < stops[0] - 3 && y + delta >= stops[0]
-      const returning = y > stops[3] + 3 && y + delta <= stops[3]
-      const inside = y >= stops[0] - 3 && y <= stops[3] + 3
-      if (!entering && !returning && !inside) return
-      // Once the final/first chapter is reached, a fresh outward gesture exits.
-      if (
-        !handled &&
-        ((y >= stops[3] - 3 && direction > 0) ||
-          (y <= stops[0] + 3 && direction < 0))
-      )
-        return
-      event.preventDefault()
-      if (handled) return
-      accumulated += delta
-      if (!entering && !returning && Math.abs(accumulated) < 40) return
-      const index = entering
-        ? 0
-        : returning
-          ? 3
-          : direction > 0
-            ? Math.min(
-                3,
-                stops.findIndex((top) => top > y + 3),
-              )
-            : Math.max(
-                0,
-                stops.reduce((found, top, i) => (top < y - 3 ? i : found), 0),
-              )
-      handled = true
-      targetRef.current = index
-      setActiveStep(index)
-      window.scrollTo({ top: stops[index], behavior: 'smooth' })
-    }
-    window.addEventListener('wheel', onWheel, { passive: false })
-    return () => window.removeEventListener('wheel', onWheel)
-  }, [canPin])
 
   const goToStep = (index: number) => {
     const article =

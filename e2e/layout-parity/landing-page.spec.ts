@@ -129,40 +129,7 @@ test('dark theme persists, merged FAQ expands and booking stays available', asyn
   await expect(page.getByTestId('cal-booking-dialog')).toBeVisible()
 })
 
-test('strong wheel input stops at the first real workflow chapter', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 })
-  await page.goto('/')
-  const workflow = page.getByTestId('landing-how-it-works')
-  await expect(workflow).toHaveAttribute('data-scroll-pinned', 'true')
-  await page.mouse.move(700, 500)
-  await page.mouse.wheel(0, 2500)
-  await expect
-    .poll(async () =>
-      Math.round((await page.locator('#workflow-step-0').boundingBox())!.y),
-    )
-    .toBe(136)
-  await expect(
-    workflow.getByRole('button', { name: labels[0], exact: true }),
-  ).toHaveAttribute('aria-current', 'step')
-  await page.mouse.wheel(0, 1500)
-  await expect(
-    workflow.getByRole('button', { name: labels[1], exact: true }),
-  ).toHaveAttribute('aria-current', 'step')
-  await expect
-    .poll(async () =>
-      Math.round((await page.locator('#workflow-step-1').boundingBox())!.y),
-    )
-    .toBe(136)
-  await page.waitForTimeout(200)
-  await page.mouse.wheel(0, -1500)
-  await expect(
-    workflow.getByRole('button', { name: labels[0], exact: true }),
-  ).toHaveAttribute('aria-current', 'step')
-})
-
-test('reversing the wheel during a transition returns to the previous chapter', async ({
+test('workflow preserves native wheel input and continuous scrolling', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
@@ -174,17 +141,40 @@ test('reversing the wheel during a transition returns to the previous chapter', 
     .evaluate((el) =>
       el.scrollIntoView({ behavior: 'instant', block: 'start' }),
     )
+  // Every input must remain available to the browser, including small deltas,
+  // momentum and reversals. The page must not consume it or force a chapter.
+  const canceled = await page.evaluate(() =>
+    [8, 80, 1500, -80, -1500].map((deltaY) => {
+      const event = new WheelEvent('wheel', {
+        deltaY,
+        bubbles: true,
+        cancelable: true,
+      })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }),
+  )
+  expect(canceled).toEqual([false, false, false, false, false])
+  // Disable CSS snapping only for this motion probe, to measure native distance.
+  await page.addStyleTag({
+    content: 'html[data-landing-scroll] { scroll-snap-type: none; }',
+  })
+  const start = await page.evaluate(() => window.scrollY)
   await page.mouse.move(700, 500)
-  await page.mouse.wheel(0, 1500)
-  await page.waitForTimeout(100)
-  await page.mouse.wheel(0, -1500)
+  await page.mouse.wheel(0, 240)
   await expect
-    .poll(async () =>
-      Math.round((await page.locator('#workflow-step-0').boundingBox())!.y),
-    )
-    .toBe(136)
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(start + 240, 0)
+  await page.mouse.wheel(0, -120)
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(start + 120, 0)
+  await page.mouse.wheel(0, 900)
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(start + 1020, 0)
   await expect(
-    workflow.getByRole('button', { name: labels[0], exact: true }),
+    workflow.getByRole('button', { name: labels[1], exact: true }),
   ).toHaveAttribute('aria-current', 'step')
 })
 

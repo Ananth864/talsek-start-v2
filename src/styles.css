@@ -454,7 +454,6 @@
     justify-content: center;
     min-height: calc(100svh - 8.5rem);
     scroll-snap-align: start;
-    scroll-snap-stop: always;
     scroll-margin-top: 4rem;
   }
   .landing-workflow[data-scroll-pinned='true'] .workflow-inline-visual {
