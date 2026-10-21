@@ -27,9 +27,9 @@ export function Hero() {
       </div>
 
       <div className="container relative z-10 mx-auto px-4">
-        <div className="grid items-center gap-12 py-16 md:py-20 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-16">
+        <div className="grid items-center gap-8 py-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12 lg:py-8">
           {/* Copy */}
-          <div className="flex min-w-0 max-w-2xl flex-col items-start gap-7">
+          <div className="flex min-w-0 max-w-2xl flex-col items-start gap-5">
             <motion.p
               {...fadeUp}
               transition={{ duration: 0.5, ease: 'easeOut' }}
