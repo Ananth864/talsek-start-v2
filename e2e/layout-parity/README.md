@@ -10,12 +10,14 @@ bun run e2e:layout-parity
 ```
 
 Requires `E2E_EMAIL` / `E2E_PASSWORD` in `.env.local` (same as behavioural E2E).
-Desktop viewport is fixed at 1280×800. No screenshots.
+The default desktop viewport is 1280×800. Landing checks also cover 1440×900,
+mobile, enlarged text, and reduced motion. No screenshot comparisons.
 
 ## Scope
 
 | Spec | Surface |
 |------|---------|
+| `landing-page.spec.ts` | Public landing chapters, scroll-driven workflow, dark mode |
 | `member-shell.spec.ts` | Member shell |
 | `dashboard-jobs.spec.ts` | Dashboard / Jobs board |
 | `candidate-board.spec.ts` | Candidate board + adaptive card |

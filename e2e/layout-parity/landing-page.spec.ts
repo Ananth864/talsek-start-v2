@@ -65,6 +65,43 @@ for (const viewport of [
       expect(fits).toBe(true)
     }
 
+    // Clicking across the pinned range must not select intermediate panels.
+    await workflow.locator('nav').evaluate((nav) => {
+      document.documentElement.dataset.stepTrace = '[]'
+      new MutationObserver(() => {
+        const current = nav
+          .querySelector('[aria-current="step"]')
+          ?.textContent.trim()
+        const trace = JSON.parse(
+          document.documentElement.dataset.stepTrace ?? '[]',
+        ) as string[]
+        if (current) trace.push(current)
+        document.documentElement.dataset.stepTrace = JSON.stringify(trace)
+      }).observe(nav, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['aria-current'],
+      })
+    })
+    await workflow
+      .getByRole('button', { name: 'Post a role', exact: true })
+      .click()
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeCloseTo(top, 0)
+    await expect(
+      workflow.getByRole('button', { name: 'Post a role', exact: true }),
+    ).toHaveAttribute('aria-current', 'step')
+    await workflow
+      .getByRole('button', { name: 'Review shortlist', exact: true })
+      .click()
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeCloseTo(top + 3 * (viewport.height - 72), 0)
+    const trace = await page.locator('html').getAttribute('data-step-trace')
+    expect(trace).not.toContain('Screen resumes')
+    expect(trace).not.toContain('AI interviews')
+
     await workflow.getByTestId('how-it-works-book-demo').click()
     await expect(page.getByTestId('cal-booking-dialog')).toBeVisible()
     await page.keyboard.press('Escape')
@@ -80,7 +117,18 @@ for (const viewport of [
         async () => (await page.locator('#resume-matching').boundingBox())?.y,
       )
       .toBeGreaterThanOrEqual(72)
-    await page.goto('/pricing')
+    await page
+      .locator('html')
+      .evaluate((el) => el.setAttribute('data-navigation-probe', 'retained'))
+    await page
+      .getByTestId('landing-hero')
+      .getByRole('link', { name: 'View pricing' })
+      .click()
+    await expect(page).toHaveURL(/\/pricing/)
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-navigation-probe',
+      'retained',
+    )
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-landing-scroll',
     )
@@ -150,4 +198,75 @@ test('dark landing keeps readable surfaces and theme choice survives reload', as
   expect(colors.color).not.toBe(colors.background)
   await page.getByTestId('cta-book-demo').click()
   await expect(page.getByTestId('cal-booking-dialog')).toBeVisible()
+})
+
+test('workflow uses the rem-based header and releases pinning for enlarged text', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  await expect(page.locator('html')).toHaveAttribute('data-landing-scroll', '')
+  const workflow = page.getByTestId('landing-how-it-works')
+  const frame = page.getByTestId('landing-workflow-frame')
+  await page.locator('html').evaluate((el) => {
+    el.style.fontSize = '14px'
+  })
+  await expect(workflow).toHaveAttribute('data-scroll-pinned', 'true')
+  await workflow
+    .getByRole('button', { name: 'Review shortlist', exact: true })
+    .click()
+  await expect
+    .poll(async () => Math.round((await frame.boundingBox())?.y ?? 0))
+    .toBe(63)
+  await expect(
+    workflow.getByRole('button', { name: 'Review shortlist', exact: true }),
+  ).toHaveAttribute('aria-current', 'step')
+
+  await page.locator('html').evaluate((el) => {
+    el.style.fontSize = '24px'
+  })
+  await expect(workflow).toHaveAttribute('data-scroll-pinned', 'false')
+  expect(await frame.evaluate((el) => getComputedStyle(el).position)).toBe(
+    'static',
+  )
+  await workflow
+    .getByRole('button', { name: 'Post a role', exact: true })
+    .click()
+  await expect(workflow.locator('h3')).toHaveText('Post a role in 5 minutes')
+  const contentFits = await frame.evaluate((el) => {
+    const bounds = el.getBoundingClientRect()
+    const content = el.firstElementChild!.getBoundingClientRect()
+    return content.top >= bounds.top && content.bottom <= bounds.bottom
+  })
+  expect(contentFits).toBe(true)
+})
+
+test('a strong wheel gesture enters the workflow on its first step', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  await expect(page.locator('html')).toHaveAttribute('data-landing-scroll', '')
+  const workflow = page.getByTestId('landing-how-it-works')
+  const entry = await workflow.evaluate(
+    (el) => window.scrollY + el.getBoundingClientRect().top - 72,
+  )
+  await page.mouse.move(700, 500)
+  await page.mouse.wheel(0, 2500)
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(entry, 0)
+  await expect(
+    workflow.getByRole('button', { name: 'Post a role', exact: true }),
+  ).toHaveAttribute('aria-current', 'step')
+  // The remainder of the same momentum gesture must not skip the opening step.
+  await page.mouse.wheel(0, 900)
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(entry, 0)
+  await page.waitForTimeout(300)
+  await page.mouse.wheel(0, 728)
+  await expect(
+    workflow.getByRole('button', { name: 'Screen resumes', exact: true }),
+  ).toHaveAttribute('aria-current', 'step')
 })

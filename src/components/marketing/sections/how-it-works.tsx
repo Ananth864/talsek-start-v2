@@ -188,9 +188,13 @@ type WorkflowStep = {
 export function HowItWorks() {
   const reducedMotion = useReducedMotion()
   const [activeStep, setActiveStep] = useState(0)
+  const [canPin, setCanPin] = useState(true)
   const { openBooking } = useCalBooking()
   const sectionRef = useRef<HTMLElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
+  const scrollTargetRef = useRef<{ top: number; expiresAt: number } | null>(
+    null,
+  )
 
   const workflowSteps: WorkflowStep[] = useMemo(
     () => [
@@ -250,16 +254,77 @@ export function HowItWorks() {
     [],
   )
 
+  // Large text must grow the chapter rather than paint over the next one.
+  useEffect(() => {
+    const frame = frameRef.current
+    const content = frame?.firstElementChild
+    if (!frame || !content) return
+    const measure = () => {
+      const styles = getComputedStyle(frame)
+      const headerOffset =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) * 4.5
+      const padding =
+        parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
+      setCanPin(
+        content.getBoundingClientRect().height + padding + 1 <=
+          window.innerHeight - headerOffset,
+      )
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(content)
+    window.addEventListener('resize', measure)
+    measure()
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+
   // The document keeps scrolling while the desktop panel stays in view.
   useEffect(() => {
     const media = window.matchMedia(
       '(min-width: 1024px) and (min-height: 800px) and (prefers-reduced-motion: no-preference)',
     )
     let frame = 0
+    let previousY = window.scrollY
+    let lastWheelAt = -Infinity
+    let entryHoldUntil = 0
     const update = () => {
       frame = 0
       if (!media.matches || !sectionRef.current || !frameRef.current) return
-      const top = sectionRef.current.getBoundingClientRect().top - 72
+      const styles = getComputedStyle(frameRef.current)
+      if (styles.position !== 'sticky') {
+        previousY = window.scrollY
+        return
+      }
+      const currentY = window.scrollY
+      const offset = parseFloat(styles.top)
+      const entryTop =
+        currentY + sectionRef.current.getBoundingClientRect().top - offset
+      // Momentum entering from the hero must first land on the opening step.
+      if (
+        !scrollTargetRef.current &&
+        performance.now() - lastWheelAt < 220 &&
+        previousY < entryTop - 2 &&
+        currentY > entryTop + 2
+      ) {
+        entryHoldUntil = performance.now() + 220
+        previousY = entryTop
+        window.scrollTo({ top: entryTop, behavior: 'instant' })
+        setActiveStep(0)
+        return
+      }
+      previousY = currentY
+      const target = scrollTargetRef.current
+      if (
+        target &&
+        performance.now() < target.expiresAt &&
+        Math.abs(window.scrollY - target.top) > 2
+      )
+        return
+      scrollTargetRef.current = null
+      const top =
+        sectionRef.current.getBoundingClientRect().top - parseFloat(styles.top)
       const height = frameRef.current.getBoundingClientRect().height
       const index = Math.round(-top / height)
       setActiveStep(Math.max(0, Math.min(workflowSteps.length - 1, index)))
@@ -267,17 +332,38 @@ export function HowItWorks() {
     const scheduleUpdate = () => {
       if (!frame) frame = requestAnimationFrame(update)
     }
+    const cancelTarget = () => {
+      scrollTargetRef.current = null
+      scheduleUpdate()
+    }
+    const onWheel = (event: WheelEvent) => {
+      if (!media.matches || event.ctrlKey) return
+      lastWheelAt = performance.now()
+      if (lastWheelAt < entryHoldUntil) {
+        event.preventDefault()
+        entryHoldUntil = lastWheelAt + 220
+      }
+      cancelTarget()
+    }
     update()
+    window.addEventListener('scrollend', cancelTarget)
+    window.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('touchstart', cancelTarget, { passive: true })
+    window.addEventListener('keydown', cancelTarget)
     window.addEventListener('scroll', scheduleUpdate, { passive: true })
     window.addEventListener('resize', scheduleUpdate)
     media.addEventListener('change', scheduleUpdate)
     return () => {
       cancelAnimationFrame(frame)
+      window.removeEventListener('scrollend', cancelTarget)
+      window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('touchstart', cancelTarget)
+      window.removeEventListener('keydown', cancelTarget)
       window.removeEventListener('scroll', scheduleUpdate)
       window.removeEventListener('resize', scheduleUpdate)
       media.removeEventListener('change', scheduleUpdate)
     }
-  }, [workflowSteps.length])
+  }, [canPin, workflowSteps.length])
 
   const goToStep = (index: number) => {
     setActiveStep(index)
@@ -288,8 +374,16 @@ export function HowItWorks() {
     ) {
       const top =
         window.scrollY + sectionRef.current.getBoundingClientRect().top
+      const targetTop =
+        top -
+        parseFloat(getComputedStyle(frameRef.current).top) +
+        index * frameRef.current.getBoundingClientRect().height
+      scrollTargetRef.current = {
+        top: targetTop,
+        expiresAt: performance.now() + 2000,
+      }
       window.scrollTo({
-        top: top - 72 + index * frameRef.current.getBoundingClientRect().height,
+        top: targetTop,
         behavior: reducedMotion ? 'instant' : 'smooth',
       })
     }
@@ -303,6 +397,7 @@ export function HowItWorks() {
       aria-labelledby="how-it-works-title"
       data-testid="landing-how-it-works"
       ref={sectionRef}
+      data-scroll-pinned={canPin}
       className="landing-workflow relative"
     >
       {workflowSteps.map((step, index) => (

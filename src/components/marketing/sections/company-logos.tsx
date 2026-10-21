@@ -46,12 +46,14 @@ export function CompanyLogos() {
                 aria-hidden={i >= logos.length}
                 className="flex shrink-0 items-center gap-3 select-none"
               >
-                <img
-                  src={logo.src}
-                  alt={logo.alt}
-                  loading="lazy"
-                  className="pointer-events-none h-8 w-auto rounded-sm object-contain dark:bg-white dark:p-1"
-                />
+                <span className="rounded-md p-1 dark:bg-white">
+                  <img
+                    src={logo.src}
+                    alt={logo.alt}
+                    loading="lazy"
+                    className="pointer-events-none h-8 w-auto rounded-sm object-contain"
+                  />
+                </span>
                 <span className="text-base font-semibold whitespace-nowrap text-foreground/80">
                   {logo.name}
                 </span>

@@ -413,18 +413,18 @@
 }
 
 @media (min-width: 1024px) and (min-height: 800px) and (prefers-reduced-motion: no-preference) {
-  .landing-workflow {
+  .landing-workflow[data-scroll-pinned='true'] {
     height: calc(4 * (100svh - 4.5rem));
   }
 
-  .landing-workflow > .landing-scene {
+  .landing-workflow[data-scroll-pinned='true'] > .landing-scene {
     position: sticky;
     top: 4.5rem;
     height: calc(100svh - 4.5rem);
     scroll-snap-align: none;
   }
 
-  .workflow-scroll-stop {
+  .landing-workflow[data-scroll-pinned='true'] > .workflow-scroll-stop {
     display: block;
     position: absolute;
     width: 1px;

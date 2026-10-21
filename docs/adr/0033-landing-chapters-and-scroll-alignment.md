@@ -18,7 +18,13 @@ desktop viewport. The requested interaction is gentle alignment between screens.
   labels and the full title in the content. Retain all four steps and demo actions. At desktop heights of at least 800px,
   pin the panel and derive its active step from document scroll position. Native
   scrolling passes through all four steps in either direction before the panel
-  releases. Step buttons scroll to their corresponding positions.
+  releases. Step buttons scroll to their corresponding positions without selecting
+  intermediate panels. Manual scroll input cancels that programmatic selection.
+  A content resize observer disables pinning when larger text no longer fits; the
+  chapter then grows naturally. Scroll math reads the computed sticky offset.
+  On wheel entry from above, clamp to the opening step and consume only the
+  remaining momentum of that gesture until 220ms of wheel inactivity. Later
+  scrolling stays native; programmatic navigation bypasses this entry guard.
 - Use natural scrolling on mobile, short windows, and when reduced motion is
   requested. Keep workflow selection manual in these modes; no timed auto-advance is used.
 - Scope the root scroll attribute to the mounted landing route and remove it on
