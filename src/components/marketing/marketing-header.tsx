@@ -20,6 +20,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -97,7 +98,7 @@ export function MarketingHeader() {
           <nav
             role="navigation"
             aria-label="Primary"
-            className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center md:flex"
+            className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center lg:flex"
           >
             <NavigationMenu>
               <NavigationMenuList>
@@ -196,7 +197,7 @@ export function MarketingHeader() {
             </NavigationMenu>
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 lg:flex">
             <Button variant="ghost" size="lg" className="font-semibold" asChild>
               <Link to="/signin">Sign In</Link>
             </Button>
@@ -205,7 +206,7 @@ export function MarketingHeader() {
             </Button>
           </div>
 
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" aria-label="Open menu">
@@ -224,6 +225,9 @@ export function MarketingHeader() {
                       <span className="text-lg font-semibold">Talsek</span>
                     </Link>
                   </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Explore Talsek, view pricing, or sign in.
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="my-6 flex flex-col gap-6">
                   <Accordion
@@ -310,7 +314,11 @@ export function MarketingHeader() {
                     >
                       <Link to="/signin">Sign In</Link>
                     </Button>
-                    <Button size="lg" className="font-semibold shadow-lg" asChild>
+                    <Button
+                      size="lg"
+                      className="font-semibold shadow-lg"
+                      asChild
+                    >
                       <Link to="/signup">Sign Up</Link>
                     </Button>
                   </div>

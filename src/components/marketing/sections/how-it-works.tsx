@@ -104,7 +104,7 @@ export function HowItWorks() {
       id="how-it-works"
       data-testid="landing-how-it-works"
       aria-labelledby="how-it-works-title"
-      className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/20 py-20 md:py-28 lg:py-32"
+      className="relative scroll-mt-24 overflow-hidden bg-gradient-to-b from-background to-secondary/20 py-20 md:py-28 lg:py-32"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
