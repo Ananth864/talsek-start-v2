@@ -28,6 +28,7 @@ for (const width of [320, 390, 768, 1024, 1440]) {
       await page.getByRole('button', { name: 'Open menu' }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
       await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toBeHidden()
     } else {
       await expect(
         page
