@@ -236,13 +236,13 @@ export function WhatSetsUsApart() {
 
           <dl
             aria-label="Hiring at a glance"
-            className="grid gap-6 border-y py-6 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] sm:gap-8"
+            className="grid gap-6 border-y py-6 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] lg:gap-8"
           >
-            <div>
+            <div className="sm:col-span-2 lg:col-span-1">
               <dt className="label-mono text-muted-foreground">Time-to-hire</dt>
               <dd className="mt-3 flex items-baseline gap-4 font-display font-bold tracking-tight">
                 <span className="text-2xl text-muted-foreground line-through decoration-1">
-                  90 days
+                  <span className="sr-only">Traditional hiring: </span>90 days
                 </span>
                 <span
                   aria-hidden="true"
@@ -251,21 +251,21 @@ export function WhatSetsUsApart() {
                   →
                 </span>
                 <span className="text-4xl text-primary sm:text-5xl">
-                  7 days
+                  <span className="sr-only">With Talsek: </span>7 days
                 </span>
               </dd>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <dd className="mt-2 text-xs text-muted-foreground">
                 Traditional hiring → Talsek
-              </p>
+              </dd>
             </div>
-            <div className="border-border sm:border-l sm:pl-8">
+            <div className="border-border lg:border-l lg:pl-8">
               <dt className="label-mono text-muted-foreground">Role setup</dt>
               <dd className="mt-3 font-display text-4xl font-bold tracking-tight text-primary sm:text-5xl">
                 5 min
               </dd>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <dd className="mt-2 text-xs text-muted-foreground">
                 Create your role and start accepting applications
-              </p>
+              </dd>
             </div>
             <div className="border-border sm:border-l sm:pl-8">
               <dt className="label-mono text-muted-foreground">
@@ -273,7 +273,7 @@ export function WhatSetsUsApart() {
               </dt>
               <dd className="mt-3 flex items-baseline gap-3 font-display font-bold tracking-tight">
                 <span className="text-2xl text-muted-foreground line-through decoration-1">
-                  20
+                  <span className="sr-only">Traditional hiring: </span>20
                 </span>
                 <span
                   aria-hidden="true"
@@ -281,11 +281,13 @@ export function WhatSetsUsApart() {
                 >
                   →
                 </span>
-                <span className="text-4xl text-primary sm:text-5xl">3</span>
+                <span className="text-4xl text-primary sm:text-5xl">
+                  <span className="sr-only">With Talsek: </span>3
+                </span>
               </dd>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <dd className="mt-2 text-xs text-muted-foreground">
                 Traditional hiring → Talsek
-              </p>
+              </dd>
             </div>
           </dl>
 
@@ -300,7 +302,7 @@ export function WhatSetsUsApart() {
                   {item.traditional}
                 </p>
                 <div className="mt-3 border-l-2 border-primary pl-3">
-                  <p className="label-mono text-[10px] text-primary">
+                  <p className="label-mono text-[11px] text-primary">
                     With Talsek
                   </p>
                   <p className="mt-1 text-base font-semibold leading-snug">

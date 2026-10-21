@@ -83,6 +83,25 @@ test('all workflow content stays in natural flow on mobile, reduced motion and l
   await expect(
     comparison.getByText('Keyword matching', { exact: false }),
   ).toBeVisible()
+  for (const width of [640, 700, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    const fits = await comparison
+      .getByRole('definition')
+      .evaluateAll((elements) =>
+        elements.every((el) => {
+          const box = el.getBoundingClientRect()
+          const parent = el.parentElement!.getBoundingClientRect()
+          return (
+            el.scrollWidth <= el.clientWidth + 1 &&
+            box.right <= parent.right + 1
+          )
+        }),
+      )
+    expect(fits, `comparison metrics fit at ${width}px`).toBe(true)
+    expect(
+      await page.locator('body').evaluate((el) => el.scrollWidth),
+    ).toBeLessThanOrEqual(width)
+  }
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(workflow).toHaveAttribute('data-scroll-pinned', 'false')
