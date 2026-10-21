@@ -81,7 +81,7 @@ test('all workflow content stays in natural flow on mobile, reduced motion and l
   ).toBeLessThanOrEqual(390)
   const comparison = page.getByTestId('landing-benchmark')
   await expect(
-    comparison.locator('td').filter({ hasText: 'Keyword matching' }),
+    comparison.getByText('Keyword matching', { exact: false }),
   ).toBeVisible()
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.emulateMedia({ reducedMotion: 'reduce' })

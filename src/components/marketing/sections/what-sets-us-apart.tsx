@@ -1,10 +1,4 @@
 import { Button } from '#/components/ui/button'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '#/components/ui/accordion'
 import { useCalBooking } from '#/components/marketing/cal-booking-context'
 
 const evidence = [
@@ -33,106 +27,15 @@ const operationalComparison = [
   },
   {
     feature: 'Screening',
-    detail: 'Screening accuracy',
     talsek: 'Consistent AI evaluation',
     traditional: 'Inconsistent manual reviews',
   },
   {
     feature: 'Outreach',
-    detail: 'Candidate outreach',
     talsek: 'Personalised at scale',
     traditional: 'Generic templates',
   },
 ]
-
-const comparisonDetails = [
-  { feature: 'Time-to-hire', talsek: '7 days', traditional: '90 days' },
-  {
-    feature: 'Interviews required',
-    talsek: '3 candidates',
-    traditional: '20 candidates',
-  },
-  {
-    feature: 'Resume processing',
-    talsek: 'Unlimited, real-time',
-    traditional: 'Manual review bottlenecks',
-  },
-  {
-    feature: 'Pricing',
-    talsek: 'Need-based, flexible',
-    traditional: '$100–$500+ per user/month',
-  },
-]
-
-function ComparisonRows({
-  rows,
-}: {
-  rows: {
-    feature: string
-    detail?: string
-    talsek: string
-    traditional: string
-  }[]
-}) {
-  return (
-    <table className="w-full table-fixed border-collapse text-left text-sm max-sm:block">
-      <caption className="sr-only">
-        Talsek and traditional hiring comparison
-      </caption>
-      <thead className="max-sm:sr-only">
-        <tr className="border-b">
-          <th
-            scope="col"
-            className="w-1/4 p-5 font-medium text-muted-foreground"
-          >
-            Hiring work
-          </th>
-          <th scope="col" className="p-5 font-medium text-muted-foreground">
-            Traditional hiring
-          </th>
-          <th
-            scope="col"
-            className="border-x border-primary/15 bg-primary/[0.08] p-5 font-display text-xl font-semibold text-primary"
-          >
-            Talsek
-          </th>
-        </tr>
-      </thead>
-      <tbody className="max-sm:block">
-        {rows.map((row) => (
-          <tr
-            key={row.feature}
-            className="border-b last:border-b-0 max-sm:grid max-sm:grid-cols-2"
-          >
-            <th
-              scope="row"
-              className="p-5 align-top font-display text-lg font-semibold max-sm:col-span-2 max-sm:px-4 max-sm:py-3"
-            >
-              {row.feature}
-              {row.detail && (
-                <span className="mt-1 block font-sans text-[13px] font-normal text-muted-foreground">
-                  {row.detail}
-                </span>
-              )}
-            </th>
-            <td className="p-5 align-top leading-relaxed text-muted-foreground max-sm:px-4 max-sm:pt-2">
-              <span className="mb-2 block text-[13px] font-semibold text-foreground sm:hidden">
-                Traditional hiring
-              </span>
-              {row.traditional}
-            </td>
-            <td className="border-x border-primary/15 bg-primary/[0.08] p-5 align-top font-medium leading-relaxed max-sm:px-4 max-sm:pt-2">
-              <span className="mb-2 block text-[13px] font-semibold text-primary sm:hidden">
-                Talsek
-              </span>
-              {row.talsek}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
 
 export function WhatSetsUsApart() {
   const { openBooking } = useCalBooking()
@@ -146,7 +49,7 @@ export function WhatSetsUsApart() {
         className="landing-scene border-b"
       >
         <div className="container mx-auto px-4">
-          <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-end lg:gap-8">
+          <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-end lg:gap-8">
             <div>
               <p className="label-mono mb-3 text-primary">Why Talsek</p>
               <h2
@@ -157,8 +60,8 @@ export function WhatSetsUsApart() {
               </h2>
             </div>
             <p className="text-base leading-relaxed text-muted-foreground">
-              Review the resume evidence, read the interview, and decide who
-              moves forward.
+              Context-aware matching, intelligent screening, and automated
+              outreach. The first 80% of hiring, handled.
             </p>
           </div>
 
@@ -168,7 +71,7 @@ export function WhatSetsUsApart() {
               aria-labelledby="matching-title"
               className="min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border bg-card"
             >
-              <div className="flex flex-wrap items-start justify-between gap-4 border-b bg-secondary/50 p-5 sm:px-6">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b bg-secondary/50 p-4 sm:px-6">
                 <div>
                   <p className="label-mono mb-2 text-primary">
                     Resume matching · example
@@ -177,13 +80,17 @@ export function WhatSetsUsApart() {
                     id="matching-title"
                     className="font-display text-xl font-semibold tracking-tight"
                   >
-                    Senior Frontend Engineer
+                    Context-aware AI matching
                   </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Priya Sharma · React · 6 yrs
+                  <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                    Every match is backed by evidence from the candidate's
+                    actual profile, not keyword density.
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Senior Frontend Engineer · Priya Sharma · React · 6 yrs
                   </p>
                 </div>
-                <div className="flex items-baseline gap-2 text-primary">
+                <div className="flex flex-col items-end text-primary">
                   <span className="font-display text-4xl font-semibold tracking-tight">
                     94
                   </span>
@@ -203,7 +110,7 @@ export function WhatSetsUsApart() {
                   {evidence.map((item) => (
                     <div
                       key={item.requirement}
-                      className="grid gap-2 border-b py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:gap-5"
+                      className="grid gap-2 border-b py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:gap-5"
                     >
                       <dt className="text-sm font-semibold">
                         {item.requirement}
@@ -220,7 +127,10 @@ export function WhatSetsUsApart() {
                   ))}
                 </dl>
               </div>
-              <div className="border-t bg-muted/30 px-5 py-4 sm:px-6">
+              <p className="border-t px-5 py-3 text-sm font-medium text-emerald-700 sm:px-6 dark:text-emerald-400">
+                Requirement met · verified
+              </p>
+              <div className="border-t bg-muted/30 px-5 py-3 sm:px-6">
                 <p className="mb-1 text-[13px] font-semibold">
                   A point to explore in the interview
                 </p>
@@ -234,18 +144,19 @@ export function WhatSetsUsApart() {
               <article
                 id="screening-interview"
                 aria-labelledby="interview-title"
-                className="scroll-mt-24 py-5 lg:pt-1"
+                className="scroll-mt-24 py-3 lg:pt-1"
               >
-                <p className="label-mono mb-2 text-primary">
-                  Screening interview
-                </p>
                 <h3
                   id="interview-title"
                   className="font-display text-xl font-semibold tracking-tight"
                 >
-                  Follow up on the work
+                  Automated screening interviews
                 </h3>
-                <div className="mt-4 space-y-3 text-sm leading-relaxed">
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Talsek interviews candidates in real time, asks your
+                  questions, and returns transcripts with fit insights.
+                </p>
+                <div className="mt-3 space-y-2 text-sm leading-relaxed">
                   <div className="border-l-2 border-primary/40 pl-3">
                     <p className="mb-1 text-[13px] font-semibold">Talsek</p>
                     <p>
@@ -259,22 +170,28 @@ export function WhatSetsUsApart() {
                       I led a team of 4 off class components. We cut bundle size
                       22%…
                     </p>
+                    <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      Fit insight · senior-level ownership
+                    </p>
                   </div>
                 </div>
               </article>
               <article
                 id="smart-outreach"
                 aria-labelledby="outreach-title"
-                className="scroll-mt-24 py-5"
+                className="scroll-mt-24 py-3"
               >
-                <p className="label-mono mb-2 text-primary">Smart outreach</p>
                 <h3
                   id="outreach-title"
                   className="font-display text-xl font-semibold tracking-tight"
                 >
-                  Make the next step personal
+                  Smart outreach
                 </h3>
-                <div className="mt-4 text-sm leading-relaxed">
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Personalised messaging to every shortlisted candidate,
+                  referencing their actual work.
+                </p>
+                <div className="mt-3 text-sm leading-relaxed">
                   <p className="border-b pb-2 text-[13px] text-muted-foreground">
                     To · Priya Sharma
                   </p>
@@ -282,6 +199,9 @@ export function WhatSetsUsApart() {
                     Hi Priya, your work on the React 18 migration caught our
                     eye. We'd like to talk about the Senior Frontend Engineer
                     role.
+                  </p>
+                  <p className="mt-3 text-xs font-medium text-primary">
+                    Personalised at scale · 34/34 shortlisted candidates
                   </p>
                 </div>
               </article>
@@ -296,32 +216,124 @@ export function WhatSetsUsApart() {
         className="landing-scene border-b"
       >
         <div className="container mx-auto px-4">
-          <div className="mb-8">
-            <p className="label-mono mb-3 text-primary">
-              The hiring work, compared
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="label-mono mb-3 text-primary">
+                A shorter path to your next hire
+              </p>
+              <h2
+                id="benchmark-title"
+                className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
+              >
+                Talsek vs traditional hiring
+              </h2>
+            </div>
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+              Less time reviewing applications. More time with the right
+              candidates.
             </p>
-            <h2
-              id="benchmark-title"
-              className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-            >
-              Talsek vs traditional hiring
-            </h2>
           </div>
-          <div className="overflow-hidden rounded-xl border bg-card">
-            <ComparisonRows rows={operationalComparison} />
-          </div>
-          <Accordion type="single" collapsible className="mt-3 border-b">
-            <AccordionItem value="comparison-details">
-              <AccordionTrigger className="py-5 text-base font-semibold hover:no-underline">
-                Compare time, volume, and pricing
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="overflow-hidden rounded-xl border bg-card">
-                  <ComparisonRows rows={comparisonDetails} />
+
+          <dl
+            aria-label="Hiring at a glance"
+            className="grid gap-6 border-y py-6 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] sm:gap-8"
+          >
+            <div>
+              <dt className="label-mono text-muted-foreground">Time-to-hire</dt>
+              <dd className="mt-3 flex items-baseline gap-4 font-display font-bold tracking-tight">
+                <span className="text-2xl text-muted-foreground line-through decoration-1">
+                  90 days
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-xl font-normal text-muted-foreground"
+                >
+                  →
+                </span>
+                <span className="text-4xl text-primary sm:text-5xl">
+                  7 days
+                </span>
+              </dd>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Traditional hiring → Talsek
+              </p>
+            </div>
+            <div className="border-border sm:border-l sm:pl-8">
+              <dt className="label-mono text-muted-foreground">Role setup</dt>
+              <dd className="mt-3 font-display text-4xl font-bold tracking-tight text-primary sm:text-5xl">
+                5 min
+              </dd>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Create your role and start accepting applications
+              </p>
+            </div>
+            <div className="border-border sm:border-l sm:pl-8">
+              <dt className="label-mono text-muted-foreground">
+                Interviews required
+              </dt>
+              <dd className="mt-3 flex items-baseline gap-3 font-display font-bold tracking-tight">
+                <span className="text-2xl text-muted-foreground line-through decoration-1">
+                  20
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-xl font-normal text-muted-foreground"
+                >
+                  →
+                </span>
+                <span className="text-4xl text-primary sm:text-5xl">3</span>
+              </dd>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Traditional hiring → Talsek
+              </p>
+            </div>
+          </dl>
+
+          <div className="grid gap-6 py-6 md:grid-cols-3 md:gap-8">
+            {operationalComparison.map((item) => (
+              <div key={item.feature}>
+                <h3 className="font-display text-lg font-semibold">
+                  {item.feature}
+                </h3>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  <span className="sr-only">Traditional hiring: </span>
+                  {item.traditional}
+                </p>
+                <div className="mt-3 border-l-2 border-primary pl-3">
+                  <p className="label-mono text-[10px] text-primary">
+                    With Talsek
+                  </p>
+                  <p className="mt-1 text-base font-semibold leading-snug">
+                    {item.talsek}
+                  </p>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-5 border-y py-5 text-sm sm:grid-cols-2 sm:gap-8">
+            <div>
+              <h3 className="font-semibold">Resume processing</h3>
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                Manual review bottlenecks <span aria-hidden="true">→</span>{' '}
+                <span className="font-medium text-foreground">
+                  Unlimited, real-time processing
+                </span>
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold">Pricing</h3>
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                $100–$500+ per user/month <span aria-hidden="true">→</span>{' '}
+                <span className="font-medium text-foreground">
+                  Need-based, flexible plans
+                </span>
+              </p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Traditional hiring effort: 40 hours per hire.
+          </p>
           <div className="mt-6 flex justify-start">
             <Button
               size="lg"

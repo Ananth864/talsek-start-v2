@@ -34,8 +34,12 @@ small product examples, and disconnected quote, FAQ, and closing sections.
   auto-advance is used. Reduced motion disables snapping and smooth scrolling.
 - Use one candidate story across workflow, evidence, and closing examples.
   Replace equal feature cards with a larger resume-evidence composition.
-  Comparison rows show both alternatives on mobile. Keep secondary comparison
-  details in a disclosure; omit the mismatched setup/time-per-hire comparison.
+  Restore the capability descriptions alongside their examples. Keep hiring
+  metrics visible in the comparison chapter. Replace stacked comparison tables
+  and their disclosure with one compact composition: three metrics, operational
+  differences, and processing/pricing details. Show both alternatives on mobile.
+  Label 5-minute role setup separately from 40-hour traditional effort per hire;
+  they measure different activities.
 - Combine the customer quote and FAQ in one chapter. Preserve the full quote
   through a disclosure and open the setup answer initially. Let disclosures
   increase chapter height. Use the normal page surface for the closing action.
