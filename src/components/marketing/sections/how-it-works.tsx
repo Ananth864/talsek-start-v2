@@ -3,7 +3,6 @@ import { useReducedMotion } from 'motion/react'
 import { Button } from '#/components/ui/button'
 import { Check, Copy, FileText, Link2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
-import { useCalBooking } from '#/components/marketing/cal-booking-context'
 
 /* ------------------------------------------------------------------ */
 /* Code-built step visuals                                             */
@@ -229,7 +228,6 @@ export function HowItWorks() {
   const sectionRef = useRef<HTMLElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
   const targetRef = useRef<number | null>(null)
-  const { openBooking } = useCalBooking()
 
   useEffect(() => {
     const section = sectionRef.current
@@ -402,14 +400,6 @@ export function HowItWorks() {
             <ActiveVisual />
           </div>
         </div>
-      </div>
-      <div className="container mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 border-t px-4 py-8">
-        <p className="text-muted-foreground">
-          See how this works for your next hire.
-        </p>
-        <Button data-testid="how-it-works-book-demo" onClick={openBooking}>
-          Book a demo <span aria-hidden="true">→</span>
-        </Button>
       </div>
     </section>
   )

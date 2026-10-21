@@ -42,9 +42,6 @@ for (const viewport of [
         Math.round((await page.locator('#workflow-step-3').boundingBox())!.y),
       )
       .toBe(136)
-    await workflow.getByTestId('how-it-works-book-demo').click()
-    await expect(page.getByTestId('cal-booking-dialog')).toBeVisible()
-    await page.keyboard.press('Escape')
     await page.goto('/#resume-matching')
     await expect
       .poll(
