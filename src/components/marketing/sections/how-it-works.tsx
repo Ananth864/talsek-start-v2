@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+import { useReducedMotion } from 'motion/react'
 import { Button } from '#/components/ui/button'
 import { Check, Copy, FileText, Link2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
@@ -18,10 +18,10 @@ function PanelShell({
 }) {
   return (
     <div className="w-full overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="border-b bg-muted/40 px-4 py-2.5">
-        <p className="label-mono text-[10px] text-muted-foreground">{label}</p>
+      <div className="border-b bg-muted/40 px-5 py-4">
+        <p className="label-mono text-xs text-muted-foreground">{label}</p>
       </div>
-      <div className="p-4 sm:p-5">{children}</div>
+      <div className="p-5 sm:p-8">{children}</div>
     </div>
   )
 }
@@ -46,7 +46,7 @@ function SetupVisual() {
         ))}
       </div>
       <div className="mt-4 space-y-2">
-        <p className="label-mono text-[10px] text-muted-foreground">
+        <p className="label-mono text-xs text-muted-foreground">
           Screening questions
         </p>
         {[
@@ -108,6 +108,17 @@ function ScreeningVisual() {
           </li>
         ))}
       </ul>
+      <div className="mt-6 border-t pt-5">
+        <p className="label-mono text-xs text-primary">
+          Priya S. · Resume evidence
+        </p>
+        <p className="mt-3 text-sm leading-relaxed">
+          “Led migration of 40+ components to React 18 with TypeScript.”
+        </p>
+        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">
+          Requirement met · verified
+        </p>
+      </div>
     </PanelShell>
   )
 }
@@ -117,16 +128,16 @@ function InterviewVisual() {
     <PanelShell label="AI interview · Priya S.">
       <div className="space-y-3">
         <div className="max-w-[85%] rounded-xl rounded-tl-sm border px-3.5 py-2.5">
-          <p className="label-mono mb-1 text-[9px] text-muted-foreground">
+          <p className="label-mono mb-1 text-xs text-muted-foreground">
             Talsek
           </p>
-          <p className="text-xs leading-relaxed">
+          <p className="text-sm leading-relaxed">
             Walk me through the React 18 migration mentioned in your resume.
           </p>
         </div>
         <div className="ml-auto max-w-[85%] rounded-xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-primary-foreground">
-          <p className="label-mono mb-1 text-[9px] opacity-70">Candidate</p>
-          <p className="text-xs leading-relaxed">
+          <p className="label-mono mb-1 text-xs opacity-70">Candidate</p>
+          <p className="text-sm leading-relaxed">
             I led a team of 4 off class components. We cut bundle size 22%…
           </p>
         </div>
@@ -159,7 +170,7 @@ function ShortlistVisual() {
               #{i + 1}
             </span>
             <span className="flex-1 text-sm font-medium">{p.name}</span>
-            <span className="rounded-md border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <span className="rounded-md border px-2 py-0.5 text-xs font-medium text-muted-foreground">
               View transcript
             </span>
             <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -176,371 +187,308 @@ function ShortlistVisual() {
 /* Section                                                             */
 /* ------------------------------------------------------------------ */
 
-type WorkflowStep = {
-  id: number
-  title: string
-  label: string
-  subtitle: string
-  description: string[]
-  Visual: React.ComponentType
-}
+const workflowSteps = [
+  {
+    label: 'Post a role',
+    title: 'Start with the role.',
+    description:
+      'Define your requirements in plain language. Add screening questions and share your application link.',
+    outcome: 'Your role is ready in 5 minutes.',
+    Visual: SetupVisual,
+  },
+  {
+    label: 'Screen resumes',
+    title: 'Find the relevant experience.',
+    description:
+      'Every resume is reviewed against your requirements. See the experience behind each match, with candidates ranked as they apply.',
+    outcome: 'Unlimited screening, around the clock.',
+    Visual: ScreeningVisual,
+  },
+  {
+    label: 'AI interviews',
+    title: 'Go beyond the resume.',
+    description:
+      'Talsek asks role-specific screening questions. Read the conversation and fit insights before you decide who moves forward.',
+    outcome: 'Your questions. Full transcripts. Clear evidence.',
+    Visual: InterviewVisual,
+  },
+  {
+    label: 'Review shortlist',
+    title: 'Make the hiring decision.',
+    description:
+      'Compare your strongest candidates in one shortlist. Review their evidence and transcripts, then meet the people you want to hire.',
+    outcome: 'We analyse. You decide.',
+    Visual: ShortlistVisual,
+  },
+]
 
 export function HowItWorks() {
   const reducedMotion = useReducedMotion()
   const [activeStep, setActiveStep] = useState(0)
-  const [canPin, setCanPin] = useState(true)
-  const { openBooking } = useCalBooking()
+  const [canPin, setCanPin] = useState(false)
   const sectionRef = useRef<HTMLElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
-  const scrollTargetRef = useRef<{ top: number; expiresAt: number } | null>(
-    null,
-  )
+  const targetRef = useRef<number | null>(null)
+  const { openBooking } = useCalBooking()
 
-  const workflowSteps: WorkflowStep[] = useMemo(
-    () => [
-      {
-        id: 1,
-        title: 'Post a role in 5 minutes',
-        label: 'Post a role',
-        subtitle:
-          'Create your job, define requirements in plain language, share the apply links.',
-        description: [
-          'Define role requirements in plain language',
-          'Add custom screening questions',
-          'Get a shareable link instantly',
-        ],
-        Visual: SetupVisual,
-      },
-      {
-        id: 2,
-        title: 'Every resume screened, 24/7',
-        label: 'Screen resumes',
-        subtitle:
-          'Unlimited resume processing with context-aware analysis, not keyword matching.',
-        description: [
-          'Unlimited resume screening in real time',
-          'Context-aware analysis beyond keywords',
-          'Instant candidate ranking against your requirements',
-        ],
-        Visual: ScreeningVisual,
-      },
-      {
-        id: 3,
-        title: 'AI interviews top candidates',
-        label: 'AI interviews',
-        subtitle:
-          'Automated screening interviews customised to your exact needs.',
-        description: [
-          'Conducts screening interviews automatically',
-          'Asks questions tuned to your role',
-          'Provides transcripts and fit insights',
-        ],
-        Visual: InterviewVisual,
-      },
-      {
-        id: 4,
-        title: 'Review the shortlist, hire',
-        label: 'Review shortlist',
-        subtitle:
-          'Get ranked candidates with evidence. Interview only the best.',
-        description: [
-          'See the top of the funnel with insights and full transcripts',
-          'Interview pre-screened candidates only',
-          'Make confident hiring decisions faster',
-        ],
-        Visual: ShortlistVisual,
-      },
-    ],
-    [],
-  )
-
-  // Large text must grow the chapter rather than paint over the next one.
   useEffect(() => {
+    const section = sectionRef.current
     const frame = frameRef.current
-    const content = frame?.firstElementChild
-    if (!frame || !content) return
+    if (!section || !frame) return
+    let raf = 0
     const measure = () => {
-      const styles = getComputedStyle(frame)
-      const headerOffset =
-        parseFloat(getComputedStyle(document.documentElement).fontSize) * 4.5
-      const padding =
-        parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
+      const rootSize = parseFloat(
+        getComputedStyle(document.documentElement).fontSize,
+      )
+      const content = frame.firstElementChild
       setCanPin(
-        content.getBoundingClientRect().height + padding + 1 <=
-          window.innerHeight - headerOffset,
+        window.innerWidth >= 1024 &&
+          window.innerHeight >= 800 &&
+          rootSize <= 18 &&
+          !reducedMotion &&
+          !!content &&
+          content.getBoundingClientRect().height <
+            window.innerHeight - rootSize * 8.5,
       )
     }
-    const observer = new ResizeObserver(measure)
-    observer.observe(content)
-    window.addEventListener('resize', measure)
-    measure()
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', measure)
-    }
-  }, [])
-
-  // The document keeps scrolling while the desktop panel stays in view.
-  useEffect(() => {
-    const media = window.matchMedia(
-      '(min-width: 1024px) and (min-height: 800px) and (prefers-reduced-motion: no-preference)',
-    )
-    let frame = 0
-    let previousY = window.scrollY
-    let lastWheelAt = -Infinity
-    let entryHoldUntil = 0
     const update = () => {
-      frame = 0
-      if (!media.matches || !sectionRef.current || !frameRef.current) return
-      const styles = getComputedStyle(frameRef.current)
-      if (styles.position !== 'sticky') {
-        previousY = window.scrollY
-        return
+      raf = 0
+      const articles = [
+        ...section.querySelectorAll<HTMLElement>('.workflow-chapter'),
+      ]
+      const offset =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) * 8.5
+      const target = targetRef.current
+      if (target !== null) {
+        if (
+          Math.abs(
+            (articles[target]?.getBoundingClientRect().top ?? 0) - offset,
+          ) > 3
+        )
+          return
+        targetRef.current = null
       }
-      const currentY = window.scrollY
-      const offset = parseFloat(styles.top)
-      const entryTop =
-        currentY + sectionRef.current.getBoundingClientRect().top - offset
-      // Momentum entering from the hero must first land on the opening step.
+      let index = 0
+      articles.forEach((article, i) => {
+        if (article.getBoundingClientRect().top <= offset + 8) index = i
+      })
+      setActiveStep(index)
+    }
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(update)
+    }
+    const cancel = () => {
+      targetRef.current = null
+      schedule()
+    }
+    const resize = () => {
+      measure()
+      schedule()
+    }
+    const observer = new ResizeObserver(resize)
+    observer.observe(frame)
+    if (frame.firstElementChild) observer.observe(frame.firstElementChild)
+    window.addEventListener('resize', resize)
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('scrollend', cancel)
+
+    window.addEventListener('touchstart', cancel, { passive: true })
+    window.addEventListener('keydown', cancel)
+    resize()
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+      window.removeEventListener('resize', resize)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('scrollend', cancel)
+
+      window.removeEventListener('touchstart', cancel)
+      window.removeEventListener('keydown', cancel)
+    }
+  }, [reducedMotion])
+
+  // Bound each wheel gesture before it moves the document, so momentum cannot
+  // skip the opening chapter or cause a corrective backward jump afterward.
+  useEffect(() => {
+    if (!canPin) return
+    let lastWheel = -Infinity
+    let handled = false
+    let accumulated = 0
+    const onWheel = (event: WheelEvent) => {
       if (
-        !scrollTargetRef.current &&
-        performance.now() - lastWheelAt < 220 &&
-        previousY < entryTop - 2 &&
-        currentY > entryTop + 2
-      ) {
-        entryHoldUntil = performance.now() + 220
-        previousY = entryTop
-        window.scrollTo({ top: entryTop, behavior: 'instant' })
-        setActiveStep(0)
-        return
-      }
-      previousY = currentY
-      const target = scrollTargetRef.current
-      if (
-        target &&
-        performance.now() < target.expiresAt &&
-        Math.abs(window.scrollY - target.top) > 2
+        event.ctrlKey ||
+        !event.deltaY ||
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
       )
         return
-      scrollTargetRef.current = null
-      const top =
-        sectionRef.current.getBoundingClientRect().top - parseFloat(styles.top)
-      const height = frameRef.current.getBoundingClientRect().height
-      const index = Math.round(-top / height)
-      setActiveStep(Math.max(0, Math.min(workflowSteps.length - 1, index)))
-    }
-    const scheduleUpdate = () => {
-      if (!frame) frame = requestAnimationFrame(update)
-    }
-    const cancelTarget = () => {
-      scrollTargetRef.current = null
-      scheduleUpdate()
-    }
-    const onWheel = (event: WheelEvent) => {
-      if (!media.matches || event.ctrlKey) return
-      lastWheelAt = performance.now()
-      if (lastWheelAt < entryHoldUntil) {
-        event.preventDefault()
-        entryHoldUntil = lastWheelAt + 220
+      const articles = [
+        ...(sectionRef.current?.querySelectorAll<HTMLElement>(
+          '.workflow-chapter',
+        ) ?? []),
+      ]
+      if (!articles.length) return
+      const offset =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) * 8.5
+      const stops = articles.map(
+        (article) =>
+          window.scrollY + article.getBoundingClientRect().top - offset,
+      )
+      const y = window.scrollY
+      const delta =
+        event.deltaY *
+        (event.deltaMode === 1
+          ? 16
+          : event.deltaMode === 2
+            ? window.innerHeight
+            : 1)
+      const direction = Math.sign(delta)
+      const now = performance.now()
+      if (now - lastWheel > 180) {
+        handled = false
+        accumulated = 0
       }
-      cancelTarget()
+      lastWheel = now
+      const entering = y < stops[0] - 3 && y + delta >= stops[0]
+      const returning = y > stops[3] + 3 && y + delta <= stops[3]
+      const inside = y >= stops[0] - 3 && y <= stops[3] + 3
+      if (!entering && !returning && !inside) return
+      // Once the final/first chapter is reached, a fresh outward gesture exits.
+      if (
+        !handled &&
+        ((y >= stops[3] - 3 && direction > 0) ||
+          (y <= stops[0] + 3 && direction < 0))
+      )
+        return
+      event.preventDefault()
+      if (handled) return
+      accumulated += delta
+      if (!entering && !returning && Math.abs(accumulated) < 40) return
+      const index = entering
+        ? 0
+        : returning
+          ? 3
+          : direction > 0
+            ? Math.min(
+                3,
+                stops.findIndex((top) => top > y + 3),
+              )
+            : Math.max(
+                0,
+                stops.reduce((found, top, i) => (top < y - 3 ? i : found), 0),
+              )
+      handled = true
+      targetRef.current = index
+      setActiveStep(index)
+      window.scrollTo({ top: stops[index], behavior: 'smooth' })
     }
-    update()
-    window.addEventListener('scrollend', cancelTarget)
     window.addEventListener('wheel', onWheel, { passive: false })
-    window.addEventListener('touchstart', cancelTarget, { passive: true })
-    window.addEventListener('keydown', cancelTarget)
-    window.addEventListener('scroll', scheduleUpdate, { passive: true })
-    window.addEventListener('resize', scheduleUpdate)
-    media.addEventListener('change', scheduleUpdate)
-    return () => {
-      cancelAnimationFrame(frame)
-      window.removeEventListener('scrollend', cancelTarget)
-      window.removeEventListener('wheel', onWheel)
-      window.removeEventListener('touchstart', cancelTarget)
-      window.removeEventListener('keydown', cancelTarget)
-      window.removeEventListener('scroll', scheduleUpdate)
-      window.removeEventListener('resize', scheduleUpdate)
-      media.removeEventListener('change', scheduleUpdate)
-    }
-  }, [canPin, workflowSteps.length])
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [canPin])
 
   const goToStep = (index: number) => {
+    const article =
+      sectionRef.current?.querySelectorAll<HTMLElement>('.workflow-chapter')[
+        index
+      ]
+    if (!article) return
+    targetRef.current = index
     setActiveStep(index)
-    if (
-      sectionRef.current &&
-      frameRef.current &&
-      getComputedStyle(frameRef.current).position === 'sticky'
-    ) {
-      const top =
-        window.scrollY + sectionRef.current.getBoundingClientRect().top
-      const targetTop =
-        top -
-        parseFloat(getComputedStyle(frameRef.current).top) +
-        index * frameRef.current.getBoundingClientRect().height
-      scrollTargetRef.current = {
-        top: targetTop,
-        expiresAt: performance.now() + 2000,
-      }
-      window.scrollTo({
-        top: targetTop,
-        behavior: reducedMotion ? 'instant' : 'smooth',
-      })
-    }
+    article.scrollIntoView({
+      behavior: reducedMotion ? 'instant' : 'smooth',
+      block: 'start',
+    })
   }
-
-  const activeWorkflowStep = workflowSteps[activeStep] ?? workflowSteps[0]
+  const ActiveVisual = workflowSteps[activeStep].Visual
 
   return (
     <section
       id="how-it-works"
-      aria-labelledby="how-it-works-title"
+      aria-label="How it works"
       data-testid="landing-how-it-works"
       ref={sectionRef}
       data-scroll-pinned={canPin}
-      className="landing-workflow relative"
+      className="landing-workflow border-b"
     >
-      {workflowSteps.map((step, index) => (
-        <div
-          key={step.id}
-          className="workflow-scroll-stop"
-          style={{ top: `${index * 25}%` }}
-          aria-hidden="true"
-        />
-      ))}
-      <div
-        ref={frameRef}
-        data-testid="landing-workflow-frame"
-        className="landing-scene border-b bg-background"
-      >
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="label-mono mb-3 text-primary">How it works</p>
-              <h2
-                id="how-it-works-title"
-                className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-              >
-                Hiring that runs on autopilot
-              </h2>
-            </div>
-            <p className="text-base text-muted-foreground">
-              We analyse, you decide.
-            </p>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border bg-card">
-            <nav
-              className="grid grid-cols-2 gap-2 border-b bg-muted/30 p-3 sm:grid-cols-4"
-              aria-label="Process steps"
-            >
-              {workflowSteps.map((step, index) => (
-                <Button
-                  key={step.id}
-                  type="button"
-                  variant="ghost"
-                  onClick={() => goToStep(index)}
-                  className={cn(
-                    'h-auto justify-start gap-2.5 rounded-lg px-3 py-3 text-left whitespace-normal',
-                    activeStep === index
-                      ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  aria-current={activeStep === index ? 'step' : undefined}
-                  aria-controls="workflow-panel"
-                >
-                  <span
-                    className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border font-mono text-xs',
-                      activeStep === index
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border bg-background',
-                    )}
-                    aria-hidden="true"
-                  >
-                    {step.id}
-                  </span>
-                  {step.label}
-                </Button>
-              ))}
-            </nav>
-
-            {/* Content panel */}
-            <div id="workflow-panel" className="relative min-w-0 p-5 sm:p-6">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeWorkflowStep.id}
-                  className="grid items-center gap-8 md:min-h-72 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12"
-                  initial={{ opacity: 0, y: reducedMotion ? 0 : 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: reducedMotion ? 0 : -10 }}
-                  transition={{ duration: reducedMotion ? 0 : 0.2 }}
-                  aria-labelledby={`step-title-${activeWorkflowStep.id}`}
-                >
-                  <div className="flex flex-col">
-                    <h3
-                      id={`step-title-${activeWorkflowStep.id}`}
-                      className="font-display text-2xl font-bold tracking-tight"
-                    >
-                      {activeWorkflowStep.title}
-                    </h3>
-                    <p className="mt-3 leading-relaxed text-muted-foreground">
-                      {activeWorkflowStep.subtitle}
-                    </p>
-                    <ul className="mt-6 space-y-3">
-                      {activeWorkflowStep.description.map((item) => (
-                        <li key={item} className="flex items-start gap-3">
-                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                            <Check className="h-3 w-3 text-primary" />
-                          </span>
-                          <span className="text-sm leading-relaxed">
-                            {item}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <activeWorkflowStep.Visual />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Result band */}
-          <div className="mt-6 flex flex-col items-start gap-6 rounded-2xl border border-primary/15 bg-primary/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
-            <div className="min-w-0">
-              <p className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-                Hire in <span className="text-primary">7 days</span> instead of
-                90.
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Let Talsek handle the screening. You choose who moves forward.
-              </p>
-            </div>
+      <div className="workflow-nav border-y bg-background/95 backdrop-blur-sm">
+        <nav
+          className="container mx-auto grid max-w-6xl grid-cols-4 px-4"
+          aria-label="Process steps"
+        >
+          {workflowSteps.map((step, index) => (
             <Button
-              size="lg"
-              data-testid="how-it-works-book-demo"
-              className="group shrink-0 gap-2 rounded-xl px-6 font-semibold"
-              onClick={openBooking}
+              key={step.label}
+              variant="ghost"
+              onClick={() => goToStep(index)}
+              aria-current={activeStep === index ? 'step' : undefined}
+              aria-controls={`workflow-step-${index}`}
+              className={cn(
+                'h-16 justify-start gap-3 rounded-none border-b-2 px-1 text-xs whitespace-normal sm:text-sm',
+                activeStep === index
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground',
+              )}
             >
-              Book a demo
-              <ArrowRightIcon />
+              <span
+                aria-hidden="true"
+                className="hidden font-mono text-xs sm:inline"
+              >
+                0{index + 1}
+              </span>
+              {step.label}
             </Button>
+          ))}
+        </nav>
+      </div>
+      <div className="workflow-composition container mx-auto max-w-6xl px-4">
+        <div className="workflow-copy">
+          {workflowSteps.map((step, index) => (
+            <article
+              id={`workflow-step-${index}`}
+              key={step.label}
+              className="workflow-chapter"
+              aria-labelledby={`step-title-${index}`}
+            >
+              <div className="max-w-md">
+                <p className="label-mono mb-5 text-primary">
+                  How it works · 0{index + 1} / 04
+                </p>
+                <h2
+                  id={`step-title-${index}`}
+                  className="font-display text-4xl font-bold leading-[1.08] tracking-tight lg:text-5xl"
+                >
+                  {step.title}
+                </h2>
+                <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+                  {step.description}
+                </p>
+                <p className="mt-8 border-l-2 border-primary pl-4 text-sm font-medium">
+                  {step.outcome}
+                </p>
+              </div>
+              <div className="workflow-inline-visual mt-8 w-full">
+                <step.Visual />
+              </div>
+            </article>
+          ))}
+        </div>
+        <div
+          ref={frameRef}
+          data-testid="landing-workflow-frame"
+          className="workflow-product"
+        >
+          <div className="w-full">
+            <ActiveVisual />
           </div>
         </div>
       </div>
+      <div className="container mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 border-t px-4 py-8">
+        <p className="text-muted-foreground">
+          See how this works for your next hire.
+        </p>
+        <Button data-testid="how-it-works-book-demo" onClick={openBooking}>
+          Book a demo <span aria-hidden="true">→</span>
+        </Button>
+      </div>
     </section>
-  )
-}
-
-function ArrowRightIcon() {
-  return (
-    <span
-      className="transition-transform duration-300 group-hover:translate-x-1"
-      aria-hidden="true"
-    >
-      →
-    </span>
   )
 }

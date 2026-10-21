@@ -2,40 +2,51 @@
 
 ## Context
 
-The landing page combined a tall workflow, feature cards, statistics, and a
-comparison table with uneven section spacing. Sections did not compose within a
-desktop viewport. The requested interaction is gentle alignment between screens.
+The landing page had uneven section heights, repeated feature cards, and a
+workflow that changed before the opening step could be read. The requested
+interaction is gentle alignment between screens and scrolling through workflow
+subsections. An independent design review also identified duplicated copy,
+small product examples, and disconnected quote, FAQ, and closing sections.
 
 ## Decision
 
-- Keep native document scrolling and use `scroll-snap-type: y proximity` only on
-  the landing route, at widths of at least 1024px and heights of at least 700px.
-- Offset alignment by the fixed 72px desktop header. Each chapter has a minimum
-  height equal to the remaining viewport; content may grow without clipping.
-- Keep the hero and company logos in the first viewport. Separate feature cards
-  and statistics from the comparison table into two chapters.
-- Present workflow navigation above one two-column panel, with shorter step
-  labels and the full title in the content. Retain all four steps and demo actions. At desktop heights of at least 800px,
-  pin the panel and derive its active step from document scroll position. Native
-  scrolling passes through all four steps in either direction before the panel
-  releases. Step buttons scroll to their corresponding positions without selecting
-  intermediate panels. Manual scroll input cancels that programmatic selection.
-  A content resize observer disables pinning when larger text no longer fits; the
-  chapter then grows naturally. Scroll math reads the computed sticky offset.
-  On wheel entry from above, clamp to the opening step and consume only the
-  remaining momentum of that gesture until 220ms of wheel inactivity. Later
-  scrolling stays native; programmatic navigation bypasses this entry guard.
-- Use natural scrolling on mobile, short windows, and when reduced motion is
-  requested. Keep workflow selection manual in these modes; no timed auto-advance is used.
-- Scope the root scroll attribute to the mounted landing route and remove it on
-  navigation. Other marketing routes and Member routes keep their scrolling.
+- Keep native document scrolling. Enable proximity snapping only on the mounted
+  landing route at desktop widths of at least 1024px and heights of at least
+  700px. Remove the root attribute on client-side navigation.
+- Keep the hero and company logos together. Use content-driven chapters with a
+  minimum viewport height below the rem-based header. Content may grow freely.
+- Give the workflow four real articles in document flow. On suitable desktop
+  viewports, keep a slim step navigation and one product frame sticky beside
+  the copy. Each article is a snap destination with `scroll-snap-stop: always`.
+  This replaces invisible snap markers. Browser verification showed that native
+  snap alone still allowed large wheel input to skip articles. On sticky desktop
+  presentation, wheel gestures therefore move smoothly to one adjacent chapter.
+  The handler cancels input before movement and consumes residual events until
+  180ms of wheel inactivity. A fresh outward gesture exits the first/last chapter.
+  It never corrects overshoot by pulling the document backward. Horizontal input
+  and browser zoom gestures are preserved.
+- Select the step when its article crosses the reading position below the
+  header and navigation. Explicit step navigation scrolls smoothly to that
+  article and keeps the selected product view stable during transit. Manual
+  input cancels that selection guard.
+- On mobile, short windows, enlarged text, or reduced motion, show all four
+  articles and their product examples in normal document flow. A resize observer
+  checks the product frame before enabling sticky presentation. No timed
+  auto-advance is used. Reduced motion disables snapping and smooth scrolling.
+- Use one candidate story across workflow, evidence, and closing examples.
+  Replace equal feature cards with a larger resume-evidence composition.
+  Comparison rows show both alternatives on mobile. Keep secondary comparison
+  details in a disclosure; omit the mismatched setup/time-per-hire comparison.
+- Combine the customer quote and FAQ in one chapter. Preserve the full quote
+  through a disclosure and open the setup answer initially. Let disclosures
+  increase chapter height. Use the normal page surface for the closing action.
 
 ## Consequences
 
-Proximity snapping allows readers to stop within content and reach the footer.
-It does not force a one-wheel-event-per-screen interaction. Expanded FAQs,
-larger text, or smaller viewports can make a chapter taller than one screen;
-content remains available through normal scrolling.
+Native proximity snapping preserves reading and footer access. The desktop gesture safeguard
+prevents a large tested wheel input from passing the opening workflow article,
+but do not establish a physical-trackpad guarantee across browsers. Expanded
+answers and larger text can make a chapter taller than one screen.
 
-Layout checks cover 1280×800 and 1440×900, all workflow steps, booking, feature
-anchor visibility, route cleanup, mobile width, and reduced-motion scrolling.
+Layout checks cover desktop navigation, forward/reverse wheel input, mobile
+content, reduced motion, enlarged text, booking, anchors, and route cleanup.

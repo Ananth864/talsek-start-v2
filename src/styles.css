@@ -408,30 +408,58 @@
   }
 }
 
-.workflow-scroll-stop {
+/* Real workflow chapters remain readable when sticky presentation is unavailable. */
+.workflow-nav {
+  position: relative;
+  z-index: 20;
+}
+.workflow-chapter {
+  padding-block: 3rem;
+  scroll-margin-top: 8.5rem;
+}
+.workflow-product {
   display: none;
+}
+.landing-workflow .container {
+  width: 100%;
+  max-width: 72rem;
 }
 
 @media (min-width: 1024px) and (min-height: 800px) and (prefers-reduced-motion: no-preference) {
-  .landing-workflow[data-scroll-pinned='true'] {
-    height: calc(4 * (100svh - 4.5rem));
-  }
-
-  .landing-workflow[data-scroll-pinned='true'] > .landing-scene {
+  .landing-workflow[data-scroll-pinned='true'] .workflow-nav {
     position: sticky;
     top: 4.5rem;
-    height: calc(100svh - 4.5rem);
-    scroll-snap-align: none;
   }
-
-  .landing-workflow[data-scroll-pinned='true'] > .workflow-scroll-stop {
-    display: block;
-    position: absolute;
-    width: 1px;
-    height: 1px;
+  .landing-workflow[data-scroll-pinned='true'] .workflow-composition {
+    display: grid;
+    grid-template-columns: minmax(0, 0.38fr) minmax(0, 0.62fr);
+    gap: 4rem;
+    align-items: start;
+  }
+  .landing-workflow[data-scroll-pinned='true'] .workflow-chapter {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: calc(100svh - 8.5rem);
     scroll-snap-align: start;
-    pointer-events: none;
+    scroll-snap-stop: always;
+    scroll-margin-top: 4rem;
   }
+  .landing-workflow[data-scroll-pinned='true'] .workflow-inline-visual {
+    display: none;
+  }
+  .landing-workflow[data-scroll-pinned='true'] .workflow-product {
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 8.5rem;
+    min-height: calc(100svh - 8.5rem);
+  }
+}
+
+.landing-scene[data-testid='landing-cta'] {
+  min-height: 0;
+  padding-block: clamp(3rem, 8vw, 7rem);
 }
 
 @media (prefers-reduced-motion: reduce) {

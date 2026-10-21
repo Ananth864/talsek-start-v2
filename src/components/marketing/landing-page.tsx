@@ -3,7 +3,6 @@ import { Hero } from '#/components/marketing/sections/hero'
 import { CompanyLogos } from '#/components/marketing/sections/company-logos'
 import { HowItWorks } from '#/components/marketing/sections/how-it-works'
 import { WhatSetsUsApart } from '#/components/marketing/sections/what-sets-us-apart'
-import { Testimonials } from '#/components/marketing/sections/testimonials'
 import { FAQs } from '#/components/marketing/sections/faqs'
 import { CTASection } from '#/components/marketing/sections/cta-section'
 
@@ -30,7 +29,6 @@ export function LandingPage() {
         </div>
         <HowItWorks />
         <WhatSetsUsApart />
-        <Testimonials />
         <FAQs />
         <CTASection />
       </main>

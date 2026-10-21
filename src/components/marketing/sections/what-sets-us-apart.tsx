@@ -1,153 +1,51 @@
-import { motion } from 'motion/react'
 import { Button } from '#/components/ui/button'
 import {
-  Brain,
-  Check,
-  Crown,
-  FileSearch,
-  Link2,
-  Users,
-  X,
-  Zap,
-} from 'lucide-react'
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '#/components/ui/accordion'
 import { useCalBooking } from '#/components/marketing/cal-booking-context'
 
-const fadeUp = {
-  initial: { opacity: 0, y: 20 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-}
-
-/* ------------------------------------------------------------------ */
-/* Feature mini-visuals                                                */
-/* ------------------------------------------------------------------ */
-
-function MatchingVisual() {
-  return (
-    <div className="space-y-2.5">
-      <div className="flex flex-wrap gap-1.5">
-        {['5+ yrs React', 'TypeScript'].map((r) => (
-          <span
-            key={r}
-            className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
-          >
-            {r}
-          </span>
-        ))}
-      </div>
-      <div className="rounded-lg border px-3 py-2.5">
-        <p className="label-mono mb-1 text-[9px] text-emerald-600 dark:text-emerald-400">
-          Evidence · resume, p.2
-        </p>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          "Led migration of 40+ components to React 18 with TypeScript…"
-        </p>
-      </div>
-      <div className="flex items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2">
-        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-          Requirement met · verified
-        </span>
-        <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-      </div>
-    </div>
-  )
-}
-
-function ScreeningVisual() {
-  return (
-    <div className="space-y-2.5">
-      <div className="max-w-[90%] rounded-xl rounded-tl-sm border px-3 py-2">
-        <p className="label-mono mb-0.5 text-[9px] text-muted-foreground">
-          Talsek
-        </p>
-        <p className="text-xs leading-relaxed">
-          "You list scaling a design system — what broke first?"
-        </p>
-      </div>
-      <div className="ml-auto max-w-[90%] rounded-xl rounded-tr-sm bg-primary px-3 py-2 text-primary-foreground">
-        <p className="text-xs leading-relaxed">
-          "Token collisions. We split primitives from semantics…"
-        </p>
-      </div>
-      <div className="rounded-lg border px-3 py-2">
-        <p className="label-mono mb-1 text-[9px] text-muted-foreground">
-          Fit insight
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <span className="block h-full w-[91%] rounded-full bg-emerald-500" />
-          </span>
-          <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            91
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function OutreachVisual() {
-  return (
-    <div className="space-y-2.5">
-      <div className="rounded-lg border px-3 py-2.5">
-        <div className="mb-1.5 flex items-center gap-2">
-          <Users className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="label-mono text-[9px] text-muted-foreground">
-            To · 34 shortlisted candidates
-          </span>
-        </div>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          "Hi Priya — your write-up on design-token migrations caught our eye.
-          We're building exactly that at Talsek…"
-        </p>
-      </div>
-      <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2">
-        <span className="flex items-center gap-2 text-xs font-medium text-primary">
-          <Link2 className="h-3.5 w-3.5" />
-          Personalised at scale
-        </span>
-        <span className="font-mono text-xs text-muted-foreground">34/34</span>
-      </div>
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Section                                                             */
-/* ------------------------------------------------------------------ */
-
-const features = [
+const evidence = [
   {
-    id: 'resume-matching',
-    icon: Brain,
-    title: 'Context-Aware AI Matching',
-    desc: "Every match is backed by evidence from the candidate's actual profile — not keyword density.",
-    Visual: MatchingVisual,
+    requirement: '5+ yrs React',
+    excerpt: 'Led migration of 40+ components to React 18',
+    source: 'Resume, p.1',
   },
   {
-    id: 'screening-interview',
-    icon: Zap,
-    title: 'Automated Screening Interviews',
-    desc: 'Talsek interviews candidates in real time, asks your questions, and returns transcripts with fit insights.',
-    Visual: ScreeningVisual,
+    requirement: 'TypeScript',
+    excerpt: 'Shipped TS strict-mode design system at Razorpay',
+    source: 'Resume, p.2',
   },
   {
-    id: 'smart-outreach',
-    icon: Users,
-    title: 'Smart Outreach',
-    desc: 'Personalised messaging to every shortlisted candidate, referencing their actual work.',
-    Visual: OutreachVisual,
+    requirement: 'Startup experience',
+    excerpt: 'Early engineer at Series-A fintech (2020–22)',
+    source: 'Resume, p.1',
   },
 ]
 
-const stats = [
-  { value: '7 days', label: 'Time-to-hire, not 90' },
-  { value: '5 min', label: 'Setup, not 40 hours' },
-  { value: '3', label: 'Interviews, not 20' },
+const operationalComparison = [
+  {
+    feature: 'Matching',
+    talsek: 'Context-aware, evidence-based',
+    traditional: 'Keyword matching',
+  },
+  {
+    feature: 'Screening',
+    detail: 'Screening accuracy',
+    talsek: 'Consistent AI evaluation',
+    traditional: 'Inconsistent manual reviews',
+  },
+  {
+    feature: 'Outreach',
+    detail: 'Candidate outreach',
+    talsek: 'Personalised at scale',
+    traditional: 'Generic templates',
+  },
 ]
 
-const benchmark = [
-  { feature: 'Setup', talsek: '5 minutes', traditional: '40 hrs per hire' },
+const comparisonDetails = [
   { feature: 'Time-to-hire', talsek: '7 days', traditional: '90 days' },
   {
     feature: 'Interviews required',
@@ -155,24 +53,9 @@ const benchmark = [
     traditional: '20 candidates',
   },
   {
-    feature: 'Matching',
-    talsek: 'Context-aware, evidence-based',
-    traditional: 'Keyword matching',
-  },
-  {
     feature: 'Resume processing',
     talsek: 'Unlimited, real-time',
     traditional: 'Manual review bottlenecks',
-  },
-  {
-    feature: 'Screening accuracy',
-    talsek: 'Consistent AI evaluation',
-    traditional: 'Inconsistent manual reviews',
-  },
-  {
-    feature: 'Candidate outreach',
-    talsek: 'Personalised at scale',
-    traditional: 'Generic templates',
   },
   {
     feature: 'Pricing',
@@ -181,6 +64,76 @@ const benchmark = [
   },
 ]
 
+function ComparisonRows({
+  rows,
+}: {
+  rows: {
+    feature: string
+    detail?: string
+    talsek: string
+    traditional: string
+  }[]
+}) {
+  return (
+    <table className="w-full table-fixed border-collapse text-left text-sm max-sm:block">
+      <caption className="sr-only">
+        Talsek and traditional hiring comparison
+      </caption>
+      <thead className="max-sm:sr-only">
+        <tr className="border-b">
+          <th
+            scope="col"
+            className="w-1/4 p-5 font-medium text-muted-foreground"
+          >
+            Hiring work
+          </th>
+          <th scope="col" className="p-5 font-medium text-muted-foreground">
+            Traditional hiring
+          </th>
+          <th
+            scope="col"
+            className="border-x border-primary/15 bg-primary/[0.08] p-5 font-display text-xl font-semibold text-primary"
+          >
+            Talsek
+          </th>
+        </tr>
+      </thead>
+      <tbody className="max-sm:block">
+        {rows.map((row) => (
+          <tr
+            key={row.feature}
+            className="border-b last:border-b-0 max-sm:grid max-sm:grid-cols-2"
+          >
+            <th
+              scope="row"
+              className="p-5 align-top font-display text-lg font-semibold max-sm:col-span-2 max-sm:px-4 max-sm:py-3"
+            >
+              {row.feature}
+              {row.detail && (
+                <span className="mt-1 block font-sans text-[13px] font-normal text-muted-foreground">
+                  {row.detail}
+                </span>
+              )}
+            </th>
+            <td className="p-5 align-top leading-relaxed text-muted-foreground max-sm:px-4 max-sm:pt-2">
+              <span className="mb-2 block text-[13px] font-semibold text-foreground sm:hidden">
+                Traditional hiring
+              </span>
+              {row.traditional}
+            </td>
+            <td className="border-x border-primary/15 bg-primary/[0.08] p-5 align-top font-medium leading-relaxed max-sm:px-4 max-sm:pt-2">
+              <span className="mb-2 block text-[13px] font-semibold text-primary sm:hidden">
+                Talsek
+              </span>
+              {row.talsek}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 export function WhatSetsUsApart() {
   const { openBooking } = useCalBooking()
 
@@ -188,164 +141,197 @@ export function WhatSetsUsApart() {
     <>
       <section
         id="why-talsek"
-        aria-label="Why Talsek"
+        aria-labelledby="evidence-title"
         data-testid="landing-differentiators"
         className="landing-scene border-b"
       >
         <div className="container mx-auto px-4">
-          {/* Header */}
-          <motion.div
-            {...fadeUp}
-            transition={{ duration: 0.5 }}
-            className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
-          >
+          <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-end lg:gap-8">
             <div>
               <p className="label-mono mb-3 text-primary">Why Talsek</p>
-              <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                What sets us apart
+              <h2
+                id="evidence-title"
+                className="max-w-xl font-display text-3xl font-bold tracking-tight sm:text-4xl"
+              >
+                See the evidence behind the match
               </h2>
             </div>
-            <p className="max-w-lg text-base text-muted-foreground">
-              Context-aware matching, intelligent screening, and automated
-              outreach — the first 80% of hiring, handled.
+            <p className="text-base leading-relaxed text-muted-foreground">
+              Review the resume evidence, read the interview, and decide who
+              moves forward.
             </p>
-          </motion.div>
-
-          {/* Feature cards */}
-          <div className="grid gap-4 md:grid-cols-3">
-            {features.map((feature, index) => (
-              <motion.article
-                key={feature.id}
-                id={feature.id}
-                {...fadeUp}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex scroll-mt-24 flex-col rounded-xl border bg-card p-4"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <feature.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold tracking-tight">
-                    {feature.title}
-                  </h3>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {feature.desc}
-                </p>
-                <div className="mt-auto pt-4">
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <feature.Visual />
-                  </div>
-                </div>
-              </motion.article>
-            ))}
           </div>
 
-          {/* Stat band */}
-          <motion.div
-            {...fadeUp}
-            transition={{ duration: 0.5 }}
-            className="mt-6 grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-3"
-          >
-            {stats.map((stat) => (
-              <div key={stat.label} className="bg-card px-5 py-4 text-center">
-                <p className="font-display text-3xl font-bold tracking-tight text-primary">
-                  {stat.value}
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <article
+              id="resume-matching"
+              aria-labelledby="matching-title"
+              className="min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border bg-card"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b bg-secondary/50 p-5 sm:px-6">
+                <div>
+                  <p className="label-mono mb-2 text-primary">
+                    Resume matching · example
+                  </p>
+                  <h3
+                    id="matching-title"
+                    className="font-display text-xl font-semibold tracking-tight"
+                  >
+                    Senior Frontend Engineer
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Priya Sharma · React · 6 yrs
+                  </p>
+                </div>
+                <div className="flex items-baseline gap-2 text-primary">
+                  <span className="font-display text-4xl font-semibold tracking-tight">
+                    94
+                  </span>
+                  <span className="text-[13px]">match score</span>
+                </div>
+              </div>
+              <div className="px-5 sm:px-6">
+                <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-5 border-b py-3 sm:grid">
+                  <p className="label-mono text-muted-foreground">
+                    Requirement
+                  </p>
+                  <p className="label-mono text-muted-foreground">
+                    Resume evidence
+                  </p>
+                </div>
+                <dl>
+                  {evidence.map((item) => (
+                    <div
+                      key={item.requirement}
+                      className="grid gap-2 border-b py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:gap-5"
+                    >
+                      <dt className="text-sm font-semibold">
+                        {item.requirement}
+                      </dt>
+                      <dd>
+                        <p className="text-sm leading-relaxed">
+                          {item.excerpt}
+                        </p>
+                        <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
+                          {item.source}
+                        </p>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div className="border-t bg-muted/30 px-5 py-4 sm:px-6">
+                <p className="mb-1 text-[13px] font-semibold">
+                  A point to explore in the interview
                 </p>
-                <p className="label-mono mt-2 text-[10px] text-muted-foreground">
-                  {stat.label}
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  No direct team management on resume.
                 </p>
               </div>
-            ))}
-          </motion.div>
+            </article>
+
+            <div className="min-w-0 divide-y border-y lg:border-t-0">
+              <article
+                id="screening-interview"
+                aria-labelledby="interview-title"
+                className="scroll-mt-24 py-5 lg:pt-1"
+              >
+                <p className="label-mono mb-2 text-primary">
+                  Screening interview
+                </p>
+                <h3
+                  id="interview-title"
+                  className="font-display text-xl font-semibold tracking-tight"
+                >
+                  Follow up on the work
+                </h3>
+                <div className="mt-4 space-y-3 text-sm leading-relaxed">
+                  <div className="border-l-2 border-primary/40 pl-3">
+                    <p className="mb-1 text-[13px] font-semibold">Talsek</p>
+                    <p>
+                      Walk me through the React 18 migration mentioned in your
+                      resume.
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/60 px-3 py-2.5">
+                    <p className="mb-1 text-[13px] font-semibold">Priya</p>
+                    <p className="text-muted-foreground">
+                      I led a team of 4 off class components. We cut bundle size
+                      22%…
+                    </p>
+                  </div>
+                </div>
+              </article>
+              <article
+                id="smart-outreach"
+                aria-labelledby="outreach-title"
+                className="scroll-mt-24 py-5"
+              >
+                <p className="label-mono mb-2 text-primary">Smart outreach</p>
+                <h3
+                  id="outreach-title"
+                  className="font-display text-xl font-semibold tracking-tight"
+                >
+                  Make the next step personal
+                </h3>
+                <div className="mt-4 text-sm leading-relaxed">
+                  <p className="border-b pb-2 text-[13px] text-muted-foreground">
+                    To · Priya Sharma
+                  </p>
+                  <p className="pt-3">
+                    Hi Priya, your work on the React 18 migration caught our
+                    eye. We'd like to talk about the Senior Frontend Engineer
+                    role.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
         </div>
       </section>
+
       <section
         aria-labelledby="benchmark-title"
         data-testid="landing-benchmark"
-        className="landing-scene border-b bg-card/40"
+        className="landing-scene border-b"
       >
         <div className="container mx-auto px-4">
-          {/* Benchmark */}
-          <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
-            <div className="mb-6">
-              <p className="label-mono mb-3 text-primary">The benchmark</p>
-              <h2
-                id="benchmark-title"
-                className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-              >
-                Talsek vs traditional hiring
-              </h2>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-              {/* Table header */}
-              <div className="grid grid-cols-[1.2fr_1.4fr_1.4fr] border-b bg-muted/40 max-sm:grid-cols-[1fr_1fr]">
-                <div className="hidden items-center px-5 py-3.5 sm:flex">
-                  <span className="label-mono text-[10px] text-muted-foreground">
-                    Feature
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.06] px-5 py-3.5 max-sm:col-span-2 max-sm:border-l-0">
-                  <Crown className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-sm font-bold text-primary">Talsek</span>
-                </div>
-                <div className="flex items-center border-l border-border/60 px-5 py-3.5 max-sm:hidden">
-                  <span className="label-mono text-[10px] text-muted-foreground">
-                    Traditional hiring
-                  </span>
-                </div>
-              </div>
-
-              {/* Rows — on mobile, traditional value renders under talsek value */}
-              {benchmark.map((item) => (
-                <div
-                  key={item.feature}
-                  className="grid border-b border-border/60 last:border-b-0 sm:grid-cols-[1.2fr_1.4fr_1.4fr] max-sm:grid-cols-[1fr_1fr]"
-                >
-                  <div className="flex items-center px-5 py-3.5 max-sm:col-span-2 max-sm:bg-muted/30 max-sm:py-2">
-                    <span className="text-sm font-medium max-sm:text-xs max-sm:font-semibold max-sm:tracking-wide max-sm:uppercase max-sm:text-muted-foreground">
-                      {item.feature}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 border-l border-border/60 bg-primary/[0.04] px-5 py-3.5 max-sm:col-span-2 max-sm:border-l-0">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-sm max-sm:text-xs">
-                      {item.talsek}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2 border-l border-border/60 px-5 py-3.5 max-sm:hidden">
-                    <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                    <span className="text-sm text-muted-foreground">
-                      {item.traditional}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="mx-auto mt-4 flex max-w-4xl items-center gap-2 text-xs text-muted-foreground sm:hidden">
-              <X className="h-3 w-3 shrink-0" />
-              Traditional hiring loses on every row above — see the full
-              comparison on a larger screen.
+          <div className="mb-8">
+            <p className="label-mono mb-3 text-primary">
+              The hiring work, compared
             </p>
-          </motion.div>
-
-          {/* CTA */}
-          <motion.div
-            {...fadeUp}
-            transition={{ duration: 0.5 }}
-            className="mt-6 text-center"
-          >
+            <h2
+              id="benchmark-title"
+              className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
+            >
+              Talsek vs traditional hiring
+            </h2>
+          </div>
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <ComparisonRows rows={operationalComparison} />
+          </div>
+          <Accordion type="single" collapsible className="mt-3 border-b">
+            <AccordionItem value="comparison-details">
+              <AccordionTrigger className="py-5 text-base font-semibold hover:no-underline">
+                Compare time, volume, and pricing
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="overflow-hidden rounded-xl border bg-card">
+                  <ComparisonRows rows={comparisonDetails} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <div className="mt-6 flex justify-start">
             <Button
               size="lg"
               data-testid="differentiators-book-demo"
-              className="group gap-2 rounded-xl px-7 font-semibold shadow-lg shadow-primary/20"
+              className="rounded-xl px-7 font-semibold"
               onClick={openBooking}
             >
-              <FileSearch className="h-4 w-4" />
               Book a demo
             </Button>
-          </motion.div>
+          </div>
         </div>
       </section>
     </>
